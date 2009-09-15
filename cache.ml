@@ -43,7 +43,7 @@ module TimeLimited(E: sig type t end) = struct
 
 end
 
-module LockNone = struct
+module NoLock = struct
   type t = unit
   let create () = ()
   let locked () f = f ()
