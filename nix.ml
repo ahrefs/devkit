@@ -23,3 +23,5 @@ let daemonize () =
 (*   redirect standard channels *)
   ()
 
+let restart f x = let rec loop () = try f x with Unix.Unix_error (EINTR,_,_) -> loop () in loop ()
+
