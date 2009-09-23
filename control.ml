@@ -9,3 +9,5 @@ let with_open_out_bin name = bracket (open_out_bin name) close_out_noerr
 
 let locked mutex f = Mutex.lock mutex; Std.finally (fun () -> Mutex.unlock mutex) f ()
 
+let suppress f x = try f x with _ -> ()
+
