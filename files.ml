@@ -31,6 +31,8 @@ let iter_files dirname f =
   iter_names dirname (fun fd path _ ->
     bracket (Unix.in_channel_of_descr fd) close_in_noerr (fun ch -> f path ch))
 
+(*
 let () =
   iter_files "/etc" (fun s _ -> print_endline s)
+*)
 
