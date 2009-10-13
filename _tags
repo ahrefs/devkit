@@ -1,2 +1,3 @@
 true: annot, debug, thread
-true: use_extLib
+<*.ml>: use_extLib
+"web.ml": use_pcre, use_netstring, use_netsys

@@ -31,6 +31,8 @@ let iter_files dirname f =
   iter_names dirname (fun fd path _ ->
     bracket (Unix.in_channel_of_descr fd) close_in_noerr (fun ch -> f path ch))
 
+let open_out_append = open_out_gen [Open_wronly;Open_append;Open_creat;Open_text] 0o644
+
 (*
 let () =
   iter_files "/etc" (fun s _ -> print_endline s)
