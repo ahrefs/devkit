@@ -53,6 +53,8 @@ dispatch begin function
      flag ["ocaml"; "doc"; "use_zip"] (S[A"-I"; A (C.lib "zip")]);
      flag ["ocaml"; "doc"; "use_pcre"] (S[A"-I"; A (C.lib "pcre")]);
 
+     flag ["ocaml"; "doc"] (S[A"-short-functors"; A"-sort"; A"-m"; A"A"]);
+
      flag ["ocaml"; "pp"; "use_json-static"] (A (Filename.concat (C.lib "json-static") "pa_json_static.cmo"));
 
      flag ["ocaml"; "pp"; "use_openin"] (A"pa_openin.cmo");
