@@ -1,3 +1,5 @@
 true: annot, debug, thread
 <*.ml{,i}>: use_extLib
 "web.ml": use_pcre, use_netstring, use_netsys
+"netcgi_ext.ml": use_netcgi, use_netstring
+"gzip_io.ml": use_zip
