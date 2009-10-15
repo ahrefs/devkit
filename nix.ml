@@ -1,3 +1,6 @@
+(**
+  *nix support
+*)
 
 open Unix
 
@@ -24,4 +27,24 @@ let daemonize () =
   ()
 
 let restart f x = let rec loop () = try f x with Unix.Unix_error (EINTR,_,_) -> loop () in loop ()
+
+let handle_sig_exit fin =
+  List.iter
+    (fun signal -> Sys.set_signal signal (Sys.Signal_handle 
+      (fun n ->
+        Log.info "Received signal %i (exit)..." n;
+        (try fin () with e -> Exn.log e "handle_sig_exit"); 
+        Log.info "Signal handler done. Exiting.";
+        exit 0)))
+    [Sys.sigint; Sys.sigterm]
+
+let handle_sig_reload f =
+  List.iter
+    (fun signal -> Sys.set_signal signal (Sys.Signal_handle 
+      (fun n -> 
+        Log.info "Received signal %i (reload)..." n; 
+        (try f () with e -> Exn.log e "handle_sig_reload");
+        Log.info "Signal handler done."
+        )))
+    [Sys.sighup; Sys.sigusr1; Sys.sigusr2]
 
