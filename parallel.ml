@@ -70,3 +70,21 @@ let perform (l,execute) e f =
 
 end
 
+let invoke (f : 'a -> 'b) x : unit -> 'b =
+  let input, output = Unix.pipe() in
+  match Unix.fork() with
+  | -1 -> Unix.close input; Unix.close output; (let v = f x in fun () -> v)
+  | 0 ->
+      Unix.close input;
+      let output = Unix.out_channel_of_descr output in
+        Marshal.to_channel output (try `Res(f x) with e -> `Exn e) [];
+        close_out output;
+        exit 0
+  | pid ->
+      Unix.close output;
+      let input = Unix.in_channel_of_descr input in fun () ->
+        let v = Marshal.from_channel input in
+        ignore (Nix.restart (Unix.waitpid []) pid);
+        close_in input;
+        match v with `Res x -> x | `Exn e -> raise e
+
