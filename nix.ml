@@ -28,23 +28,43 @@ let daemonize () =
 
 let restart f x = let rec loop () = try f x with Unix.Unix_error (EINTR,_,_) -> loop () in loop ()
 
-let handle_sig_exit fin =
+(** Use [with_sig_exit] *)
+let handle_sig_exit_with fin =
   List.iter
     (fun signal -> Sys.set_signal signal (Sys.Signal_handle 
       (fun n ->
         Log.info "Received signal %i (exit)..." n;
-        (try fin () with e -> Exn.log e "handle_sig_exit"); 
+        (try fin () with e -> Exn.log e "handle_sig_exit");
         Log.info "Signal handler done. Exiting.";
         exit 0)))
     [Sys.sigint; Sys.sigterm]
 
-let handle_sig_reload f =
+(** Use [with_sig_reload] *)
+let handle_sig_reload_with fin =
   List.iter
     (fun signal -> Sys.set_signal signal (Sys.Signal_handle 
       (fun n -> 
         Log.info "Received signal %i (reload)..." n; 
-        (try f () with e -> Exn.log e "handle_sig_reload");
+        (try fin () with e -> Exn.log e "handle_sig_reload");
         Log.info "Signal handler done."
         )))
     [Sys.sighup; Sys.sigusr1; Sys.sigusr2]
+
+
+type sig_stack = (unit -> unit) list ref
+
+let sig_exit_funcs : sig_stack = ref []
+let sig_reload_funcs : sig_stack = ref []
+
+let register_sig st f k = Control.bracket (st := f :: !st) (fun () -> st := List.tl !st) k
+
+let with_sig_exit f k = register_sig sig_exit_funcs f k
+let with_sig_reload f k = register_sig sig_reload_funcs f k
+
+let () = 
+  handle_sig_exit_with (fun () ->
+    List.iter (fun fin -> try fin () with e -> Exn.log e "sig_exit_funcs") !sig_exit_funcs);
+  handle_sig_reload_with (fun () ->
+    List.iter (fun fin -> try fin () with e -> Exn.log e "sig_reload_funcs") !sig_reload_funcs);
+
 

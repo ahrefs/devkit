@@ -19,7 +19,12 @@ let reg_value (name:string) x =
 let reg_control (name:string) x =
   Hashtbl.add controls name (x:><gets:string; sets:string->bool>)
 
+let set_control name x =
+  try let c = Hashtbl.find controls name in c#sets x
+  with _ -> false
+
 let values () = Hashtbl.enum values >> Enum.map (fun (k,v) -> k,v#gets)
+let controls () = Hashtbl.enum controls >> Enum.map (fun (k,v) -> k,v#gets)
 
 let value name =
 object (self)
@@ -46,4 +51,11 @@ initializer
 
 end
 
+let store () = 
+  let _vl = values () >> List.of_enum and cl = controls () >> List.of_enum in
+  Marshal.to_string cl []
+
+let restore s =
+  let cl = (Marshal.from_string s 0 : (string*string) list) in
+  List.iter (fun (k,v) -> ignore (set_control k v)) cl
 
