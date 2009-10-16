@@ -4,11 +4,9 @@ open Printf
 
 open Prelude
 
-module Search = struct
+module Provider = struct
 
-  module MakeSimple(T : sig val request : string -> string val extract : string -> string Enum.t end) = struct
-    let search get = T.extract & get & T.request
-  end
+  type t = { request : string -> string; extract : string -> string Enum.t; }
 
   let all_matches rex s =
     try
@@ -16,20 +14,31 @@ module Search = struct
     with
       _ -> Enum.empty ()
 
-  module Google = MakeSimple(struct
-    let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l"
-    let extract = all_matches re
-    let request q =
-      sprintf "http://www.google.com/search?hl=en&q=%s&btnG=Search&aq=f&oq=&aqi="
-        (Netencoding.Url.encode q)
-  end)
+  let google =
+    let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l" in
+    { extract = all_matches re;
+      request = fun q ->
+        sprintf "http://www.google.com/search?hl=en&q=%s&btnG=Search&aq=f&oq=&aqi="
+          (Netencoding.Url.encode q)
+    }
 
-  module Bing = MakeSimple(struct
-    let re = Pcre.regexp ~flags:[`CASELESS] "<link>([^<]+)</link>"
-    let extract = all_matches re 
-    let request q =
-      sprintf "http://www.bing.com/search?q=%s&count=50&format=rss" (Netencoding.Url.encode q)
-  end)
+  let bing =
+    let re = Pcre.regexp ~flags:[`CASELESS] "<link>([^<]+)</link>" in
+    { extract = all_matches re;
+      request = fun q ->
+        sprintf "http://www.bing.com/search?q=%s&count=50&format=rss" (Netencoding.Url.encode q)
+    }
+
+end
+
+module Search(GET : sig val get : string -> string end) = struct
+
+  open Provider
+
+  let search p = p.extract & GET.get & p.request
+
+  let google = search google
+  let bing = search bing
 
 end
 
