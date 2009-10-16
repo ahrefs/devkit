@@ -52,6 +52,7 @@ dispatch begin function
      flag ["ocaml"; "doc"; "use_netstring"] (S[A"-I"; A (C.lib "netstring")]);
      flag ["ocaml"; "doc"; "use_zip"] (S[A"-I"; A (C.lib "zip")]);
      flag ["ocaml"; "doc"; "use_pcre"] (S[A"-I"; A (C.lib "pcre")]);
+     flag ["ocaml"; "doc"; "use_netcgi"] (S[A"-I"; A (C.lib "netcgi2")]);
 
      flag ["ocaml"; "doc"] (S[A"-short-functors"; A"-sort"; A"-m"; A"A"]);
 
