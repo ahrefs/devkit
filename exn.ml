@@ -16,3 +16,6 @@ let str = to_string
 let log_s e s = Log.warn "%s : exception : %s" s (to_string e)
 let log e fmt = Printf.ksprintf (log_s e) fmt
 
+(** [log_try f x] logs and reraises any exception raised by [f x] *)
+let log_try f x = try f x with e -> log e "Exn.log_try"; raise e
+

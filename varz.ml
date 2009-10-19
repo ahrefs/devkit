@@ -31,8 +31,21 @@ object (self)
 
 val mutable x = 0L
 method inc = x <- Int64.succ x
+method addl n = x <- Int64.add x n
 method add n = x <- Int64.add x (Int64.of_int n)
 method gets = Int64.to_string x
+
+initializer
+  reg_value name self
+
+end
+
+let fvalue name =
+object (self)
+
+val mutable x = 0.
+method add n = x <- x +. n
+method gets = string_of_float x
 
 initializer
   reg_value name self
