@@ -23,7 +23,7 @@ module Provider = struct
     }
 
   let bing =
-    let re = Pcre.regexp ~flags:[`CASELESS] "<link>([^<]+)</link>" in
+    let re = Pcre.regexp ~flags:[`CASELESS] "<item>.*?<link>([^<]+)</link>.*?</item>" in
     { extract = all_matches re;
       request = fun q ->
         sprintf "http://www.bing.com/search?q=%s&count=50&format=rss" (Netencoding.Url.encode q)
