@@ -35,7 +35,7 @@ module Search(GET : sig val get : string -> string end) = struct
 
   open Provider
 
-  let search p = p.extract & GET.get & p.request
+  let search p = p.extract $ GET.get $ p.request
 
   let google = search google
   let bing = search bing

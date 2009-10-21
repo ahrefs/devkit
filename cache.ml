@@ -35,7 +35,7 @@ module TimeLimited(E: sig type t end) = struct
   let on_key key = fun (k,_) -> k = key
 
   let replace t key x =
-    locked t.mutex (fun () -> t.m <- M.add (key, x) (M.filter (not & on_key key) t.m))
+    locked t.mutex (fun () -> t.m <- M.add (key, x) (M.filter (not $ on_key key) t.m))
 
   let get t key =
     let found = locked t.mutex (fun () -> M.filter (on_key key) t.m) in

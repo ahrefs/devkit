@@ -16,9 +16,9 @@ let output_oc oc =
     ~flush:ignore
     ~close:(fun () -> Gzip.close_out oc)
 
-let output_ch = output_oc & Gzip.open_out_chan
-let input_ch = input_ic & Gzip.open_in_chan
-let input = input_ic & Gzip.open_in
+let output_ch = output_oc $ Gzip.open_out_chan
+let input_ch = input_ic $ Gzip.open_in_chan
+let input = input_ic $ Gzip.open_in
 
 let pipe_in f =
   bracket (Filename.open_temp_file ~mode:[Open_binary] "gzip_io" "gz")

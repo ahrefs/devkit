@@ -18,4 +18,6 @@ let log e fmt = Printf.ksprintf (log_s e) fmt
 
 (** [log_try f x] logs and reraises any exception raised by [f x] *)
 let log_try f x = try f x with e -> log e "Exn.log_try"; raise e
+(** Apply [f x], exception (if any) is logged and suppressed. *)
+let log_catch f x = try f x with e -> log e "Exn.log_catch"
 

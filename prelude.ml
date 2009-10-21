@@ -1,6 +1,6 @@
 (** Useful shortcuts *)
 
-let (&) f g = fun x -> f (g x)
+let ($) f g = fun x -> f (g x)
 let (>>) x f = f x
 
 external id : 'a -> 'a = "%identity"
