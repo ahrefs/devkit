@@ -65,6 +65,16 @@ initializer
 
 end
 
+let fun_value name f =
+object (self)
+
+method gets = f ()
+
+initializer
+  reg_value name self
+
+end
+
 let store () = 
   let _vl = values () >> List.of_enum and cl = controls () >> List.of_enum in
   Marshal.to_string cl []
