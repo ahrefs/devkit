@@ -1,5 +1,7 @@
 (** In-memory cache *)
 
+open ExtLib
+
 open Prelude
 open Control
 
@@ -92,5 +94,14 @@ module TimeLimited2(E: Set.OrderedType)
     let found = Lock.locked t.lock (fun () -> M.filter (fun (x,_) -> 0 = E.compare x v) t.m) in
     try M.choose found >> snd >> some with Not_found -> None
 
+end
+
+(** Count elements *)
+module Count =
+struct
+  open Hashtbl
+  let create () = create 100
+  let add t x = match find_option t x with None -> add t x 1 | Some n -> replace t x (n+1)
+  let enum t = enum t
 end
 
