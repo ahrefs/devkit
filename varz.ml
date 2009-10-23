@@ -87,12 +87,16 @@ let restore s =
 
 open Printf
 
-let caml_words f = (* oh ugly *)
-  let f = f *. (float_of_int (Sys.word_size / 8)) in
+let bytes_string_f f = (* oh ugly *)
   if f < 1024. then sprintf "%uB" (int_of_float f) else
   if f < 1024. *. 1024. then sprintf "%uKB" (int_of_float (f /. 1024.)) else
   if f < 1024. *. 1024. *. 1024. then sprintf "%.1fMB" (f /. 1024. /. 1024.) else
   sprintf "%.1fGB" (f /. 1024. /. 1024. /. 1024.)
+
+let bytes_string = bytes_string_f $ float_of_int
+
+let caml_words f =
+  bytes_string_f (f *. (float_of_int (Sys.word_size / 8)))
 
 let _ = fun_value "CPU time" (fun () -> 
   sprintf "%.3fs " (Sys.time ()))
@@ -120,4 +124,17 @@ let _ = fun_value "Collections(mv,ma,mi)" (fun () ->
 let _ =
   let start = Unix.time() in
   fun_value "Uptime" (fun () -> Time.duration_str (Unix.time() -. start))
+
+let value_bytes name =
+object (self)
+
+val mutable x = 0L
+method add n = x <- Int64.add x (Int64.of_int n)
+method addl n = x <- Int64.add x n
+method gets = Int64.to_float x >> bytes_string_f
+
+initializer
+  reg_value name self
+
+end
 
