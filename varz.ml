@@ -23,8 +23,10 @@ let set_control name x =
   try let c = Hashtbl.find controls name in c#sets x
   with _ -> false
 
-let values () = Hashtbl.enum values >> Enum.map (fun (k,v) -> k,v#gets)
-let controls () = Hashtbl.enum controls >> Enum.map (fun (k,v) -> k,v#gets)
+let values () = Hashtbl.enum values >> Enum.map (fun (k,v) -> k,v#gets) >> List.of_enum >> 
+  List.sort ~cmp:(fun (x,_) (y,_) -> compare x y)
+let controls () = Hashtbl.enum controls >> Enum.map (fun (k,v) -> k,v#gets) >> List.of_enum >>
+  List.sort ~cmp:(fun (x,_) (y,_) -> compare x y)
 
 let value name =
 object (self)
@@ -76,7 +78,7 @@ initializer
 end
 
 let store () = 
-  let _vl = values () >> List.of_enum and cl = controls () >> List.of_enum in
+  let _vl = values () and cl = controls () in
   Marshal.to_string cl []
 
 let restore s =
@@ -92,21 +94,30 @@ let caml_words f = (* oh ugly *)
   if f < 1024. *. 1024. *. 1024. then sprintf "%.1fMB" (f /. 1024. /. 1024.) else
   sprintf "%.1fGB" (f /. 1024. /. 1024. /. 1024.)
 
-let _ = fun_value "gc stats"
-  (fun () ->
+let _ = fun_value "CPU time" (fun () -> 
+  sprintf "%.3fs " (Sys.time ()))
+
+let _ = fun_value "Heap(max):" (fun () ->
     let st = Gc.quick_stat () in
-    let out = IO.output_string () in
-    IO.printf out "CPU: %.3fs " (Sys.time ());
-    IO.printf out "Heap(max): %s(%s) "
+    sprintf "%s(%s)"
         (caml_words (float_of_int st.Gc.heap_words)) 
-        (caml_words (float_of_int st.Gc.top_heap_words));
-    IO.printf out "Counters(min,pro,maj): %s %s %s "
+        (caml_words (float_of_int st.Gc.top_heap_words)))
+
+let _ = fun_value "Counters(mi,pr,ma)" (fun () ->
+    let st = Gc.quick_stat () in
+    sprintf "%s %s %s"
         (caml_words st.Gc.minor_words)
         (caml_words st.Gc.promoted_words)
-        (caml_words st.Gc.major_words);
-    IO.printf out "Collections(cmp,maj,min): %u %u %u "
+        (caml_words st.Gc.major_words))
+
+let _ = fun_value "Collections(mv,ma,mi)" (fun () ->
+    let st = Gc.quick_stat () in
+    sprintf "%u %u %u"
         st.Gc.compactions 
         st.Gc.major_collections 
-        st.Gc.minor_collections;
-    IO.close_out out)
+        st.Gc.minor_collections)
+
+let _ =
+  let start = Unix.time() in
+  fun_value "Uptime" (fun () -> Time.duration_str (Unix.time() -. start))
 
