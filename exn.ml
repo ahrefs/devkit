@@ -24,7 +24,9 @@ let log_catch f x = try f x with e -> log e "Exn.log_catch"
 let log_thread f x =
   let thread () =
     try
-      f x
+      Log.info "Thread started";
+      f x;
+      Log.info "Thread finished"
     with
       e ->
         Log.error "Thread died with uncaught exception : %s" (str e);
