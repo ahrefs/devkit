@@ -21,15 +21,16 @@ let log_try f x = try f x with e -> log e "Exn.log_try"; raise e
 (** Apply [f x], exception (if any) is logged and suppressed. *)
 let log_catch f x = try f x with e -> log e "Exn.log_catch"
 
-let log_thread f x =
+let log_thread ?name f x =
   let thread () =
     try
-      Log.info "Thread started";
-      f x;
-      Log.info "Thread finished"
+      Option.may (Log.info "Thread \"%s\" started") name;
+      let () = f x in
+      Option.may (Log.info "Thread \"%s\" finished") name
     with
       e ->
-        Log.error "Thread died with uncaught exception : %s" (str e);
+        let name = Option.map_default (Printf.sprintf " \"%s\"") "" name in
+        Log.error "Thread%s died with uncaught exception : %s" name (str e);
         Log.error_s (Printexc.get_backtrace ());
         raise e (* let the runtime print warning too *)
   in
