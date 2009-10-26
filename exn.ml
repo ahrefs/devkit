@@ -21,3 +21,15 @@ let log_try f x = try f x with e -> log e "Exn.log_try"; raise e
 (** Apply [f x], exception (if any) is logged and suppressed. *)
 let log_catch f x = try f x with e -> log e "Exn.log_catch"
 
+let log_thread f x =
+  let thread () =
+    try
+      f x
+    with
+      e ->
+        Log.error "Thread died with uncaught exception : %s" (str e);
+        Log.error_s (Printexc.get_backtrace ());
+        raise e (* let the runtime print warning too *)
+  in
+  Thread.create thread ()
+
