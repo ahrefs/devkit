@@ -49,7 +49,6 @@ object (self)
 val mutable x = 0.
 method add n = x <- x +. n
 method gets = string_of_float x
-method get = x
 
 initializer
   reg_value name self
@@ -57,10 +56,12 @@ initializer
 end
 
 let time_value name =
-let v = fvalue name in
-object
-method add = v#add
-method gets = Time.duration_str v#get
+object(self)
+val mutable x = 0.
+method add n = x <- x +. n
+method gets = Time.duration_str x
+initializer
+  reg_value name self
 end
 
 let set_int name init = object(self)
