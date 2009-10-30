@@ -36,6 +36,7 @@ method inc = x <- Int64.succ x
 method dec = x <- Int64.pred x
 method addl n = x <- Int64.add x n
 method add n = x <- Int64.add x (Int64.of_int n)
+method get = x
 method gets = Int64.to_string x
 
 initializer
