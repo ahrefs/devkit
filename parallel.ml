@@ -88,3 +88,24 @@ let invoke (f : 'a -> 'b) x : unit -> 'b =
         close_in input;
         match v with `Res x -> x | `Exn e -> raise e
 
+(*
+
+(* example *)
+open Printf
+
+module W = Workers(struct type task = string type result = string list end)
+
+let execute s = for i = 1 to 100_000 do Thread.delay 0. done; printf "%u : %s\n%!" (Unix.getpid()) s; [s;s;s;s]
+
+let () =
+  let workers = W.create execute 4 in
+  print_endline "go";
+  let e = Enum.init 100 (sprintf "<%u>") in
+  let f l = printf "got [%s]\n%!" (Util.strl Prelude.id l) in
+  for i = 1 to 2 do
+    W.perform workers (Enum.clone e) f;
+    Thread.delay 1.
+  done;
+  print_endline "Done"
+*)
+
