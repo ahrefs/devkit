@@ -47,6 +47,7 @@ dispatch begin function
      C.extern "sqlite3";
      C.extern "curl";
      C.extern "fileutils";
+     C.extern "ocsigen.xhtml" ~cma:"xhtml";
 
      flag ["ocaml"; "doc"; "use_extLib"] (S[A"-I"; A (C.lib "extlib")]);
      flag ["ocaml"; "doc"; "use_netstring"] (S[A"-I"; A (C.lib "netstring")]);

@@ -3,4 +3,5 @@ true: annot, debug, thread
 "web.ml": use_pcre, use_netstring, use_netsys
 "netcgi_ext.ml": use_netcgi, use_netstring
 "gzip_io.ml": use_zip
+"varz_html.ml" or "netcgi_ext.ml": use_xhtml
 <*.top>: use_extLib, use_pcre, use_netstring, use_netsys, use_zip
