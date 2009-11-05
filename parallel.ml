@@ -27,7 +27,7 @@ let worker (execute : T.task -> T.result) =
         let r = execute v in
         Marshal.to_channel output (r : T.result) []; flush output
       done
-      with e -> Printf.printf "exception %s\n%!" (Printexc.to_string e)
+      with e -> Log.error "Paraller.worker exception %s" (Exn.str e)
       end;
       close_in_noerr input;
       close_out_noerr output;
