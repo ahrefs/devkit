@@ -53,3 +53,15 @@ let serve_html cgi html =
 let not_found cgi = serve_text cgi ~status:`Not_found "Not found"
 let bad_request cgi = serve_text cgi ~status:`Bad_request "Bad request"
 
+(*
+  let name = "/tmp/scraper.fcgi" in
+  (try Unix.unlink name with _ -> ());
+  Unix.umask 0o000 >> ignore; (* awful... *)
+*)
+
+let listen_fcgi port perform =
+  let addr = Unix.inet_addr_loopback in
+  let buffered _ ch = new Netchannels.buffered_trans_channel ch in
+  Netcgi_fcgi.run ~output_type:(`Transactional buffered)
+    ~sockaddr:(Unix.ADDR_INET (addr,port)) perform
+
