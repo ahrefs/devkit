@@ -15,14 +15,14 @@ let cgi_suppress_exn exn cgi =
   Exn.log exn "Netcgi_ext.suppress_exn";
   cgi#out_channel#output_string "Internal server error"
 
-let perform_cgi f err =
+let perform_cgi f (err:exn->cgi->unit) =
   fun cgi ->
   try
     f (cgi:>cgi);
     cgi#out_channel#commit_work ();
   with e ->
     cgi#out_channel#rollback_work ();
-    err e cgi;
+    err e (cgi:>cgi);
     cgi#out_channel#commit_work ()
 
 module Cgi_arg(T : sig val cgi : Netcgi.cgi end) =
