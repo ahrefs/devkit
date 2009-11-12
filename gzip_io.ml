@@ -3,23 +3,27 @@
 open Prelude
 open Control
 
-let input_ic ic =
+let input io =
+  let iz = Gzip_stream.open_in io in
   IO.create_in 
-    ~read:(fun () -> try Gzip.input_char ic with End_of_file -> raise IO.No_more_input)
-    ~input:(fun s o l -> match Gzip.input ic s o l with 0 -> raise IO.No_more_input | n -> n)
-    ~close:(fun () -> Gzip.close_in ic)
+    ~read:(fun () -> Gzip_stream.input_char iz)
+    ~input:(Gzip_stream.input iz)
+    ~close:(fun () -> Gzip_stream.close_in iz)
 
-let output_oc oc =
+let output io =
+  let oz = Gzip_stream.open_out io in
   IO.create_out
-    ~write:(Gzip.output_char oc)
-    ~output:(fun s o l -> Gzip.output oc s o l; l)
-    ~flush:ignore
-    ~close:(fun () -> Gzip.close_out oc)
+    ~write:(Gzip_stream.output_char oz)
+    ~output:(fun s o l -> Gzip_stream.output oz s o l; l)
+    ~flush:(fun () -> IO.flush io)
+    ~close:(fun () -> Gzip_stream.close_out oz)
 
-let output_ch = output_oc $ Gzip.open_out_chan
-let input_ch = input_ic $ Gzip.open_in_chan
-let input = input_ic $ Gzip.open_in
+(*
+let input_ic ic = input (IO.input_channel ic)
+let output_oc oc = output (IO.output_channel oc)
+*)
 
+(*
 let pipe_in f =
   bracket (Filename.open_temp_file ~mode:[Open_binary] "gzip_io" "gz")
     (fun (tmpname,ch) -> close_out_noerr ch; Sys.remove tmpname)
@@ -30,4 +34,5 @@ let pipe_in f =
         Std.input_file ~bin:true tmpname
       )
     )
+*)
 

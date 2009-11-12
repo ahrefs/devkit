@@ -38,17 +38,18 @@ let serve_content cgi ?status ~ctype (f : 'a IO.output -> unit) =
   let out = IO.from_out_channel cgi#out_channel in (* not closing *)
   f out
 
-let serve_text_io cgi ?status = serve_content cgi ?status ~ctype:"text/plain"
+let serve_text_io cgi ?status = 
+  serve_content cgi ?status ~ctype:"text/plain"
 
 let serve_gzip_io cgi ?status f =
-  serve_content cgi ?status ~ctype:"application/gzip" (flip IO.nwrite (Gzip_io.pipe_in f))
+  serve_content cgi ?status ~ctype:"application/gzip" (fun io -> Control.with_output (Gzip_io.output io) f)
 
-let serve_text cgi ?status text = serve_text_io cgi ?status (flip IO.nwrite text)
+let serve_text cgi ?status text = 
+  serve_text_io cgi ?status (flip IO.nwrite text)
 
 let serve_html cgi html =
   serve_content cgi ~ctype:"text/html" (fun out -> XHTML.M.pretty_print (IO.nwrite out) html)
 
 let not_found cgi = serve_text cgi ~status:`Not_found "Not found"
 let bad_request cgi = serve_text cgi ~status:`Bad_request "Bad request"
-
 
