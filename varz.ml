@@ -87,6 +87,16 @@ initializer
 
 end
 
+let fun_time_value name f =
+object (self)
+
+method gets = Time.duration_str (f ())
+
+initializer
+  reg_value name self
+
+end
+
 let store () = 
   let _vl = values () and cl = controls () in
   Marshal.to_string cl []
@@ -108,8 +118,7 @@ let bytes_string = bytes_string_f $ float_of_int
 let caml_words f =
   bytes_string_f (f *. (float_of_int (Sys.word_size / 8)))
 
-let _ = fun_value "CPU time" (fun () -> 
-  sprintf "%.3fs " (Sys.time ()))
+let _ = fun_time_value "CPU time" Sys.time
 
 let _ = fun_value "Heap(max):" (fun () ->
     let st = Gc.quick_stat () in
@@ -133,7 +142,7 @@ let _ = fun_value "Collections(mv,ma,mi)" (fun () ->
 
 let _ =
   let start = Unix.time() in
-  fun_value "Uptime" (fun () -> Time.duration_str (Unix.time() -. start))
+  fun_time_value "Uptime" (fun () -> Unix.time() -. start)
 
 let value_bytes name =
 object (self)

@@ -34,6 +34,9 @@ dispatch begin function
 
 | After_rules ->
 
+(*      PR#4873 *)
+     flag ["thread"; "toplevel"; "link"; "ocaml"] (S[A"-thread";A"threads.cma"]);
+
      C.extern "extlib" ~cma:"extLib";
      C.extern "pcre";
      C.extern "netsys";
