@@ -18,10 +18,8 @@ let output io =
     ~flush:(fun () -> IO.flush io)
     ~close:(fun () -> Gzip_stream.close_out oz)
 
-(*
-let input_ic ic = input (IO.input_channel ic)
-let output_oc oc = output (IO.output_channel oc)
-*)
+let input_ch ch = input (IO.input_channel ch)
+let output_ch ch = output (IO.output_channel ch)
 
 (*
 let pipe_in f =

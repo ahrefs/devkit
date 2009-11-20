@@ -14,4 +14,4 @@ Gzip_io
 Varz
 Time
 Varz_html
-Gzip_stream
+Gzip_stream Persist
