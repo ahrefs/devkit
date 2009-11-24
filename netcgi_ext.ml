@@ -33,16 +33,24 @@ struct
   let int name = let s = str name in try int_of_string s with _ -> raise (Bad name)
 end
 
+let noclose io =
+  IO.create_out
+    ~write:(IO.write io)
+    ~output:(IO.output io)
+    ~flush:(fun () -> IO.flush io)
+    ~close:(fun () -> ())
+
 let serve_content cgi ?status ~ctype (f : 'a IO.output -> unit) =
   (cgi:>cgi)#set_header ~cache:`No_cache ~content_type:ctype ?status ();
   let out = IO.from_out_channel cgi#out_channel in (* not closing *)
-  f out
+  f (noclose out)
 
 let serve_text_io cgi ?status = 
   serve_content cgi ?status ~ctype:"text/plain"
 
 let serve_gzip_io cgi ?status f =
-  serve_content cgi ?status ~ctype:"application/gzip" (fun io -> Control.with_output (Gzip_io.output io) f)
+  serve_content cgi ?status ~ctype:"application/gzip" (fun io -> 
+    Control.with_output (Gzip_io.output io) f)
 
 let serve_text cgi ?status text = 
   serve_text_io cgi ?status (flip IO.nwrite text)
