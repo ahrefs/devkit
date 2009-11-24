@@ -11,3 +11,5 @@ let get q = locked q.mutex (fun () ->
   while Queue.is_empty q.q do Condition.wait q.cond q.mutex done;
   Queue.pop q.q)
 
+let clear q = locked q.mutex (fun () -> Queue.clear q.q)
+

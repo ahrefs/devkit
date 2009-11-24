@@ -14,6 +14,8 @@ val create : (task -> result) -> int -> t
 (** [perform workers tasks f] distributes [tasks] to all [workers] in parallel,
     collecting results with [f] and returns when all [tasks] are finished *)
 val perform : t -> task Enum.t -> (result -> unit) -> unit
+(** [kill workers] kills worker processes asap *)
+val kill : t -> unit
 end
 
 (** Thread workers *)

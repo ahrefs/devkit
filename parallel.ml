@@ -10,6 +10,7 @@ type result
 type t
 val create : (task -> result) -> int -> t
 val perform : t -> task Enum.t -> (result -> unit) -> unit
+val kill : t -> unit
 end
 
 module Threads(T:WorkerT) =
@@ -23,6 +24,8 @@ let worker qi f qo =
   while true do
     Mtq.put qo (f (Mtq.get qi))
   done
+
+let kill (qi,_,_) = Mtq.clear qi
 
 let create f n =
   let qi = Mtq.create () and qo = Mtq.create () in
@@ -90,6 +93,12 @@ let worker (execute : task -> result) =
 type t = (in_channel * out_channel * int) list * (task -> result)
 
 let create f n = let l = ref [] in for i = 1 to n do l := worker f :: !l done; !l, f
+
+let kill (l,_) =
+  List.iter (fun (cin,cout,pid) ->
+    close_in_noerr cin;
+    close_out_noerr cout;
+    Unix.kill pid Sys.sigkill) l
 
 let perform (l,execute) e f =
     match l with
