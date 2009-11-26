@@ -40,10 +40,13 @@ let noclose io =
     ~flush:(fun () -> IO.flush io)
     ~close:(fun () -> ())
 
-let serve_content cgi ?status ~ctype (f : 'a IO.output -> unit) =
-  (cgi:>cgi)#set_header ~cache:`No_cache ~content_type:ctype ?status ();
+let cgi_output cgi (f : 'a IO.output -> unit) =
   let out = IO.from_out_channel cgi#out_channel in (* not closing *)
   f (noclose out)
+
+let serve_content cgi ?status ~ctype (f : 'a IO.output -> unit) =
+  (cgi:>cgi)#set_header ~cache:`No_cache ~content_type:ctype ?status ();
+  cgi_output cgi f
 
 let serve_text_io cgi ?status = 
   serve_content cgi ?status ~ctype:"text/plain"
