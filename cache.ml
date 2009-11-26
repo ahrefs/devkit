@@ -105,3 +105,15 @@ struct
   let enum t = enum t
 end
 
+module Group : sig
+  type ('a,'b) t
+  val by : ('a -> 'b) -> ('a,'b) t
+  val add : ('a,'b) t -> 'a -> unit
+  val get : ('a,'b) t -> 'b -> 'a list
+end = struct
+  type ('a,'b) t = ('b,'a) Hashtbl.t * ('a -> 'b)
+  let by f = Hashtbl.create 32, f
+  let add (h,f) x = Hashtbl.add h (f x) x
+  let get (h,_) k = Hashtbl.find_all h k
+end
+
