@@ -34,6 +34,13 @@ dispatch begin function
 
 | After_rules ->
 
+    let copy_modules ext = rule ("copy devkit.modules to devkit."^ext) ~deps:["devkit.modules"] ~prod:("devkit."^ext)
+      (fun _ _ -> Cmd (S[P"cp"; A"devkit.modules"; A("devkit."^ext)])) in
+
+    copy_modules "mllib";
+    copy_modules "odocl";
+    copy_modules "mltop";
+
 (*      PR#4873 *)
      flag ["thread"; "toplevel"; "link"; "ocaml"] (S[A"-thread";A"threads.cma"]);
 
