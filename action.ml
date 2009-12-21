@@ -14,3 +14,16 @@ let partition l n =
   ExtList.List.iteri (fun i x -> let i = i mod n in a.(i) <- x :: a.(i)) l;
   a
 
+module App(Info : sig val version : string val name : string end) = struct
+
+let run main =
+  Printexc.record_backtrace true;
+  Log.info "%s started. Version %s. PID %u" Info.name Info.version (Unix.getpid ());
+  try
+    main ();
+    Log.info "%s finished." Info.name
+  with
+    e -> Log.error "%s aborted : %s" Info.name (Exn.str e); Log.error_s (Printexc.get_backtrace ())
+
+end
+
