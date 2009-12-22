@@ -117,3 +117,38 @@ end = struct
   let get (h,_) k = Hashtbl.find_all h k
 end
 
+(** One-to-one associations *)
+module Assoc : sig
+  type ('a,'b) t
+  val create : unit -> ('a,'b) t
+  (** Add association, assert on duplicate key *)
+  val add : ('a,'b) t -> 'a -> 'b -> unit
+  (** Get associated value, @raise Not_found if key is not present *)
+  val get : ('a,'b) t -> 'a -> 'b
+  (** Get associated value *)
+  val try_get : ('a,'b) t -> 'a -> 'b option
+  (** Delete association, assert if key is not present, @return associated value *)
+  val del : ('a,'b) t -> 'a -> 'b
+  (** Delete association, assert if key is not present *)
+  val remove : ('a,'b) t -> 'a -> unit
+  val size : ('a,'b) t -> int
+end = struct
+  type ('a,'b) t = ('a,'b) Hashtbl.t
+  let create () = Hashtbl.create 32
+  let add h k v =
+    assert (false = Hashtbl.mem h k);
+    Hashtbl.add h k v
+  let get = Hashtbl.find
+  let try_get = Hashtbl.find_option
+  let del h k =
+    try 
+      let v = Hashtbl.find h k in
+      Hashtbl.remove h k; v
+    with
+      Not_found -> assert false
+  let remove h k =
+    assert (true = Hashtbl.mem h k);
+    Hashtbl.remove h k
+  let size = Hashtbl.length
+end
+
