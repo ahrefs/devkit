@@ -65,6 +65,9 @@ let () =
   handle_sig_exit_with (fun () ->
     List.iter (fun fin -> try fin () with e -> Exn.log e "sig_exit_funcs") !sig_exit_funcs);
   handle_sig_reload_with (fun () ->
-    List.iter (fun fin -> try fin () with e -> Exn.log e "sig_reload_funcs") !sig_reload_funcs);
+    List.iter (fun fin -> try fin () with e -> Exn.log e "sig_reload_funcs") !sig_reload_funcs)
 
+let string_of_sockaddr = function
+  | Unix.ADDR_UNIX s -> Printf.sprintf "unix:%s" s
+  | Unix.ADDR_INET (addr,port) -> Printf.sprintf "%s:%u" (Unix.string_of_inet_addr addr) port
 
