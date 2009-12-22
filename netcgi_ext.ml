@@ -25,10 +25,16 @@ let perform_cgi f (err:exn->cgi->unit) =
     err e (cgi:>cgi);
     cgi#out_channel#commit_work ()
 
-module Cgi_arg(T : sig val cgi : Netcgi.cgi end) =
+class type cgi_args = 
+object
+method argument : string -> < value : string >
+end
+
+module Cgi_arg(T : sig val cgi : cgi_args end) =
 struct
+  let arg name = (T.cgi#argument name)#value
   exception Bad of string
-  let get name = try Some (T.cgi#argument name)#value with _ -> None
+  let get name = Exn.catch arg name
   let str name = match get name with Some s -> s | None -> raise (Bad name)
   let int name = let s = str name in try int_of_string s with _ -> raise (Bad name)
 end
