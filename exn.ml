@@ -18,7 +18,8 @@ let log_s e s = Log.warn "%s : exception : %s" s (to_string e)
 let log e fmt = Printf.ksprintf (log_s e) fmt
 
 (** [log_try f x] logs and reraises any exception raised by [f x] *)
-let log_try f x = try f x with e -> log e "Exn.log_try"; raise e
+let log_try ?name f x = 
+  try f x with e -> log_s e (Option.default "Exn.log_try" name); raise e
 (** Apply [f x], exception (if any) is logged and suppressed. *)
 let log_catch ?name f x =
   try f x with e -> log_s e (Option.default "Exn.log_catch" name)
@@ -26,8 +27,9 @@ let log_catch ?name f x =
 let log_action ?name f x =
   try
     Option.may (Log.info "Action \"%s\" started") name;
+    let t = Unix.gettimeofday () in
     let () = f x in
-    Option.may (Log.info "Action \"%s\" finished") name
+    Option.may (fun name -> Log.info "Action \"%s\" finished (%f secs)" name (Unix.gettimeofday () -. t)) name
   with
     e ->
       let name = Option.map_default (Printf.sprintf " \"%s\"") "" name in
