@@ -14,7 +14,7 @@ doc:
 		ocamlbuild -j 0 devkit.docdir/index.html
 
 install: all
-		ocamlfind install devkit META _build/*.{cmi,mli,cma,cmxa}
+		ocamlfind install devkit META _build/*.{cmi,mli,cma,cmxa,a}
 
 remove:
 		ocamlfind remove devkit
