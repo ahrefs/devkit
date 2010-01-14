@@ -20,10 +20,29 @@ end
 module Simple(T : Target) =
 struct
 
+  let last = ref (Debug,"")
+  let n = ref 0
+
+  (** FIXME? not thread safe *)
   let put level str =
     let facil = "" in
-    if T.filter level facil str then 
-      T.output (T.format level facil str)
+    match T.filter level facil str with
+    | false -> ()
+    | true ->
+      let this = (level,str) in
+      if !last = this then 
+        incr n
+      else
+      begin
+        if !n <> 0 then
+        begin
+         T.output (sprintf 
+          "last message repeated %u times, suppressed\n" !n);
+          n := 0
+        end;
+        last := this; 
+        T.output (T.format level facil str);
+      end
 
   let logs_debug = put Debug
   let logs_info = put Info
