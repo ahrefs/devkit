@@ -42,3 +42,7 @@ module Search(GET : sig val get : string -> string end) = struct
 
 end
 
+let get_host = String.lowercase $ Neturl.url_host $ Neturl.parse_url
+let urlencode = Netencoding.Url.encode
+let urldecode = Netencoding.Url.decode
+
