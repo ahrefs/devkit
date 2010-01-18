@@ -1,12 +1,23 @@
 (** Misc *)
 
+open ExtLib
 open Printf
+
+open Prelude
 
 let period n f = 
   let count = ref 0 in
   (fun () -> incr count; if !count mod n = 0 then f !count)
 
 let strl f l = sprintf "[%s]" (String.concat ";" (List.map f l))
+
+let uniq p e =
+  let h = Hashtbl.create 16 in
+  Enum.filter (fun x ->
+    let k = p x in
+    if Hashtbl.mem h k then false else (Hashtbl.add h k (); true)) e
+
+let list_uniq p = List.of_enum $ uniq p $ List.enum
 
 (** [partition l n] splits [l] into [n] chunks *)
 let partition l n =
