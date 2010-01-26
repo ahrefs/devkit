@@ -16,7 +16,7 @@ doc:
 install: all
 		ocamlfind install devkit META _build/*.{cmi,mli,cma,cmxa,a}
 
-remove:
+uninstall:
 		ocamlfind remove devkit
 
 clean:

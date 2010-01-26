@@ -2,7 +2,7 @@ open Ocamlbuild_plugin
 open Command
 open Printf
 
-let static = true
+(* let static = true *)
 
 module C = Myocamlbuild_config
 
@@ -75,7 +75,7 @@ dispatch begin function
      dep ["ocaml"; "ocamldep"; "use_openin"] ["pa_openin.cmo"];
 
      (* If `static' is true then every ocaml link in bytecode will add -custom *)
-     if static then flag ["link"; "ocaml"; "byte"] (A"-custom");
+(*      if static then flag ["link"; "ocaml"; "byte"] (A"-custom"); *)
  
      flag ["link"; "ocaml"; "use_netstring"; "thread"; "byte"] (S[A"netstring_mt.cmo"]);
      flag ["link"; "ocaml"; "use_netstring"; "thread"; "native"] (S[A"netstring_mt.cmx"]);
