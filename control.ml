@@ -2,8 +2,8 @@
 
 let bracket resource destroy k = Std.finally (fun () -> destroy resource) k resource
 
-let with_open_in name = bracket (open_in name) close_in_noerr
-let with_open_out name = bracket (open_out name) close_out_noerr
+let with_open_in_txt name = bracket (open_in name) close_in_noerr
+let with_open_out_txt name = bracket (open_out name) close_out_noerr
 let with_open_in_bin name = bracket (open_in_bin name) close_in_noerr
 let with_open_out_bin name = bracket (open_out_bin name) close_out_noerr
 let with_open_out_temp_file ~mode = bracket (Filename.open_temp_file ~mode "dvkt" "tmp") (fun (_,ch) -> close_out_noerr ch)
