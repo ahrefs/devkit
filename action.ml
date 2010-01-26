@@ -25,6 +25,23 @@ let partition l n =
   ExtList.List.iteri (fun i x -> let i = i mod n in a.(i) <- x :: a.(i)) l;
   a
 
+(* FIXME *)
+
+let bytes_string_f f = (* oh ugly *)
+  if f < 1024. then sprintf "%uB" (int_of_float f) else
+  if f < 1024. *. 1024. then sprintf "%uKB" (int_of_float (f /. 1024.)) else
+  if f < 1024. *. 1024. *. 1024. then sprintf "%.1fMB" (f /. 1024. /. 1024.) else
+  sprintf "%.1fGB" (f /. 1024. /. 1024. /. 1024.)
+
+let bytes_string = bytes_string_f $ float_of_int
+
+let caml_words_f f =
+  bytes_string_f (f *. (float_of_int (Sys.word_size / 8)))
+
+let caml_words = caml_words_f $ float_of_int
+
+(* EMXIF *)
+
 module App(Info : sig val version : string val name : string end) = struct
 
 let run main =

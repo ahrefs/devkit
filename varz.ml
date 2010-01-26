@@ -14,7 +14,7 @@ let values = Hashtbl.create 16
 let controls = Hashtbl.create 16
 
 let reg_value (name:string) x =
-  Hashtbl.add values name (x:><gets:string>)
+  Hashtbl.add values name (x:><gets:string;name:string>)
 
 let reg_control (name:string) x =
   Hashtbl.add controls name (x:><gets:string; sets:string->bool>)
@@ -38,6 +38,7 @@ method addl n = x <- Int64.add x n
 method add n = x <- Int64.add x (Int64.of_int n)
 method get = x
 method gets = Int64.to_string x
+method name = name
 
 initializer
   reg_value name self
@@ -50,6 +51,7 @@ object (self)
 val mutable x = 0.
 method add n = x <- x +. n
 method gets = string_of_float x
+method name = name
 
 initializer
   reg_value name self
@@ -61,6 +63,7 @@ object(self)
 val mutable x = 0.
 method add n = x <- x +. n
 method gets = Time.duration_str x
+method name = name
 initializer
   reg_value name self
 end
@@ -81,6 +84,7 @@ let fun_value name f =
 object (self)
 
 method gets = f ()
+method name = name
 
 initializer
   reg_value name self
@@ -91,6 +95,7 @@ let fun_time_value name f =
 object (self)
 
 method gets = Time.duration_str (f ())
+method name = name
 
 initializer
   reg_value name self
@@ -106,41 +111,34 @@ let restore s =
   List.iter (fun (k,v) -> ignore (set_control k v)) cl
 
 open Printf
+open Action
 
-let bytes_string_f f = (* oh ugly *)
-  if f < 1024. then sprintf "%uB" (int_of_float f) else
-  if f < 1024. *. 1024. then sprintf "%uKB" (int_of_float (f /. 1024.)) else
-  if f < 1024. *. 1024. *. 1024. then sprintf "%.1fMB" (f /. 1024. /. 1024.) else
-  sprintf "%.1fGB" (f /. 1024. /. 1024. /. 1024.)
+let cpu_time = fun_time_value "CPU time" Sys.time
 
-let bytes_string = bytes_string_f $ float_of_int
-
-let caml_words f =
-  bytes_string_f (f *. (float_of_int (Sys.word_size / 8)))
-
-let _ = fun_time_value "CPU time" Sys.time
-
-let _ = fun_value "Heap(max):" (fun () ->
+let gc_heap = fun_value "Heap" begin fun () ->
     let st = Gc.quick_stat () in
-    sprintf "%s(%s)"
-        (caml_words (float_of_int st.Gc.heap_words)) 
-        (caml_words (float_of_int st.Gc.top_heap_words)))
+    sprintf "%s live %s max %s chunks %u"
+        (caml_words st.Gc.heap_words) 
+        (caml_words st.Gc.live_words)
+        (caml_words st.Gc.top_heap_words)
+        st.Gc.heap_chunks
+    end
 
-let _ = fun_value "Counters(mi,pr,ma)" (fun () ->
+let gc_ctrs = fun_value "Counters(mi,pr,ma)" (fun () ->
     let st = Gc.quick_stat () in
     sprintf "%s %s %s"
-        (caml_words st.Gc.minor_words)
-        (caml_words st.Gc.promoted_words)
-        (caml_words st.Gc.major_words))
+        (caml_words_f st.Gc.minor_words)
+        (caml_words_f st.Gc.promoted_words)
+        (caml_words_f st.Gc.major_words))
 
-let _ = fun_value "Collections(mv,ma,mi)" (fun () ->
+let gc_coll = fun_value "Collections(mv,ma,mi)" (fun () ->
     let st = Gc.quick_stat () in
     sprintf "%u %u %u"
         st.Gc.compactions 
         st.Gc.major_collections 
         st.Gc.minor_collections)
 
-let _ =
+let uptime =
   let start = Unix.time() in
   fun_time_value "Uptime" (fun () -> Unix.time() -. start)
 
@@ -151,9 +149,16 @@ val mutable x = 0L
 method add n = x <- Int64.add x (Int64.of_int n)
 method addl n = x <- Int64.add x n
 method gets = Int64.to_float x >> bytes_string_f
+method name = name
 
 initializer
   reg_value name self
 
 end
+
+let gc = [ gc_heap; gc_ctrs; gc_coll; ]
+
+let log x = Log.info "Varz %s : %s" x#name x#gets
+
+let log_l l = Log.info "Varz %s" (String.concat " " (List.map (fun x -> sprintf "%s : %s" x#name x#gets) l))
 
