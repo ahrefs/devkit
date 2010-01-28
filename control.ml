@@ -11,6 +11,7 @@ let with_open_out_temp_bin k = with_open_out_temp_file ~mode:[Open_binary] k
 
 let with_output io = bracket io IO.close_out
 let with_input io = bracket io IO.close_in
+let with_input_bin name k = with_open_in_bin name (fun ch -> k (IO.input_channel ch))
 
 let locked mutex f = Mutex.lock mutex; Std.finally (fun () -> Mutex.unlock mutex) f ()
 

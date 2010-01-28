@@ -2,6 +2,7 @@
 
 let ($) f g = fun x -> f (g x)
 let (>>) x f = f x
+let (&) f x = f x
 
 external id : 'a -> 'a = "%identity"
 let flip f x y = f y x
