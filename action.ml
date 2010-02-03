@@ -55,3 +55,13 @@ let run main =
 
 end
 
+class timer = 
+let tm = Unix.gettimeofday  in
+object
+
+val start = tm ()
+method get = tm () -. start
+method gets = sprintf "%.6f" & tm () -. start
+
+end
+
