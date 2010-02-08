@@ -1,6 +1,7 @@
 (** More string functions *)
 
 open Prelude
+open ExtLib
 
 let by_words = Pcre.regexp ~flags:[`UTF8] "(?:[^\\pL\\pN.]|_)+"
 let split rex str = match Pcre.split ~rex str with ""::l -> l | l -> l
@@ -30,4 +31,6 @@ let string_of_stream s =
 
 let split_words = split by_words $ string_of_stream $ erase_dots
 let split_words s = try split_words s with e -> Exn.log e "split_words \"%s\"" s; [s]
+
+let concat sep e = String.concat " " (List.of_enum e)
 

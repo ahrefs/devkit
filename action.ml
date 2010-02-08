@@ -19,6 +19,12 @@ let uniq p e =
 
 let list_uniq p = List.of_enum $ uniq p $ List.enum
 
+let list_random_exn l = List.nth l (Random.int (List.length l))
+
+let list_random = function
+  | [] -> None
+  | l -> list_random_exn l >> some
+
 (** [partition l n] splits [l] into [n] chunks *)
 let partition l n =
   let a = Array.make n [] in
