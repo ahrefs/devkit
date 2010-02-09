@@ -68,6 +68,7 @@ object
 val start = tm ()
 method get = tm () -. start
 method gets = sprintf "%.6f" & tm () -. start
+method get_str = Time.duration_str & tm () -. start
 
 end
 

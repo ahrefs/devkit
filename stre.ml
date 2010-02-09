@@ -6,6 +6,12 @@ open ExtLib
 let by_words = Pcre.regexp ~flags:[`UTF8] "(?:[^\\pL\\pN.]|_)+"
 let split rex str = match Pcre.split ~rex str with ""::l -> l | l -> l
 
+let extract rex str = 
+  try
+    Some (Pcre.extract ~rex ~full_match:false str).(0)
+  with
+    _ -> None
+
 let erase_dots s = 
   let rec erase = parser
   | [< ''\''; t >] -> erase t
