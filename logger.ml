@@ -1,8 +1,9 @@
 
 open Printf
 
-type level = | Debug | Info | Warn | Error
-type facil = string
+type level = Debug | Info | Warn | Error
+type facil = { name : string; mutable show : level }
+let filter facil level = facil.show <- level
 
 let level_string = function
   | Debug -> "debug"
@@ -17,15 +18,27 @@ sig
   val output : string -> unit
 end
 
-module Simple(T : Target) =
+module type Put = sig
+val put : level -> facil -> string -> unit
+end
+
+module PutSimple(T : Target) : Put =
+struct
+
+  let put level facil str =
+    if T.filter level facil str then
+      T.output (T.format level facil str)
+
+end
+
+module PutLimited(T : Target) : Put =
 struct
 
   let last = ref (Debug,"")
   let n = ref 0
 
-  (** FIXME? not thread safe *)
-  let put level str =
-    let facil = "" in
+  (** FIXME not thread safe *)
+  let put level facil str =
     match T.filter level facil str with
     | false -> ()
     | true ->
@@ -44,23 +57,19 @@ struct
         T.output (T.format level facil str);
       end
 
-  let logs_debug = put Debug
-  let logs_info = put Info
-  let logs_warn = put Warn
-  let logs_error = put Error
-
-  let log_debug fmt = ksprintf logs_debug fmt
-  let log_info fmt = ksprintf logs_info fmt
-  let log_warn fmt = ksprintf logs_warn fmt
-  let log_error fmt = ksprintf logs_error fmt
-
 end
 
-let output_ch ch = 
-  fun str -> output_string ch str; flush ch
+module Make(T : Put) = struct
 
-let format_simple l _ s =
-  sprintf "[%s] : %06u:%04u : [%5s] %s\n" (Time.gmt_string_ms (Unix.gettimeofday ())) (Unix.getpid ()) (Thread.id (Thread.self ())) (level_string l) s
+  let debug_s = T.put Debug
+  let info_s = T.put Info
+  let warn_s = T.put Warn
+  let error_s = T.put Error
 
-let filter_none _ _ _ = true
+  let debug f fmt = ksprintf (debug_s f) fmt
+  let info f fmt = ksprintf (info_s f) fmt
+  let warn f fmt = ksprintf (warn_s f) fmt
+  let error f fmt = ksprintf (error_s f) fmt
+
+end
 

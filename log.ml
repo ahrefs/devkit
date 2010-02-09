@@ -4,38 +4,110 @@
   TODO interface to manage State
 *)
 
+(**
+{2 Example usage}
+
+Create logging facility (messages origin)
+{[let http = Log.facility "http"]}
+
+Log from http subsystem at debug level
+{[Log.debug http "received %u bytes"]}
+
+Create and use object for http logging
+{[let log = Log.from http;;
+log#info "sent %u bytes"]}
+
+Output only messages of warning level or higher for the http facility
+{[Logger.filter http Logger.Warn]}
+or
+{[Log.set_filter ~name:"http" Logger.Warn]}
+
+Output only messages of warning level or higher for all facilities
+{[Log.set_filter Logger.Warn]}
+
+{2 API}
+*)
+
+open ExtLib
+
+(** Global logger state *)
 module State = struct
 
-  let log_ch = ref stderr
-  let output = ref (Logger.output_ch stderr)
+  let all = Hashtbl.create 10
 
-  module M = Logger.Simple(
+  let facility name =
+    try
+      Hashtbl.find all name
+    with
+      Not_found ->
+        let x = { Logger.name = name; show = Logger.Info } in
+        Hashtbl.add all name x; 
+        x
+
+  let set_filter ?name level =
+    match name with
+    | None -> Hashtbl.iter (fun _ x -> Logger.filter x level) all
+    | Some name -> match Hashtbl.find_option all name with
+                   | Some x -> Logger.filter x level
+                   | None -> ()
+
+  let output_ch ch = 
+    fun str -> output_string ch str; flush ch
+
+  let format_simple level facil msg =
+    Printf.sprintf "[%s] : %06u:%04u : %6s : [%5s] %s\n" 
+      (Time.gmt_string_ms (Unix.gettimeofday ())) 
+      (Unix.getpid ()) 
+      (Thread.id (Thread.self ()))
+      facil.Logger.name
+      (Logger.level_string level)
+      msg
+
+  let filter l f _ = l >= f.Logger.show
+
+  let log_ch = ref stderr
+  let output = ref (output_ch stderr)
+
+  module Put = Logger.PutSimple(
   struct
-    let filter = Logger.filter_none
-    let format = Logger.format_simple
+    let filter = filter
+    let format = format_simple
     let output = fun s -> !output s
   end)
+
+  module M = Logger.Make(Put)
+
+  let self = "devkit"
 
   let reopen_log_ch file =
     try
       let ch = Files.open_out_append file in
-      output := Logger.output_ch ch;
+      output := output_ch ch;
       if !log_ch <> stderr then close_out_noerr !log_ch;
       log_ch := ch
     with
-      e -> M.log_warn "reopen_log_ch(%s) failed : %s" file (Printexc.to_string e)
+      e -> M.warn (facility self) "reopen_log_ch(%s) failed : %s" file (Printexc.to_string e)
 
 end
 
-open State
+include State.M
 
-let debug = M.log_debug
-let info = M.log_info
-let warn = M.log_warn
-let error = M.log_error
+let facility = State.facility
 
-let debug_s = M.logs_debug
-let info_s = M.logs_info
-let warn_s = M.logs_warn
-let error_s = M.logs_error
+type 'a pr = ('a, unit, string, unit) format4 -> 'a
+
+let from name =
+let facil = facility name in
+object
+method debug : 'a. 'a pr = fun fmt -> debug facil fmt
+method warn : 'a. 'a pr = fun fmt -> warn facil fmt
+method info : 'a. 'a pr = fun fmt -> info facil fmt
+method error : 'a. 'a pr = fun fmt -> error facil fmt
+end
+
+(** internal logging facility *)
+let self = from State.self
+
+(** general logging facility *)
+let main = from "main"
 

@@ -156,7 +156,7 @@ end
 
 let gc = [ gc_heap; gc_ctrs; gc_coll; ]
 
-let log x = Log.info "Varz %s : %s" x#name x#gets
+let log x = Log.self #info "Varz %s : %s" x#name x#gets
 
-let log_l l = Log.info "Varz %s" (String.concat " " (List.map (fun x -> sprintf "%s : %s" x#name x#gets) l))
+let log_l l = Log.self #info "Varz %s" (String.concat " " (List.map (fun x -> sprintf "%s : %s" x#name x#gets) l))
 

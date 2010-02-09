@@ -52,12 +52,12 @@ module App(Info : sig val version : string val name : string end) = struct
 
 let run main =
   Printexc.record_backtrace true;
-  Log.info "%s started. Version %s. PID %u" Info.name Info.version (Unix.getpid ());
+  Log.self #info "%s started. Version %s. PID %u" Info.name Info.version (Unix.getpid ());
   try
     main ();
-    Log.info "%s finished." Info.name
+    Log.self #info "%s finished." Info.name
   with
-    e -> Log.error "%s aborted : %s" Info.name (Exn.str e); Log.error_s (Printexc.get_backtrace ())
+    e -> Log.self #error "%s aborted : %s" Info.name (Exn.str e); Log.self #error "%s" (Printexc.get_backtrace ())
 
 end
 

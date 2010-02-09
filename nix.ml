@@ -33,9 +33,9 @@ let handle_sig_exit_with fin =
   List.iter
     (fun signal -> Sys.set_signal signal (Sys.Signal_handle 
       (fun n ->
-        Log.info "Received signal %i (exit)..." n;
+        Log.self #info "Received signal %i (exit)..." n;
         (try fin () with e -> Exn.log e "handle_sig_exit");
-        Log.info "Signal handler done. Exiting.";
+        Log.self #info "Signal handler done. Exiting.";
         exit 0)))
     [Sys.sigint; Sys.sigterm]
 
@@ -44,9 +44,9 @@ let handle_sig_reload_with fin =
   List.iter
     (fun signal -> Sys.set_signal signal (Sys.Signal_handle 
       (fun n -> 
-        Log.info "Received signal %i (reload)..." n; 
+        Log.self #info "Received signal %i (reload)..." n; 
         (try fin () with e -> Exn.log e "handle_sig_reload");
-        Log.info "Signal handler done."
+        Log.self #info "Signal handler done."
         )))
     [Sys.sighup; Sys.sigusr1; Sys.sigusr2]
 

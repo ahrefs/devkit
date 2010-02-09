@@ -78,7 +78,7 @@ let bad_request ?(text="Bad request") cgi = serve_text cgi ~status:`Bad_request 
 
 let listen_fcgi port perform =
   let addr = Unix.inet_addr_loopback in
-  Log.info "Ready for FastCGI on %s:%u" (Unix.string_of_inet_addr addr) port;
+  Log.self #info "Ready for FastCGI on %s:%u" (Unix.string_of_inet_addr addr) port;
   let buffered _ ch = new Netchannels.buffered_trans_channel ch in
   Netcgi_fcgi.run ~output_type:(`Transactional buffered)
     ~sockaddr:(Unix.ADDR_INET (addr,port)) perform
