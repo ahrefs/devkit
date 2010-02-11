@@ -39,7 +39,7 @@ let set_data (s : 'a t) (d : 'a data) =
 ;;
 
 let fill_buff b =
-  b.len <- IO.input b.ic b.buff 0 (String.length b.buff); b.ind <- 0
+  b.len <- (try IO.input b.ic b.buff 0 (String.length b.buff) with IO.No_more_input -> 0); b.ind <- 0
 ;;
 
 let rec get_data count d = match d with
