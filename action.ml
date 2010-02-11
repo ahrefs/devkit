@@ -72,3 +72,18 @@ method get_str = Time.duration_str & tm () -. start
 
 end
 
+let log ?name f x =
+  try
+    Option.may (Log.self #info "Action \"%s\" started") name;
+    let t = Unix.gettimeofday () in
+    let () = f x in
+    Option.may (fun name -> Log.self #info "Action \"%s\" finished (%f secs)" name (Unix.gettimeofday () -. t)) name
+  with
+    e ->
+      let name = Option.map_default (Printf.sprintf " \"%s\"") "" name in
+      Log.self #error "Action%s aborted with uncaught exception : %s" name (Exn.str e);
+      Log.self #error "%s" (Printexc.get_backtrace ())
+
+let log_thread ?name f x =
+  Thread.create (fun () -> log ?name f x) ()
+

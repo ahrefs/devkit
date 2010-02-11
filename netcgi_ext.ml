@@ -12,7 +12,7 @@ let cgi_show_exn exn cgi =
 
 let cgi_suppress_exn exn cgi =
   (cgi:>cgi)#set_header ~cache:`No_cache ~content_type:"text/plain" ~status:`Internal_server_error ();
-  Exn.log exn "Netcgi_ext.suppress_exn";
+  Log.self #warn ~exn "Netcgi_ext.suppress_exn";
   cgi#out_channel#output_string "Internal server error"
 
 let perform_cgi f (err:exn->cgi->unit) =

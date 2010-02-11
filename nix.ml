@@ -34,7 +34,7 @@ let handle_sig_exit_with fin =
     (fun signal -> Sys.set_signal signal (Sys.Signal_handle 
       (fun n ->
         Log.self #info "Received signal %i (exit)..." n;
-        (try fin () with e -> Exn.log e "handle_sig_exit");
+        (try fin () with exn -> Log.self #warn ~exn "handle_sig_exit");
         Log.self #info "Signal handler done. Exiting.";
         exit 0)))
     [Sys.sigint; Sys.sigterm]
@@ -45,7 +45,7 @@ let handle_sig_reload_with fin =
     (fun signal -> Sys.set_signal signal (Sys.Signal_handle 
       (fun n -> 
         Log.self #info "Received signal %i (reload)..." n; 
-        (try fin () with e -> Exn.log e "handle_sig_reload");
+        (try fin () with exn -> Log.self #warn ~exn "handle_sig_reload");
         Log.self #info "Signal handler done."
         )))
     [Sys.sighup; Sys.sigusr1; Sys.sigusr2]
@@ -63,9 +63,9 @@ let with_sig_reload f k = register_sig sig_reload_funcs f k
 
 let () = 
   handle_sig_exit_with (fun () ->
-    List.iter (fun fin -> try fin () with e -> Exn.log e "sig_exit_funcs") !sig_exit_funcs);
+    List.iter (fun fin -> try fin () with exn -> Log.self #warn ~exn "sig_exit_funcs") !sig_exit_funcs);
   handle_sig_reload_with (fun () ->
-    List.iter (fun fin -> try fin () with e -> Exn.log e "sig_reload_funcs") !sig_reload_funcs)
+    List.iter (fun fin -> try fin () with exn -> Log.self #warn ~exn "sig_reload_funcs") !sig_reload_funcs)
 
 let string_of_sockaddr = function
   | Unix.ADDR_UNIX s -> Printf.sprintf "unix:%s" s

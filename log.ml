@@ -28,6 +28,7 @@ Output only messages of warning level or higher for all facilities
 {2 API}
 *)
 
+open Printf
 open ExtLib
 
 (** Global logger state *)
@@ -55,7 +56,7 @@ module State = struct
     fun str -> output_string ch str; flush ch
 
   let format_simple level facil msg =
-    Printf.sprintf "[%s] : %06u:%04u : %6s : [%5s] %s\n" 
+    sprintf "[%s] %06u:%04u %8s [%5s] %s\n" 
       (Time.gmt_string_ms (Unix.gettimeofday ())) 
       (Unix.getpid ()) 
       (Thread.id (Thread.self ()))
@@ -77,7 +78,7 @@ module State = struct
 
   module M = Logger.Make(Put)
 
-  let self = "devkit"
+  let self = "lib"
 
   let reopen_log_ch file =
     try
@@ -94,15 +95,20 @@ include State.M
 
 let facility = State.facility
 
-type 'a pr = ('a, unit, string, unit) format4 -> 'a
+type 'a pr = ?exn:exn -> ('a, unit, string, unit) format4 -> 'a
 
 let from name =
 let facil = facility name in
+let perform f =
+  fun ?exn fmt -> match exn with
+    | Some exn -> ksprintf (fun s -> f facil (s ^ " : exn " ^ Exn.str exn)) fmt
+    | None -> ksprintf (f facil) fmt
+in
 object
-method debug : 'a. 'a pr = fun fmt -> debug facil fmt
-method warn : 'a. 'a pr = fun fmt -> warn facil fmt
-method info : 'a. 'a pr = fun fmt -> info facil fmt
-method error : 'a. 'a pr = fun fmt -> error facil fmt
+method debug : 'a. 'a pr = perform debug_s
+method warn : 'a. 'a pr = perform warn_s
+method info : 'a. 'a pr = perform info_s
+method error : 'a. 'a pr = perform error_s
 end
 
 (** internal logging facility *)

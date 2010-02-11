@@ -36,7 +36,7 @@ let string_of_stream s =
   let b = Buffer.create 32 in Stream.iter (Buffer.add_char b) s; Buffer.contents b
 
 let split_words = split by_words $ string_of_stream $ erase_dots
-let split_words s = try split_words s with e -> Exn.log e "split_words \"%s\"" s; [s]
+let split_words s = try split_words s with exn -> Log.self #warn ~exn "split_words \"%s\"" s; [s]
 
 let concat sep e = String.concat " " (List.of_enum e)
 
