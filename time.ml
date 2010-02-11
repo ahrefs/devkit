@@ -5,6 +5,10 @@ open ExtLib
 
 open Prelude
 
+type t = float
+
+let get = Unix.gettimeofday
+
 let gmt_string t = 
   let module U = Unix in
   let t = U.gmtime t in
