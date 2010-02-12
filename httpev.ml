@@ -1,10 +1,11 @@
+(** Very simple and incomplete HTTP server *)
 
 open Prelude
 
 open Printf
 module Ev = Liboevent
 
-let log = Log.from "http"
+let log = Log.from "httpev"
 
 DEFINE INC(x) = x <- x + 1
 DEFINE DEC(x) = x <- x - 1
@@ -133,8 +134,11 @@ let handle_client status fd client answer =
       log #warn ~exn "handle_client %s" & show_client client
   end
 
+include struct
+open Unix
+
 let server addr answer = 
-  open Unix in
+(*   open Unix in *)
   let fd = socket PF_INET SOCK_STREAM 0 in
   set_nonblock fd;
   setsockopt fd SO_REUSEADDR true;
@@ -151,6 +155,8 @@ let server addr answer =
   end;
   Ev.dispatch ()
 
+end
+
 let header n v = sprintf "%s: %s" n v
 let bad_request = `Bad_request, [], "bad request"
 let not_found = `Not_found, [], "not found"
@@ -162,13 +168,13 @@ let server addr answer =
     | Some url -> answer status url)
 
 (*
-let answer = function
-  | None -> bad_request, "Bad request"
-  | Some url ->
-    let answer = sprintf "answer %s\n%s" url (String.create 102400) in
-    [status `Ok], answer
+let answer st url =
+  match url with
+  | "/test" -> 
+    let body = sprintf "answer %s\n%s" url (String.create 102400) in
+    `Ok,[],answer
+  | _ -> not_found
 
 let () =
   server (Unix.ADDR_INET (Unix.inet_addr_any, 8081)) answer
-
 *)

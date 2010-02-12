@@ -5,4 +5,5 @@ true: annot, debug, thread
 <gzip_*.ml>: use_zip
 "varz_html.ml" or "netcgi_ext.ml": use_xhtml
 "stre.ml": camlp4o, use_pcre
-<*.top>: use_extLib, use_pcre, use_netstring, use_netcgi, use_xhtml, use_netsys, use_zip, use_unix
+"httpev.ml": use_liboevent, camlp4o, pa_macro
+<*.top>: use_extLib, use_pcre, use_netstring, use_netcgi, use_xhtml, use_netsys, use_zip, use_unix, use_liboevent

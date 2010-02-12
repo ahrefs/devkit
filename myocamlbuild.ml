@@ -58,6 +58,7 @@ dispatch begin function
      C.extern "curl";
      C.extern "fileutils";
      C.extern "ocsigen.xhtml" ~cma:"xhtml";
+     C.extern "event" ~cma:"liboevent";
 
      flag ["ocaml"; "doc"; "use_extLib"] (S[A"-I"; A (C.lib "extlib")]);
      flag ["ocaml"; "doc"; "use_netstring"] (S[A"-I"; A (C.lib "netstring")]);
@@ -65,6 +66,7 @@ dispatch begin function
      flag ["ocaml"; "doc"; "use_pcre"] (S[A"-I"; A (C.lib "pcre")]);
      flag ["ocaml"; "doc"; "use_netcgi"] (S[A"-I"; A (C.lib "netcgi2")]);
      flag ["ocaml"; "doc"; "use_xhtml"] (S[A"-I"; A (C.lib "ocsigen.xhtml")]);
+     flag ["ocaml"; "doc"; "use_liboevent"] (S[A"-I"; A (C.lib "event")]);
 
      flag ["ocaml"; "doc"] (S[A"-short-functors"; A"-sort"; A"-m"; A"A"]);
 
@@ -73,6 +75,8 @@ dispatch begin function
      flag ["ocaml"; "pp"; "use_openin"] (A"pa_openin.cmo");
      flag ["ocaml"; "camlp4of"] (S[A"-I"; A"+camlp4"]);
      dep ["ocaml"; "ocamldep"; "use_openin"] ["pa_openin.cmo"];
+
+     flag ["ocaml"; "pp"; "pa_macro"] (S[A"Camlp4MacroParser.cmo"]);
 
      (* If `static' is true then every ocaml link in bytecode will add -custom *)
 (*      if static then flag ["link"; "ocaml"; "byte"] (A"-custom"); *)
