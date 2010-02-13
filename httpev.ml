@@ -252,11 +252,11 @@ let output (f : 'a IO.output -> unit) =
   f (Netcgi_ext.noclose out);
   IO.close_out out
 
-let serve req ?status ctype data =
+let serve (_req : request) ?status ctype data =
   Option.default `Ok status, ["Content-Type",ctype], data
 
-let serve_io req ?status ctype (f : 'a IO.output -> unit) =
-  serve ?status ctype (output f)
+let serve_io (req : request) ?status ctype (f : 'a IO.output -> unit) =
+  serve req ?status ctype (output f)
 
 let serve_text_io req ?status =
   serve_io req ?status "text/plain"
