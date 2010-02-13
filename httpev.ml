@@ -1,14 +1,17 @@
 (** Very simple and incomplete HTTP server *)
 
-open Prelude
-
 open Printf
+open ExtLib
 module Ev = Liboevent
+
+open Prelude
 
 let log = Log.from "httpev"
 
 DEFINE INC(x) = x <- x + 1
 DEFINE DEC(x) = x <- x - 1
+
+(** {2 Server} *)
 
 (** Create persistent event. Don't forget [del] *)
 let event fd flags f =
@@ -17,28 +20,61 @@ let event fd flags f =
   Ev.add ev None
 
 type request = { addr : Unix.sockaddr ;
-                 mutable url : string option ;
-                 conn : Time.t ; (* time when client connected *)
-                 mutable recv : Time.t ; (* time when client request was read *)
+                 url : string;
+                 path : string ;
+                 args : (string * string) list;
+                 conn : Time.t; (* time when client connected *)
+                 recv : Time.t; (* time when client request was fully read *)
+                 meth : string; (* HTTP method *)
+                 headers : (string * string) list;
+                 body : string;
+                 version : string; (* HTTP version *)
                  }
 
-let show_client c =
+let show_request c =
   sprintf "%s time %.4f (recv %.4f) url %s" 
     (Nix.string_of_sockaddr c.addr) 
     (Time.get () -. c.conn) 
     (c.recv -. c.conn) 
-    (Option.default "?" c.url)
+    c.url
 
 type status = { mutable reqs : int; mutable active : int; mutable errs : int; }
 
-let parse_http_req s =
+type ('a,'b) result = [ `Ok of 'a | `Error of 'b ]
+
+let space = Pcre.regexp "[ ]+"
+
+let parse_http_req s (addr,conn) =
+  let next s = String.split s "\r\n" in
   try
-  Scanf.sscanf s "%s@  %s@  %s@\r\n" & fun meth url version ->
-  match meth,version with
-  | "GET","HTTP/1.0" | "GET","HTTP/1.1" -> Some url
-  | _ -> None
+    let (line,s) = next s in
+    match Pcre.split ~rex:space line with
+    | [meth;url;version] ->
+      let rec loop hs s =
+        match next s with
+        | "",body ->
+          let (path,args) = try String.split "?" url with _ -> url,"" in
+          let args = Netencoding.Url.dest_url_encoded_parameters args in
+          {
+            addr = addr;
+            url = url;
+            path = path;
+            args = args;
+            conn = conn;
+            recv = Time.get ();
+            headers = List.rev_map (fun (n,v) -> String.lowercase n,v) hs;
+            body = body;
+            meth = meth;
+            version = version;
+          }
+        | line,s ->
+          let (n,v) = String.split line ":" in
+          loop ((n, String.strip v) :: hs) s
+      in
+      `Ok (loop [] s)
+    | _ -> Exn.fail "bad request line"
   with
-  End_of_file -> None
+  exn -> `Error exn
 
 let int_of_fd : Unix.file_descr -> int = Obj.magic
 
@@ -47,9 +83,9 @@ let close fd =
   Exn.suppress (Unix.shutdown fd) Unix.SHUTDOWN_ALL;
   Unix.close fd
 
-let write_f status client (data,ack) ev fd _flags =
+let write_f status req (data,ack) ev fd _flags =
   let finish () =
-    log #debug "finished %s" & show_client client;
+    log #debug "finished %s" & Option.map_default show_request "" req;
     Ev.del ev; 
     close fd;
     DEC status.active
@@ -79,14 +115,18 @@ let write_f status client (data,ack) ev fd _flags =
     Exn.suppress close fd;
     INC status.errs;
     DEC status.active;
-    log #warn ~exn "write_f %s" & show_client client
+    log #warn ~exn "write_f %s" & Option.map_default show_request "" req
 
 let http_reply = function
   | `Ok -> "HTTP/1.0 200 OK"
   | `Not_found -> "HTTP/1.0 404 Not Found"
   | `Bad_request -> "HTTP/1.0 400 Bad Request"
+  | `Forbidden -> "HTTP/1.0 403 Forbidden"
+  | `Request_too_large -> "HTTP/1.0 413 Request Entity Too Large"
+  | `Internal_server_error -> "HTTP/1.0 500 Internal Server Error"
+  | `Custom s -> s
 
-let read_all fd =
+let read_all ~limit fd =
   let read buf =
     try
       match Unix.read fd buf 0 (String.length buf) with
@@ -99,23 +139,37 @@ let read_all fd =
   let s = String.create 1024 in
   let rec loop () =
     match read s with
-    | None -> Buffer.contents buf
-    | Some len -> Buffer.add_substring buf s 0 len; loop ()
+    | None -> `Ok (Buffer.contents buf)
+    | Some len -> 
+      Buffer.add_substring buf s 0 len;
+      if Buffer.length buf > limit then `Error `Limit else loop ()
   in
   loop ()
 
-let handle_client status fd client answer =
+let handle_client status fd conn_info answer =
   INC status.reqs;
   INC status.active;
   Unix.set_nonblock fd;
   event fd [Ev.READ] begin fun ev fd _ ->
     try
     Ev.del ev; 
-    let request = read_all fd in (* FIXME may not read whole request *)
-(*     Log.info "fd %u got %u bytes" (int_of_fd fd) len; *)
-    client.url <- parse_http_req request;
-    client.recv <- Time.get ();
-    let (code,hdrs,body) = answer status client.url in
+    let (req,(code,hdrs,body)) =
+    (* FIXME may not read whole request *)
+    match read_all ~limit:(16*1024) fd with
+    | `Error `Limit -> None, (`Request_too_large,[],"request entity too large")
+    | `Ok data ->
+      log #debug "read_all: %d bytes" (String.length data);
+      match parse_http_req data conn_info with
+      | `Error exn ->
+        log #warn ~exn "Failed to parse request";
+        None, (`Bad_request,[],"bad request")
+      | `Ok req ->
+        try
+          Some req, answer status req
+        with exn ->
+          log #error ~exn "answer %s" & show_request req;
+          None, (`Internal_server_error,[],"Internal server error")
+    in
     let b = Buffer.create 1024 in
     let put s = Buffer.add_string b s; Buffer.add_string b "\r\n" in
     put (http_reply code);
@@ -123,15 +177,21 @@ let handle_client status fd client answer =
     bprintf b "Content-length: %u\r\n" (String.length body);
     put "Connection: close";
     put "";
+    log #debug "will answer with %d+%d bytes" 
+      (Buffer.length b) 
+      (String.length body);
 (*     Buffer.add_string b body; *)
-    event fd [Ev.WRITE] (write_f status client (ref [Buffer.contents b; body],ref 0))
+    event fd [Ev.WRITE] 
+      (write_f status req (ref [Buffer.contents b; body],ref 0))
     with
     exn -> 
       (*Exn.suppress Ev.del ev;*)
       INC status.errs;
       DEC status.active;
       Exn.suppress close fd;
-      log #warn ~exn "handle_client %s" & show_client client
+      let (addr,stamp) = conn_info in
+      log #warn ~exn "handle_client %s %.4f" 
+        (Nix.string_of_sockaddr addr) stamp
   end
 
 include struct
@@ -149,7 +209,7 @@ let server addr answer =
 (*     Log.info "client";  *)
     try
       let (fd,addr) = accept fd in
-      handle_client status fd { addr=addr; conn=Time.get(); recv=0.; url=None } answer
+      handle_client status fd (addr,Time.get()) answer
     with
       exn -> log #error ~exn "accept"
   end;
@@ -158,14 +218,8 @@ let server addr answer =
 end
 
 let header n v = sprintf "%s: %s" n v
-let bad_request = `Bad_request, [], "bad request"
+let forbidden = `Forbidden, [], "forbidden"
 let not_found = `Not_found, [], "not found"
-
-let server addr answer =
-  server addr (fun status url ->
-    match url with
-    | None -> bad_request 
-    | Some url -> answer status url)
 
 (*
 let answer st url =
@@ -178,3 +232,51 @@ let answer st url =
 let () =
   server (Unix.ADDR_INET (Unix.inet_addr_any, 8081)) answer
 *)
+
+(** {2 Utilities} 
+  mimic {!Netcgi_ext} interface
+*)
+
+module Args(T : sig val req : request end) =
+struct
+  let arg name = List.assoc name T.req.args
+  exception Bad of string
+  let get name = Exn.catch arg name
+  let str name = match get name with Some s -> s | None -> raise (Bad name)
+  let int name = let s = str name in try int_of_string s with _ -> raise (Bad name)
+end
+
+(** Buffers all output *)
+let output (f : 'a IO.output -> unit) =
+  let out = IO.output_string () in
+  f (Netcgi_ext.noclose out);
+  IO.close_out out
+
+let serve req ?status ctype data =
+  Option.default `Ok status, ["Content-Type",ctype], data
+
+let serve_io req ?status ctype (f : 'a IO.output -> unit) =
+  serve ?status ctype (output f)
+
+let serve_text_io req ?status =
+  serve_io req ?status "text/plain"
+
+let serve_gzip_io req ?status f =
+  serve_io req ?status "application/gzip" (fun io ->
+    Control.with_output (Gzip_io.output io) f)
+
+let serve_text req ?status text = 
+  serve req ?status "text/plain" text
+
+let serve_html req html =
+  serve_io req "text/html" (fun out -> 
+    XHTML.M.pretty_print (IO.nwrite out) html)
+
+let run_local port answer =
+  let addr = Unix.inet_addr_loopback in
+  log #info "Ready for HTTP on %s:%u" (Unix.string_of_inet_addr addr) port;
+  server (Unix.ADDR_INET (addr,port)) answer
+
+let input_header req name =
+  List.assoc (String.lowercase name) req.headers
+

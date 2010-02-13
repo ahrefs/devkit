@@ -94,11 +94,11 @@ end
 include State.M
 
 let facility = State.facility
+let set_filter = State.set_filter
 
 type 'a pr = ?exn:exn -> ('a, unit, string, unit) format4 -> 'a
 
-let from name =
-let facil = facility name in
+class logger facil =
 let perform f =
   fun ?exn fmt -> match exn with
     | Some exn -> ksprintf (fun s -> f facil (s ^ " : exn " ^ Exn.str exn)) fmt
@@ -110,6 +110,8 @@ method warn : 'a. 'a pr = perform warn_s
 method info : 'a. 'a pr = perform info_s
 method error : 'a. 'a pr = perform error_s
 end
+
+let from name = new logger (facility name)
 
 (** internal logging facility *)
 let self = from State.self
