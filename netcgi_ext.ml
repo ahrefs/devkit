@@ -18,7 +18,7 @@ let cgi_suppress_exn exn cgi =
 let perform_cgi f (err:exn->cgi->unit) =
   fun cgi ->
   try
-    f (cgi:>cgi);
+    let () = f (cgi:>cgi) in
     cgi#out_channel#commit_work ();
   with e ->
     cgi#out_channel#rollback_work ();

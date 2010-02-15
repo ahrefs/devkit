@@ -42,7 +42,7 @@ type status = { mutable reqs : int; mutable active : int; mutable errs : int; }
 
 type ('a,'b) result = [ `Ok of 'a | `Error of 'b ]
 
-let space = Pcre.regexp "[ ]+"
+let space = Pcre.regexp "[ \t]+"
 
 let parse_http_req s (addr,conn) =
   let next s = String.split s "\r\n" in
@@ -53,7 +53,7 @@ let parse_http_req s (addr,conn) =
       let rec loop hs s =
         match next s with
         | "",body ->
-          let (path,args) = try String.split "?" url with _ -> url,"" in
+          let (path,args) = try String.split url "?" with _ -> url,"" in
           let args = Netencoding.Url.dest_url_encoded_parameters args in
           {
             addr = addr;
@@ -120,6 +120,7 @@ let write_f status req (data,ack) ev fd _flags =
 let http_reply = function
   | `Ok -> "HTTP/1.0 200 OK"
   | `Not_found -> "HTTP/1.0 404 Not Found"
+  | `Unauthorized -> "HTTP/1.0 401 Unauthorized"
   | `Bad_request -> "HTTP/1.0 400 Bad Request"
   | `Forbidden -> "HTTP/1.0 403 Forbidden"
   | `Request_too_large -> "HTTP/1.0 413 Request Entity Too Large"
@@ -173,7 +174,7 @@ let handle_client status fd conn_info answer =
     let b = Buffer.create 1024 in
     let put s = Buffer.add_string b s; Buffer.add_string b "\r\n" in
     put (http_reply code);
-    List.iter put hdrs;
+    List.iter (fun (n,v) -> bprintf b "%s: %s\r\n" n v) hdrs;
     bprintf b "Content-length: %u\r\n" (String.length body);
     put "Connection: close";
     put "";
@@ -217,7 +218,7 @@ let server addr answer =
 
 end
 
-let header n v = sprintf "%s: %s" n v
+let header n v = n,v
 let forbidden = `Forbidden, [], "forbidden"
 let not_found = `Not_found, [], "not found"
 
@@ -272,8 +273,7 @@ let serve_html req html =
   serve_io req "text/html" (fun out -> 
     XHTML.M.pretty_print (IO.nwrite out) html)
 
-let run_local port answer =
-  let addr = Unix.inet_addr_loopback in
+let run ?(addr=Unix.inet_addr_loopback) port answer =
   log #info "Ready for HTTP on %s:%u" (Unix.string_of_inet_addr addr) port;
   server (Unix.ADDR_INET (addr,port)) answer
 
