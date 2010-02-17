@@ -16,7 +16,11 @@ DEFINE DEC(x) = x <- x - 1
 (** Create persistent event. Don't forget [del] *)
 let event fd flags f =
   let ev = Ev.create () in
-  Ev.set ev fd flags ~persist:true (fun fd flags -> f ev fd flags);
+  Ev.set ev fd flags ~persist:true (fun fd flags -> 
+    try 
+      f ev fd flags
+    with
+      exn -> log #warn ~exn "event");
   Ev.add ev None
 
 type request = { addr : Unix.sockaddr ;
@@ -119,12 +123,16 @@ let write_f status req (data,ack) ev fd _flags =
 
 let http_reply = function
   | `Ok -> "HTTP/1.0 200 OK"
-  | `Not_found -> "HTTP/1.0 404 Not Found"
-  | `Unauthorized -> "HTTP/1.0 401 Unauthorized"
+
   | `Bad_request -> "HTTP/1.0 400 Bad Request"
+  | `Unauthorized -> "HTTP/1.0 401 Unauthorized"
   | `Forbidden -> "HTTP/1.0 403 Forbidden"
+  | `Not_found -> "HTTP/1.0 404 Not Found"
   | `Request_too_large -> "HTTP/1.0 413 Request Entity Too Large"
+
   | `Internal_server_error -> "HTTP/1.0 500 Internal Server Error"
+  | `Service_unavailable -> "HTTP/1.0 503 Service Unavailable"
+
   | `Custom s -> s
 
 let read_all ~limit fd =
@@ -147,30 +155,28 @@ let read_all ~limit fd =
   in
   loop ()
 
+let wait fd k =
+  event fd [Ev.READ] begin fun ev fd _ ->
+    Ev.del ev;
+    Exn.suppress Unix.close fd;
+    k ()
+  end
+
 let handle_client status fd conn_info answer =
   INC status.reqs;
   INC status.active;
   Unix.set_nonblock fd;
-  event fd [Ev.READ] begin fun ev fd _ ->
+  let abort exn msg =
+    (*Exn.suppress Ev.del ev;*)
+    INC status.errs;
+    DEC status.active;
+    Exn.suppress close fd;
+    let (addr,stamp) = conn_info in
+    log #warn ~exn "handle_client %s %s %.4f" 
+      msg (Nix.string_of_sockaddr addr) stamp
+  in
+  let send_reply (req,(code,hdrs,body)) =
     try
-    Ev.del ev; 
-    let (req,(code,hdrs,body)) =
-    (* FIXME may not read whole request *)
-    match read_all ~limit:(16*1024) fd with
-    | `Error `Limit -> None, (`Request_too_large,[],"request entity too large")
-    | `Ok data ->
-      log #debug "read_all: %d bytes" (String.length data);
-      match parse_http_req data conn_info with
-      | `Error exn ->
-        log #warn ~exn "Failed to parse request";
-        None, (`Bad_request,[],"bad request")
-      | `Ok req ->
-        try
-          Some req, answer status req
-        with exn ->
-          log #error ~exn "answer %s" & show_request req;
-          None, (`Internal_server_error,[],"Internal server error")
-    in
     let b = Buffer.create 1024 in
     let put s = Buffer.add_string b s; Buffer.add_string b "\r\n" in
     put (http_reply code);
@@ -182,17 +188,36 @@ let handle_client status fd conn_info answer =
       (Buffer.length b) 
       (String.length body);
 (*     Buffer.add_string b body; *)
-    event fd [Ev.WRITE] 
+    event fd [Ev.WRITE]
       (write_f status req (ref [Buffer.contents b; body],ref 0))
     with
-    exn -> 
-      (*Exn.suppress Ev.del ev;*)
-      INC status.errs;
-      DEC status.active;
-      Exn.suppress close fd;
-      let (addr,stamp) = conn_info in
-      log #warn ~exn "handle_client %s %.4f" 
-        (Nix.string_of_sockaddr addr) stamp
+      exn -> abort exn "send"
+  in
+  log #debug "accepted %s" (Nix.string_of_sockaddr (fst conn_info));
+  event fd [Ev.READ] begin fun ev fd _ ->
+    try
+    Ev.del ev; 
+    (* FIXME may not read whole request *)
+    let (req,x) = match read_all ~limit:(16*1024) fd with
+    | `Error `Limit -> None, `Now (`Request_too_large,[],"request entity too large")
+    | `Ok data ->
+      log #debug "read_all: %d bytes" (String.length data);
+      match parse_http_req data conn_info with
+      | `Error exn ->
+        log #warn ~exn "Failed to parse request";
+        None, `Now (`Bad_request,[],"bad request")
+      | `Ok req ->
+        try
+          Some req, answer status req
+        with exn ->
+          log #error ~exn "answer %s" & show_request req;
+          None, `Now (`Internal_server_error,[],"Internal server error")
+    in
+    match x with
+    | `Now reply -> send_reply (req,reply)
+    | `Later (fd,reply) -> wait fd (fun () -> send_reply (req, !reply))
+    with
+    exn -> abort exn "send"
   end
 
 include struct
