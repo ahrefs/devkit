@@ -143,6 +143,8 @@ let write_f status req (data,ack) ev fd _flags =
 let http_reply = function
   | `Ok -> "HTTP/1.0 200 OK"
 
+  | `Found -> "HTTP/1.0 302 Found"
+
   | `Bad_request -> "HTTP/1.0 400 Bad Request"
   | `Unauthorized -> "HTTP/1.0 401 Unauthorized"
   | `Forbidden -> "HTTP/1.0 403 Forbidden"
@@ -265,6 +267,7 @@ end
 let header n v = n,v
 let forbidden = `Forbidden, [], "forbidden"
 let not_found = `Not_found, [], "not found"
+let found url = `Found,[header "Location" url], "found"
 
 (*
 let answer st url =
