@@ -57,8 +57,18 @@ let parse_http_req s (addr,conn) =
       let rec loop hs s =
         match next s with
         | "",body ->
+          let headers = List.rev_map (fun (n,v) -> String.lowercase n,v) hs in
+          begin match Exn.catch (List.assoc "content-length") headers with
+          | Some n when String.length body <> int_of_string n -> 
+            Exn.fail "not full body"
+          | _ ->
           let (path,args) = try String.split url "?" with _ -> url,"" in
-          let args = Netencoding.Url.dest_url_encoded_parameters args in
+          let decode_args = Netencoding.Url.dest_url_encoded_parameters in
+          let args = match meth with
+          | "POST" -> decode_args body
+          | "GET" -> decode_args args
+          | _ -> []
+          in
           {
             addr = addr;
             url = url;
@@ -66,11 +76,12 @@ let parse_http_req s (addr,conn) =
             args = args;
             conn = conn;
             recv = Time.get ();
-            headers = List.rev_map (fun (n,v) -> String.lowercase n,v) hs;
+            headers = headers;
             body = body;
             meth = meth;
             version = version;
           }
+          end
         | line,s ->
           let (n,v) = String.split line ":" in
           loop ((n, String.strip v) :: hs) s
