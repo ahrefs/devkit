@@ -29,7 +29,7 @@ type request = { addr : Unix.sockaddr ;
                  args : (string * string) list;
                  conn : Time.t; (* time when client connected *)
                  recv : Time.t; (* time when client request was fully read *)
-                 meth : string; (* HTTP method *)
+                 meth : [`GET | `POST ];
                  headers : (string * string) list;
                  body : string;
                  version : string; (* HTTP version *)
@@ -54,6 +54,15 @@ let parse_http_req s (addr,conn) =
     let (line,s) = next s in
     match Pcre.split ~rex:space line with
     | [meth;url;version] ->
+      if url.[0] <> '/' then 
+        Exn.fail "bad url : %s" url;
+      if version <> "HTTP/1.0" && version <> "HTTP/1.1" then
+        Exn.fail "unknown HTTP version : %s" version;
+      let meth = match meth with (* FIXME HEAD *)
+      | "GET" -> `GET
+      | "POST" -> `POST
+      | _ -> Exn.fail "unknown request method : %s" meth
+      in
       let rec loop hs s =
         match next s with
         | "",body ->
@@ -65,9 +74,8 @@ let parse_http_req s (addr,conn) =
           let (path,args) = try String.split url "?" with _ -> url,"" in
           let decode_args = Netencoding.Url.dest_url_encoded_parameters in
           let args = match meth with
-          | "POST" -> decode_args body
-          | "GET" -> decode_args args
-          | _ -> []
+          | `POST -> decode_args body
+          | `GET -> decode_args args
           in
           {
             addr = addr;
