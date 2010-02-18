@@ -15,6 +15,9 @@ val get : 'a t -> 'a
     @return None immediately if queue is empty *)
 val try_get : 'a t -> 'a option
 
+(** Get the length of the queue *)
+val length : 'a t -> int
+
 (** Remove all elements from the queue *)
 val clear : 'a t -> unit
 

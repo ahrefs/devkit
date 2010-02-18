@@ -13,5 +13,7 @@ let get q = locked q.mutex (fun () ->
 
 let try_get q = locked q.mutex (fun () -> Exn.catch Queue.pop q.q)
 
+let length q = locked q.mutex (fun () -> Queue.length q.q)
+
 let clear q = locked q.mutex (fun () -> Queue.clear q.q)
 
