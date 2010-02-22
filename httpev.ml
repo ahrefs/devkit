@@ -222,7 +222,9 @@ let handle_client status fd conn_info answer =
     Ev.del ev; 
     (* FIXME may not read whole request *)
     let (req,x) = match read_all ~limit:(16*1024) fd with
-    | `Error `Limit -> None, `Now (`Request_too_large,[],"request entity too large")
+    | `Error `Limit -> 
+      log #info "read_all: request too large from %s" (Nix.string_of_sockaddr (fst conn_info));
+      None, `Now (`Request_too_large,[],"request entity too large")
     | `Ok data ->
       log #debug "read_all: %d bytes" (String.length data);
       match parse_http_req data conn_info with
