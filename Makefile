@@ -14,7 +14,7 @@ doc:
 		ocamlbuild -j 0 devkit.docdir/index.html
 
 install: lib
-		ocamlfind install devkit META _build/*.{cmi,mli,cma,cmxa,a}
+		ocamlfind install -patch-version "svn r$(shell svnversion)" devkit META _build/*.{cmi,mli,cma,cmxa,a}
 
 uninstall:
 		ocamlfind remove devkit
