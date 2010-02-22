@@ -51,7 +51,7 @@ type ('a,'b) result = [ `Ok of 'a | `Error of 'b ]
 let space = Pcre.regexp "[ \t]+"
 
 let parse_http_req s (addr,conn) =
-  let next s = String.split s "\r\n" in
+  let next s = try String.split s "\r\n" with _ -> Exn.fail "not expected : %s" (String.slice ~last:100 s) in
   try
     let (line,s) = next s in
     match Pcre.split ~rex:space line with
@@ -71,7 +71,7 @@ let parse_http_req s (addr,conn) =
           let headers = List.rev_map (fun (n,v) -> String.lowercase n,v) hs in
           begin match Exn.catch (List.assoc "content-length") headers with
           | Some n when String.length body <> int_of_string n -> 
-            Exn.fail "not full body"
+            Exn.fail "not full body : %u <> %s" (String.length body) n
           | _ ->
           let (path,args) = try String.split url "?" with _ -> url,"" in
           let decode_args = Netencoding.Url.dest_url_encoded_parameters in
@@ -93,11 +93,11 @@ let parse_http_req s (addr,conn) =
           }
           end
         | line,s ->
-          let (n,v) = String.split line ":" in
+          let (n,v) = try String.split line ":" with _ -> Exn.fail "bad header line : %s" line in
           loop ((n, String.strip v) :: hs) s
       in
       `Ok (loop [] s)
-    | _ -> Exn.fail "bad request line"
+    | _ -> Exn.fail "bad request line : %s" line
   with
   exn -> `Error exn
 
