@@ -11,6 +11,13 @@ let level_string = function
   | Warn -> "warn"
   | Error -> "error"
 
+let level = function
+  | "info" -> Info
+  | "debug" -> Debug
+  | "warn" -> Warn
+  | "error" -> Error
+  | s -> Exn.fail "unrecognized level %s" s
+
 module type Target =
 sig
   val filter : level -> facil -> string -> bool

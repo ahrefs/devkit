@@ -35,22 +35,21 @@ open ExtLib
 module State = struct
 
   let all = Hashtbl.create 10
+  let default_level = ref Logger.Info
 
   let facility name =
     try
       Hashtbl.find all name
     with
       Not_found ->
-        let x = { Logger.name = name; show = Logger.Info } in
+        let x = { Logger.name = name; show = !default_level } in
         Hashtbl.add all name x; 
         x
 
   let set_filter ?name level =
     match name with
-    | None -> Hashtbl.iter (fun _ x -> Logger.filter x level) all
-    | Some name -> match Hashtbl.find_option all name with
-                   | Some x -> Logger.filter x level
-                   | None -> ()
+    | None -> default_level := level; Hashtbl.iter (fun _ x -> Logger.filter x level) all
+    | Some name -> Logger.filter (facility name) level
 
   let output_ch ch = 
     fun str -> output_string ch str; flush ch
