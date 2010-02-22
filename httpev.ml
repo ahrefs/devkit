@@ -37,11 +37,15 @@ type request = { addr : Unix.sockaddr ;
                  version : string; (* HTTP version *)
                  }
 
+let input_header req name =
+  List.assoc (String.lowercase name) req.headers
+
 let show_request c =
-  sprintf "%s time %.4f (recv %.4f) url %s" 
-    (Nix.string_of_sockaddr c.addr) 
-    (Time.get () -. c.conn) 
-    (c.recv -. c.conn) 
+  sprintf "%s time %.4f (recv %.4f) %s%s"
+    (Nix.string_of_sockaddr c.addr)
+    (Time.get () -. c.conn)
+    (c.recv -. c.conn)
+    (Exn.default "" (input_header c) "host")
     c.url
 
 type status = { mutable reqs : int; mutable active : int; mutable errs : int; }
@@ -327,7 +331,4 @@ let serve_html req html =
 let run ?(addr=Unix.inet_addr_loopback) port answer =
   log #info "Ready for HTTP on %s:%u" (Unix.string_of_inet_addr addr) port;
   server (Unix.ADDR_INET (addr,port)) answer
-
-let input_header req name =
-  List.assoc (String.lowercase name) req.headers
 
