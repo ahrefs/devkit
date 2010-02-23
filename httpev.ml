@@ -54,7 +54,7 @@ type ('a,'b) result = [ `Ok of 'a | `Error of 'b ]
 let space = Pcre.regexp "[ \t]+"
 
 type reason = Url | Version | Method | Args | Header | RequestLine | Split | Length
-exception Parse of reason
+exception Parse of reason * string
 let failed reason s =
   let name =
   match reason with
@@ -62,8 +62,7 @@ let failed reason s =
   | RequestLine -> "RequestLine" | Split -> "split" | Header -> "header" | Length -> "length"
   in
   let s = if String.length s > 100 then (String.slice ~last:100 s) ^ "..." else s in
-  log #warn "parse_http_req %s : %s" name s;
-  raise (Parse reason)
+  raise (Parse (reason, sprintf "%s : %s" name s))
 
 let parse_http_req s (addr,conn) =
   let next s = try String.split s "\r\n" with _ -> failed Split s in
@@ -214,6 +213,7 @@ let wait fd k =
   end
 
 let handle_client status fd conn_info answer =
+  let peer = Nix.string_of_sockaddr (fst conn_info) in
   INC status.reqs;
   INC status.active;
   Unix.set_nonblock fd;
@@ -222,10 +222,8 @@ let handle_client status fd conn_info answer =
     INC status.errs;
     DEC status.active;
     Exn.suppress close fd;
-    let (addr,stamp) = conn_info in
-    log #warn ~exn "handle_client %s %s %.4f" 
-      msg (Nix.string_of_sockaddr addr) stamp
-  in
+    log #warn ~exn "handle_client %s %s" msg peer
+  in 
   let send_reply (req,(code,hdrs,body)) =
     try
     let b = Buffer.create 1024 in
@@ -237,7 +235,8 @@ let handle_client status fd conn_info answer =
     put "";
     (* do not transfer body for HEAD requests *)
     let body = match req with Some x when x.meth = `HEAD -> "" | _ -> body in
-    log #debug "will answer with %d+%d bytes" 
+    log #debug "will answer to %s with %d+%d bytes" 
+      peer
       (Buffer.length b) 
       (String.length body);
 (*     Buffer.add_string b body; *)
@@ -246,34 +245,37 @@ let handle_client status fd conn_info answer =
     with
       exn -> abort exn "send"
   in
-  log #debug "accepted %s" (Nix.string_of_sockaddr (fst conn_info));
+  log #debug "accepted %s" peer;
   event fd [Ev.READ] begin fun ev fd _ ->
     try
     Ev.del ev; 
     (* FIXME may not read whole request *)
     let (req,x) = match read_all ~limit:(16*1024) fd with
     | `Error `Limit -> 
-      log #info "read_all: request too large from %s" (Nix.string_of_sockaddr (fst conn_info));
+      log #info "read_all: request too large from %s" peer;
       None, `Now (`Request_too_large,[],"request entity too large")
     | `Ok data ->
-      log #debug "read_all: %d bytes" (String.length data);
+      log #debug "read_all: %d bytes from %s" (String.length data) peer;
       match parse_http_req data conn_info with
-      | `Error (Parse what) ->
+      | `Error (Parse (what,msg)) ->
         let error = match what with
         | Url | Args | RequestLine | Header | Split | Version -> `Bad_request
         | Method -> `Not_implemented
         | Length -> `Length_required
         in
+        log #warn "parse_http_req from %s : %s" peer msg;
         None, `Now (error,[],"")
       | `Error exn -> 
-        log #warn ~exn "parse_http_req";
+        log #warn ~exn "parse_http_req from %s" peer;
         None, `Now (`Bad_request,[],"")
       | `Ok req ->
         try
           let reply = 
             match req.version with
             | (1,_) -> answer status req
-            | _ -> `Now (`Version_not_supported, [], "HTTP/1.0 is supported")
+            | _ -> 
+              log #info "version %u.%u not supported from %s" (fst req.version) (snd req.version) (show_request req);
+              `Now (`Version_not_supported, [], "HTTP/1.0 is supported")
           in
           Some req, reply
         with exn ->
