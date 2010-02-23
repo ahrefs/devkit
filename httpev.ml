@@ -37,15 +37,14 @@ type request = { addr : Unix.sockaddr ;
                  version : string; (* HTTP version *)
                  }
 
-let input_header req name =
-  List.assoc (String.lowercase name) req.headers
-
 let show_request c =
+  let client = Nix.string_of_sockaddr c.addr in
+  let client = try sprintf "%s (%s)" (List.assoc "x-real-ip" c.headers) client with Not_found -> client in
   sprintf "%s time %.4f (recv %.4f) %s%s"
-    (Nix.string_of_sockaddr c.addr)
+    client
     (Time.get () -. c.conn)
     (c.recv -. c.conn)
-    (Exn.default "" (input_header c) "host")
+    (Exn.default "" (List.assoc "host") c.headers)
     c.url
 
 type status = { mutable reqs : int; mutable active : int; mutable errs : int; }
@@ -86,6 +85,7 @@ let parse_http_req s (addr,conn) =
         match next s with
         | "",body ->
           let headers = List.rev_map (fun (n,v) -> String.lowercase n,v) hs in
+          if version = "HTTP/1.1" && not (List.mem_assoc "host" headers) then failed Header "Host is required for HTTP/1.1";
           let length = match Exn.catch (List.assoc "content-length") headers with
                        | None -> None
                        | Some s -> try Some (int_of_string s) with _ -> failed Header (sprintf "content-length %s" s)
@@ -359,4 +359,7 @@ let serve_html req html =
 let run ?(addr=Unix.inet_addr_loopback) port answer =
   log #info "Ready for HTTP on %s:%u" (Unix.string_of_inet_addr addr) port;
   server (Unix.ADDR_INET (addr,port)) answer
+
+let input_header req name =
+  List.assoc (String.lowercase name) req.headers
 
