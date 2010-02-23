@@ -34,7 +34,7 @@ type request = { addr : Unix.sockaddr ;
                  meth : [`GET | `POST | `HEAD ];
                  headers : (string * string) list;
                  body : string;
-                 version : string; (* HTTP version *)
+                 version : int * int; (* client HTTP version *)
                  }
 
 let show_request c =
@@ -73,8 +73,12 @@ let parse_http_req s (addr,conn) =
     | [meth;url;version] ->
       if url.[0] <> '/' then (* abs_path *)
         failed Url url;
-      if version <> "HTTP/1.0" && version <> "HTTP/1.1" then
-        failed Version version;
+      let version = 
+        try
+          Scanf.sscanf version "HTTP/%u.%u" (fun ma mi -> ma,mi)
+        with
+          _ -> failed Version version;
+      in
       let meth = match meth with
       | "GET" -> `GET
       | "POST" -> `POST
@@ -85,7 +89,7 @@ let parse_http_req s (addr,conn) =
         match next s with
         | "",body ->
           let headers = List.rev_map (fun (n,v) -> String.lowercase n,v) hs in
-          if version = "HTTP/1.1" && not (List.mem_assoc "host" headers) then failed Header "Host is required for HTTP/1.1";
+          if version = (1,1) && not (List.mem_assoc "host" headers) then failed Header "Host is required for HTTP/1.1"; 
           let length = match Exn.catch (List.assoc "content-length") headers with
                        | None -> None
                        | Some s -> try Some (int_of_string s) with _ -> failed Header (sprintf "content-length %s" s)
@@ -178,6 +182,7 @@ let http_reply = function
   | `Internal_server_error -> "HTTP/1.0 500 Internal Server Error"
   | `Not_implemented -> "HTTP/1.0 501 Not Implemented"
   | `Service_unavailable -> "HTTP/1.0 503 Service Unavailable"
+  | `Version_not_supported -> "HTTP/1.0 505 HTTP Version Not Supported"
 
   | `Custom s -> s
 
@@ -265,7 +270,12 @@ let handle_client status fd conn_info answer =
         None, `Now (`Bad_request,[],"")
       | `Ok req ->
         try
-          Some req, answer status req
+          let reply = 
+            match req.version with
+            | (1,_) -> answer status req
+            | _ -> `Now (`Version_not_supported, [], "HTTP/1.0 is supported")
+          in
+          Some req, reply
         with exn ->
           log #error ~exn "answer %s" & show_request req;
           None, `Now (`Internal_server_error,[],"Internal server error")
