@@ -91,6 +91,17 @@ initializer
 
 end
 
+let const name s =
+object (self)
+
+method gets = s
+method name = name
+
+initializer
+  reg_value name self
+
+end
+
 let fun_time_value name f =
 object (self)
 
