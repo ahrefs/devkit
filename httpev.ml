@@ -31,7 +31,7 @@ type request = { addr : Unix.sockaddr ;
                  args : (string * string) list;
                  conn : Time.t; (* time when client connected *)
                  recv : Time.t; (* time when client request was fully read *)
-                 meth : [`GET | `POST ];
+                 meth : [`GET | `POST | `HEAD ];
                  headers : (string * string) list;
                  body : string;
                  version : string; (* HTTP version *)
@@ -54,34 +54,51 @@ type ('a,'b) result = [ `Ok of 'a | `Error of 'b ]
 
 let space = Pcre.regexp "[ \t]+"
 
+type reason = Url | Version | Method | Args | Header | RequestLine | Split | Length
+exception Parse of reason
+let failed reason s =
+  let name =
+  match reason with
+  | Url -> "url" | Version -> "version" | Method -> "method" | Args -> "args" 
+  | RequestLine -> "RequestLine" | Split -> "split" | Header -> "header" | Length -> "length"
+  in
+  let s = if String.length s > 100 then (String.slice ~last:100 s) ^ "..." else s in
+  log #warn "parse_http_req %s : %s" name s;
+  raise (Parse reason)
+
 let parse_http_req s (addr,conn) =
-  let next s = try String.split s "\r\n" with _ -> Exn.fail "not expected : %s" (String.slice ~last:100 s) in
+  let next s = try String.split s "\r\n" with _ -> failed Split s in
   try
     let (line,s) = next s in
     match Pcre.split ~rex:space line with
     | [meth;url;version] ->
-      if url.[0] <> '/' then 
-        Exn.fail "bad url : %s" url;
+      if url.[0] <> '/' then (* abs_path *)
+        failed Url url;
       if version <> "HTTP/1.0" && version <> "HTTP/1.1" then
-        Exn.fail "unknown HTTP version : %s" version;
-      let meth = match meth with (* FIXME HEAD *)
+        failed Version version;
+      let meth = match meth with
       | "GET" -> `GET
       | "POST" -> `POST
-      | _ -> Exn.fail "unknown request method : %s" meth
+      | "HEAD" -> `HEAD
+      | _ -> failed Method meth
       in
       let rec loop hs s =
         match next s with
         | "",body ->
           let headers = List.rev_map (fun (n,v) -> String.lowercase n,v) hs in
-          begin match Exn.catch (List.assoc "content-length") headers with
-          | Some n when String.length body <> int_of_string n -> 
-            Exn.fail "not full body : %u <> %s" (String.length body) n
+          let length = match Exn.catch (List.assoc "content-length") headers with
+                       | None -> None
+                       | Some s -> try Some (int_of_string s) with _ -> failed Header (sprintf "content-length %s" s)
+          in
+          begin match length, String.length body with
+          | Some len, n when len <> n -> Exn.fail "not full body : %u <> %u" (String.length body) n
+          | None, n when n <> 0 -> failed Length "required"
           | _ ->
           let (path,args) = try String.split url "?" with _ -> url,"" in
-          let decode_args = Netencoding.Url.dest_url_encoded_parameters in
+          let decode_args s = try Netencoding.Url.dest_url_encoded_parameters s with _ -> failed Args s in
           let args = match meth with
           | `POST -> decode_args body
-          | `GET -> decode_args args
+          | `GET | `HEAD -> decode_args args
           in
           {
             addr = addr;
@@ -97,11 +114,11 @@ let parse_http_req s (addr,conn) =
           }
           end
         | line,s ->
-          let (n,v) = try String.split line ":" with _ -> Exn.fail "bad header line : %s" line in
+          let (n,v) = try String.split line ":" with _ -> failed Header line in
           loop ((n, String.strip v) :: hs) s
       in
       `Ok (loop [] s)
-    | _ -> Exn.fail "bad request line : %s" line
+    | _ -> failed RequestLine line
   with
   exn -> `Error exn
 
@@ -155,9 +172,11 @@ let http_reply = function
   | `Unauthorized -> "HTTP/1.0 401 Unauthorized"
   | `Forbidden -> "HTTP/1.0 403 Forbidden"
   | `Not_found -> "HTTP/1.0 404 Not Found"
+  | `Length_required -> "HTTP/1.0 411 Length Required"
   | `Request_too_large -> "HTTP/1.0 413 Request Entity Too Large"
 
   | `Internal_server_error -> "HTTP/1.0 500 Internal Server Error"
+  | `Not_implemented -> "HTTP/1.0 501 Not Implemented"
   | `Service_unavailable -> "HTTP/1.0 503 Service Unavailable"
 
   | `Custom s -> s
@@ -211,6 +230,8 @@ let handle_client status fd conn_info answer =
     bprintf b "Content-length: %u\r\n" (String.length body);
     put "Connection: close";
     put "";
+    (* do not transfer body for HEAD requests *)
+    let body = match req with Some x when x.meth = `HEAD -> "" | _ -> body in
     log #debug "will answer with %d+%d bytes" 
       (Buffer.length b) 
       (String.length body);
@@ -232,9 +253,16 @@ let handle_client status fd conn_info answer =
     | `Ok data ->
       log #debug "read_all: %d bytes" (String.length data);
       match parse_http_req data conn_info with
-      | `Error exn ->
-        log #warn ~exn "Failed to parse request";
-        None, `Now (`Bad_request,[],"bad request")
+      | `Error (Parse what) ->
+        let error = match what with
+        | Url | Args | RequestLine | Header | Split | Version -> `Bad_request
+        | Method -> `Not_implemented
+        | Length -> `Length_required
+        in
+        None, `Now (error,[],"")
+      | `Error exn -> 
+        log #warn ~exn "parse_http_req";
+        None, `Now (`Bad_request,[],"")
       | `Ok req ->
         try
           Some req, answer status req
