@@ -53,12 +53,12 @@ type ('a,'b) result = [ `Ok of 'a | `Error of 'b ]
 
 let space = Pcre.regexp "[ \t]+"
 
-type reason = Url | Version | Method | Args | Header | RequestLine | Split | Length
+type reason = Url | Version | Method | Header | RequestLine | Split | Length
 exception Parse of reason * string
 let failed reason s =
   let name =
   match reason with
-  | Url -> "url" | Version -> "version" | Method -> "method" | Args -> "args" 
+  | Url -> "url" | Version -> "version" | Method -> "method"
   | RequestLine -> "RequestLine" | Split -> "split" | Header -> "header" | Length -> "length"
   in
   let s = if String.length s > 100 then (String.slice ~last:100 s) ^ "..." else s in
@@ -98,7 +98,7 @@ let parse_http_req s (addr,conn) =
           | None, n when n <> 0 -> failed Length "required"
           | _ ->
           let (path,args) = try String.split url "?" with _ -> url,"" in
-          let decode_args s = try Netencoding.Url.dest_url_encoded_parameters s with _ -> failed Args s in
+          let decode_args s = try Netencoding.Url.dest_url_encoded_parameters s with _ -> log #debug "failed to parse args : %s" s; [] in
           let args = match meth with
           | `POST -> decode_args body
           | `GET | `HEAD -> decode_args args
@@ -259,7 +259,7 @@ let handle_client status fd conn_info answer =
       match parse_http_req data conn_info with
       | `Error (Parse (what,msg)) ->
         let error = match what with
-        | Url | Args | RequestLine | Header | Split | Version -> `Bad_request
+        | Url | RequestLine | Header | Split | Version -> `Bad_request
         | Method -> `Not_implemented
         | Length -> `Length_required
         in
