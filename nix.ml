@@ -26,6 +26,28 @@ let daemonize () =
 (*   redirect standard channels *)
   ()
 
+let write_pidfile path =
+  Control.with_open_out_txt path (fun ch -> Printf.fprintf ch "%u\n" (getpid ()))
+
+let read_pidfile path =
+  Control.with_open_in_txt path (fun ch -> Scanf.fscanf ch " %u " Prelude.id)
+
+let check_pidfile path =
+  if Sys.file_exists path then
+  try
+    let pid = read_pidfile path in
+    kill pid 0;
+    Log.self #info "pid is alive, exiting";
+    exit 2
+  with
+  | Unix_error (ESRCH, _, _) -> Log.self #info "removing stale pidfile"; Exn.suppress Sys.remove path
+  | e -> Log.self #warn "wrong pid file, exiting"; exit 3
+
+let manage_pidfile path =
+  check_pidfile path;
+  write_pidfile path;
+  at_exit (fun () -> Exn.suppress Sys.remove path)
+
 let restart f x = let rec loop () = try f x with Unix.Unix_error (EINTR,_,_) -> loop () in loop ()
 
 (** Use [with_sig_exit] *)
