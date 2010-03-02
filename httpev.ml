@@ -15,6 +15,23 @@ DEFINE DEC(x) = x <- x - 1
 
 (** {2 Server} *)
 
+(** server configuration *)
+type config =
+  {
+    ip : Unix.inet_addr;
+    port : int;
+    backlog : int;
+    log_epipe : bool;
+  }
+
+let default = 
+  {
+    ip = Unix.inet_addr_loopback;
+    port = 8080;
+    backlog = 100;
+    log_epipe = false;
+  }
+
 (** Create persistent event. Don't forget [del] *)
 let event fd flags f =
   let ev = Ev.create () in
@@ -132,7 +149,7 @@ let close fd =
   Exn.suppress (Unix.shutdown fd) Unix.SHUTDOWN_ALL;
   Unix.close fd
 
-let write_f status req (data,ack) ev fd _flags =
+let write_f config status req (data,ack) ev fd _flags =
   let finish () =
     log #debug "finished %s" & Option.map_default show_request "" req;
     Ev.del ev; 
@@ -164,7 +181,9 @@ let write_f status req (data,ack) ev fd _flags =
     Exn.suppress close fd;
     INC status.errs;
     DEC status.active;
-    log #warn ~exn "write_f %s" & Option.map_default show_request "" req
+    match config.log_epipe, exn with
+    | false, Unix.Unix_error (Unix.EPIPE,_,_) -> ()
+    | _ -> log #warn ~exn "write_f %s" & Option.map_default show_request "" req
 
 let http_reply = function
   | `Ok -> "HTTP/1.0 200 OK"
@@ -212,7 +231,7 @@ let wait fd k =
     k ()
   end
 
-let handle_client status fd conn_info answer =
+let handle_client config status fd conn_info answer =
   let peer = Nix.string_of_sockaddr (fst conn_info) in
   INC status.reqs;
   INC status.active;
@@ -241,7 +260,7 @@ let handle_client status fd conn_info answer =
       (String.length body);
 (*     Buffer.add_string b body; *)
     event fd [Ev.WRITE]
-      (write_f status req (ref [Buffer.contents b; body],ref 0))
+      (write_f config status req (ref [Buffer.contents b; body],ref 0))
     with
       exn -> abort exn "send"
   in
@@ -292,19 +311,19 @@ let handle_client status fd conn_info answer =
 include struct
 open Unix
 
-let server addr answer = 
+let server config answer = 
 (*   open Unix in *)
   let fd = socket PF_INET SOCK_STREAM 0 in
   set_nonblock fd;
   setsockopt fd SO_REUSEADDR true;
-  bind fd addr;
-  listen fd 100;
+  bind fd (Unix.ADDR_INET (config.ip,config.port));
+  listen fd config.backlog;
   let status = { reqs = 0; active = 0; errs = 0; } in
   event fd [Ev.READ] begin fun _ fd _ -> 
 (*     Log.info "client";  *)
     try
       let (fd,addr) = accept fd in
-      handle_client status fd (addr,Time.get()) answer
+      handle_client config status fd (addr,Time.get()) answer
     with
       exn -> log #error ~exn "accept"
   end;
@@ -368,9 +387,9 @@ let serve_html req html =
   serve_io req "text/html" (fun out -> 
     XHTML.M.pretty_print (IO.nwrite out) html)
 
-let run ?(addr=Unix.inet_addr_loopback) port answer =
-  log #info "Ready for HTTP on %s:%u" (Unix.string_of_inet_addr addr) port;
-  server (Unix.ADDR_INET (addr,port)) answer
+let run ?(ip=Unix.inet_addr_loopback) port answer =
+  log #info "Ready for HTTP on %s:%u" (Unix.string_of_inet_addr ip) port;
+  server { default with ip = ip; port = port } answer
 
 let input_header req name =
   List.assoc (String.lowercase name) req.headers
