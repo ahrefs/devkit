@@ -43,8 +43,8 @@ let event fd flags f =
   Ev.add ev None
 
 type request = { addr : Unix.sockaddr ;
-                 url : string;
-                 path : string ;
+                 url : string; (* path and arguments *)
+                 path : string;
                  args : (string * string) list;
                  conn : Time.t; (* time when client connected *)
                  recv : Time.t; (* time when client request was fully read *)
@@ -316,7 +316,7 @@ let server config answer =
   let fd = socket PF_INET SOCK_STREAM 0 in
   set_nonblock fd;
   setsockopt fd SO_REUSEADDR true;
-  bind fd (Unix.ADDR_INET (config.ip,config.port));
+  bind fd (ADDR_INET (config.ip,config.port));
   listen fd config.backlog;
   let status = { reqs = 0; active = 0; errs = 0; } in
   event fd [Ev.READ] begin fun _ fd _ -> 
