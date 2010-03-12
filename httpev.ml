@@ -111,7 +111,7 @@ let parse_http_req s (addr,conn) =
                        | Some s -> try Some (int_of_string s) with _ -> failed Header (sprintf "content-length %s" s)
           in
           begin match length, String.length body with
-          | Some len, n when len <> n -> Exn.fail "not full body : %u <> %u" (String.length body) n
+          | Some len, n when len <> n -> Exn.fail "not full body : %u <> %u" len n
           | None, n when n <> 0 -> failed Length "required"
           | _ ->
           let (path,args) = try String.split url "?" with _ -> url,"" in
