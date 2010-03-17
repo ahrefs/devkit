@@ -14,7 +14,7 @@ Log from http subsystem at debug level
 {[Log.debug http "received %u bytes"]}
 
 Create and use object for http logging
-{[let log = Log.from http;;
+{[let log = Log.from "http" (* new Log.logger http *);;
 log#info "sent %u bytes"]}
 
 Output only messages of warning level or higher for the http facility

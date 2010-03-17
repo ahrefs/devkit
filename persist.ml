@@ -25,6 +25,7 @@ let from_channel ch =
   if s <> V.tag then raise Error;
   (Marshal.from_channel ch : t)
 
+(** FIXME temp + fsync + rename *)
 let to_file name ?(flags=[]) x =
   with_open_out_bin name (fun ch -> to_channel ch ~flags x)
 
