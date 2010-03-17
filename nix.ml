@@ -83,7 +83,10 @@ let register_sig st f k = Control.bracket (st := f :: !st) (fun () -> st := List
 let with_sig_exit f k = register_sig sig_exit_funcs f k
 let with_sig_reload f k = register_sig sig_reload_funcs f k
 
-let () = 
+let () =
+  match Sys.os_type with
+  | "Win32" -> ()
+  | _ ->
   handle_sig_exit_with (fun () ->
     List.iter (fun fin -> try fin () with exn -> Log.self #warn ~exn "sig_exit_funcs") !sig_exit_funcs);
   handle_sig_reload_with (fun () ->
