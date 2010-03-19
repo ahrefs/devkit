@@ -3,6 +3,7 @@ open ExtLib
 open Printf
 
 open Prelude
+open Control
 
 (* let log = Log.from "web" *)
 
@@ -66,4 +67,23 @@ end
 let get_host = String.lowercase $ Neturl.url_host $ Neturl.parse_url
 let urlencode = Netencoding.Url.encode
 let urldecode = Netencoding.Url.decode
+
+let () = Curl.global_init Curl.CURLINIT_GLOBALALL
+
+let with_curl f =
+  bracket (Curl.init ()) Curl.cleanup f
+
+let http_get url =
+  try
+  with_curl (fun h ->
+(*     Curl.set_interface h ip; *)
+    Curl.set_url h url;
+    let b = Buffer.create 1024 in
+    Curl.set_writefunction h (fun s -> Buffer.add_string b s; String.length s);
+    Curl.perform h;
+    Buffer.contents b
+(*     log_trace "%u bytes (%.2f KB/sec) -- %s" (get_sizedownload h >> int_of_float) (get_speeddownload h /. 1024.) url *)
+  )
+  with
+  exn -> Log.main #warn ~exn "http_get(%s)" url; ""
 

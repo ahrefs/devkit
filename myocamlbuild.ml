@@ -67,6 +67,7 @@ dispatch begin function
      flag ["ocaml"; "doc"; "use_netcgi"] (S[A"-I"; A (C.lib "netcgi2")]);
      flag ["ocaml"; "doc"; "use_xhtml"] (S[A"-I"; A (C.lib "ocsigen.xhtml")]);
      flag ["ocaml"; "doc"; "use_liboevent"] (S[A"-I"; A (C.lib "event")]);
+     flag ["ocaml"; "doc"; "use_curl"] (S[A"-I"; A (C.lib "curl")]);
 
      flag ["ocaml"; "doc"] (S[A"-short-functors"; A"-sort"; A"-m"; A"A"]);
 
