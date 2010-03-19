@@ -11,11 +11,21 @@ let replace_all ~str ~sub ~by =
   Str.global_substitute (Str.regexp_string sub) (fun _ -> by) str
 *)
 
+(** contents of the first submatch *)
 let extract rex str = 
   try
     Some (Pcre.extract ~rex ~full_match:false str).(0)
   with
     _ -> None
+
+(** sequence of matches *)
+let enum_matches rex s =
+  try
+    Pcre.exec_all ~rex s >> Array.enum
+  with
+    _ -> Enum.empty () 
+
+let enum_extract rex s = enum_matches rex s >> Enum.map (flip Pcre.get_substring 1)
 
 let erase_dots s = 
   let rec erase = parser
