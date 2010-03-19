@@ -4,6 +4,8 @@ open Printf
 
 open Prelude
 
+(* let log = Log.from "web" *)
+
 module Provider = struct
 
   type t = { request : string -> string; extract : string -> string Enum.t; }
@@ -22,6 +24,31 @@ module Provider = struct
       request = fun q ->
         sprintf "http://www.bing.com/search?q=%s&count=50&format=rss" (Netencoding.Url.encode q)
     }
+
+  (** 
+    @return list of (link,title,description)
+
+    raises exn on error *)
+  let bing_full s =
+    let xml = Xmlm.make_input (`String (0,s)) in
+    let rec skip () = 
+      match Xmlm.peek xml with
+      | `Dtd _ -> ignore & Xmlm.input xml; skip ()
+      | _ -> () in
+    skip ();
+    let link = ref "" and title = ref "" and desc = ref "" in
+    match Xmlm.input_tree ~data:(fun s -> `D s) ~el:(fun ((_,name),_) ch ->
+      match name,ch with
+      | "item", _ -> let r = (!link, !title, !desc) in link := ""; title := ""; desc := ""; `R r
+      | "link",[`D s] -> link := s; `U
+      | "description", [`D s] -> desc := s; `U
+      | "title", [`D s] -> title := s; `U
+      | "channel", l -> `L (List.filter_map (function (`R x) -> Some x | _ -> None) l)
+      | "rss",[x] -> x
+      | _ -> `U) xml
+    with
+    | `L l -> List.enum l
+    | _ -> assert false
 
 end
 
