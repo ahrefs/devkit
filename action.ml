@@ -31,6 +31,8 @@ let partition l n =
   ExtList.List.iteri (fun i x -> let i = i mod n in a.(i) <- x :: a.(i)) l;
   a
 
+let printfn fmt = ksprintf print_endline fmt
+
 (* FIXME *)
 
 let bytes_string_f f = (* oh ugly *)

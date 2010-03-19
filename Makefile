@@ -1,19 +1,23 @@
 
-.PHONY: all lib top doc clean install uninstall
+.PHONY: all lib top doc clean install uninstall test
 
 INSTALL_FILES=$(wildcard _build/*.cmx _build/*.cmi _build/*.mli _build/devkit.cma _build/devkit.cmxa _build/*.lib _build/*.a)
+OCAMLBUILD=ocamlbuild -j 0
 
 all:
-		ocamlbuild -j 0 devkit.otarget
+		$(OCAMLBUILD) devkit.otarget
 
 lib:
-		ocamlbuild -j 0 devkit.cma devkit.cmxa
+		$(OCAMLBUILD) devkit.cma devkit.cmxa
 
 top:
-		ocamlbuild -j 0 devkit.top
+		$(OCAMLBUILD) devkit.top
+
+test:
+		$(OCAMLBUILD) test.byte test.native
 
 doc:
-		ocamlbuild -j 0 devkit.docdir/index.html
+		$(OCAMLBUILD) devkit.docdir/index.html
 
 install: lib
 		ocamlfind install -patch-version "svn $(shell svnversion)" devkit META $(INSTALL_FILES)
@@ -23,3 +27,4 @@ uninstall:
 
 clean:
 		ocamlbuild -clean
+
