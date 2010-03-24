@@ -6,5 +6,6 @@ true: annot, debug, thread
 "varz_html.ml" or "netcgi_ext.ml": use_xhtml
 "stre.ml": camlp4o, use_pcre
 "httpev.ml": use_liboevent, camlp4o, pa_macro, use_pcre, use_netstring, use_xhtml
+"async.ml" or "nix.ml": use_liboevent
 <*.{top,byte,native}>: use_extLib, use_pcre, use_netstring, use_netcgi, use_xhtml, use_netsys, use_zip, use_unix, use_liboevent, use_curl
 <test.*>: use_oUnit

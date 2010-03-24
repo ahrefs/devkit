@@ -96,3 +96,54 @@ let string_of_sockaddr = function
   | Unix.ADDR_UNIX s -> Printf.sprintf "unix:%s" s
   | Unix.ADDR_INET (addr,port) -> Printf.sprintf "%s:%u" (Unix.string_of_inet_addr addr) port
 
+(** Execute process and capture stdout to string, @return empty string on error *)
+let read_process cmd =
+  try
+    let cin = Unix.open_process_in cmd in
+    let input = IO.input_channel cin in
+    let data = IO.read_all input in
+    IO.close_in input;
+    ignore (Unix.close_process_in cin);
+    data
+  with _ -> ""
+
+module Ev = Liboevent
+
+let read_process_exn ?timeout cmd =
+  let cin = Unix.open_process_in cmd in
+  let fd = Unix.descr_of_in_channel cin in
+  Unix.set_nonblock fd;
+  let ev = Ev.create () in
+  let ok = ref false in
+  let fin b = Ev.del ev; ok := b in
+  let b = Buffer.create 16 in
+  Ev.set ev fd [Ev.READ] ~persist:true (fun fd flags ->
+    try
+    if flags = Ev.TIMEOUT then
+      fin false
+    else
+      match Async.read_available ~limit:max_int fd with
+      | `Done s -> Buffer.add_string b s; fin true
+      | `Limit q -> fin false
+      | `Part s -> Buffer.add_string b s
+    with
+      exn -> Log.self#warn ~exn "event"; fin false);
+  Ev.add ev timeout;
+  Ev.dispatch ();
+  if !ok then
+    Some (Buffer.contents b)
+  else
+    None
+
+(** Execute process and feed stdin from string *)
+let write_process_exn cmd data =
+  let cout = Unix.open_process_out cmd in
+  output_string cout data;
+  flush cout;
+  match Unix.close_process_out cout with
+  | Unix.WEXITED 0 -> ()
+  | Unix.WEXITED n -> Exn.fail "Command \"%s\": Exit code %u" cmd n
+  | Unix.WSIGNALED n | Unix.WSTOPPED n -> Exn.fail "Command \"%s\": Terminated with signal %u" cmd n
+
+let write_process cmd data = try write_process_exn cmd data; true with _ -> false
+

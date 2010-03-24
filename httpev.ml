@@ -32,16 +32,6 @@ let default =
     log_epipe = false;
   }
 
-(** Create persistent event. Don't forget [del] *)
-let event fd flags f =
-  let ev = Ev.create () in
-  Ev.set ev fd flags ~persist:true (fun fd flags -> 
-    try 
-      f ev fd flags
-    with
-      exn -> log #warn ~exn "event");
-  Ev.add ev None
-
 type request = { addr : Unix.sockaddr ;
                  url : string; (* path and arguments *)
                  path : string;
@@ -204,28 +194,9 @@ let http_reply = function
 
   | `Custom s -> s
 
-let read_all ~limit fd =
-  let read buf =
-    try
-      match Unix.read fd buf 0 (String.length buf) with
-      | 0 -> None
-      | n -> Some n
-    with
-    | Unix.Unix_error (Unix.EAGAIN,_,_) -> None
-  in
-  let buf = Buffer.create 1024 in
-  let s = String.create 1024 in
-  let rec loop () =
-    match read s with
-    | None -> `Ok (Buffer.contents buf)
-    | Some len -> 
-      Buffer.add_substring buf s 0 len;
-      if Buffer.length buf > limit then `Error `Limit else loop ()
-  in
-  loop ()
-
+(** Wait until [fd] becomes readable and close it (for eventfd-backed notifications) *)
 let wait fd k =
-  event fd [Ev.READ] begin fun ev fd _ ->
+  Async.simple_event fd [Ev.READ] begin fun ev fd _ ->
     Ev.del ev;
     Exn.suppress Unix.close fd;
     k ()
@@ -259,21 +230,24 @@ let handle_client config status fd conn_info answer =
       (Buffer.length b) 
       (String.length body);
 (*     Buffer.add_string b body; *)
-    event fd [Ev.WRITE]
+    Async.simple_event fd [Ev.WRITE]
       (write_f config status req (ref [Buffer.contents b; body],ref 0))
     with
       exn -> abort exn "send"
   in
   log #debug "accepted %s" peer;
-  event fd [Ev.READ] begin fun ev fd _ ->
+  Async.simple_event fd [Ev.READ] begin fun ev fd _ ->
     try
     Ev.del ev; 
     (* FIXME may not read whole request *)
-    let (req,x) = match read_all ~limit:(16*1024) fd with
-    | `Error `Limit -> 
+    let (req,x) = match Async.read_available ~limit:(16*1024) fd with
+    | `Limit _ -> 
       log #info "read_all: request too large from %s" peer;
       None, `Now (`Request_too_large,[],"request entity too large")
-    | `Ok data ->
+    | `Part s ->
+      log #warn "read_all: received partial request from %s" peer;
+      None, `Now (`Bad_request,[],"")
+    | `Done data ->
       log #debug "read_all: %d bytes from %s" (String.length data) peer;
       match parse_http_req data conn_info with
       | `Error (Parse (what,msg)) ->
@@ -319,7 +293,7 @@ let server config answer =
   bind fd (ADDR_INET (config.ip,config.port));
   listen fd config.backlog;
   let status = { reqs = 0; active = 0; errs = 0; } in
-  event fd [Ev.READ] begin fun _ fd _ -> 
+  Async.simple_event fd [Ev.READ] begin fun _ fd _ -> 
 (*     Log.info "client";  *)
     try
       let (fd,addr) = accept fd in

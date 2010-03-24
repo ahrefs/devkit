@@ -31,6 +31,16 @@ let partition l n =
   ExtList.List.iteri (fun i x -> let i = i mod n in a.(i) <- x :: a.(i)) l;
   a
 
+(** [chunks e n] splits [e] into chunks of [n] elements each (except the last which can be shorter) *)
+(*
+let chunks e n =
+  let rec loop len =
+    if len = n 
+    match Enum.
+  ExtList.List.iteri (fun i x -> let i = i mod n in a.(i) <- x :: a.(i)) l;
+  a
+*)
+
 let printfn fmt = ksprintf print_endline fmt
 
 (* FIXME *)
