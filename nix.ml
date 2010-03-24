@@ -113,6 +113,7 @@ let read_process_exn ?timeout cmd =
   let cin = Unix.open_process_in cmd in
   let fd = Unix.descr_of_in_channel cin in
   Unix.set_nonblock fd;
+  let base = Ev.init () in
   let ev = Ev.create () in
   let ok = ref false in
   let fin b = Ev.del ev; ok := b in
@@ -128,8 +129,9 @@ let read_process_exn ?timeout cmd =
       | `Part s -> Buffer.add_string b s
     with
       exn -> Log.self#warn ~exn "event"; fin false);
-  Ev.add ev timeout;
-  Ev.dispatch ();
+  Ev.add base ev timeout;
+  Ev.dispatch base;
+  Ev.free base;
   if !ok then
     Some (Buffer.contents b)
   else

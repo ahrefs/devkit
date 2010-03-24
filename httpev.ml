@@ -22,6 +22,7 @@ type config =
     port : int;
     backlog : int;
     log_epipe : bool;
+    events : Ev.event_base;
   }
 
 let default = 
@@ -30,6 +31,7 @@ let default =
     port = 8080;
     backlog = 100;
     log_epipe = false;
+    events = Ev.Global.base;
   }
 
 type request = { addr : Unix.sockaddr ;
@@ -195,8 +197,8 @@ let http_reply = function
   | `Custom s -> s
 
 (** Wait until [fd] becomes readable and close it (for eventfd-backed notifications) *)
-let wait fd k =
-  Async.simple_event fd [Ev.READ] begin fun ev fd _ ->
+let wait base fd k =
+  Async.simple_event base fd [Ev.READ] begin fun ev fd _ ->
     Ev.del ev;
     Exn.suppress Unix.close fd;
     k ()
@@ -230,13 +232,13 @@ let handle_client config status fd conn_info answer =
       (Buffer.length b) 
       (String.length body);
 (*     Buffer.add_string b body; *)
-    Async.simple_event fd [Ev.WRITE]
+    Async.simple_event config.events fd [Ev.WRITE]
       (write_f config status req (ref [Buffer.contents b; body],ref 0))
     with
       exn -> abort exn "send"
   in
   log #debug "accepted %s" peer;
-  Async.simple_event fd [Ev.READ] begin fun ev fd _ ->
+  Async.simple_event config.events fd [Ev.READ] begin fun ev fd _ ->
     try
     Ev.del ev; 
     (* FIXME may not read whole request *)
@@ -277,7 +279,7 @@ let handle_client config status fd conn_info answer =
     in
     match x with
     | `Now reply -> send_reply (req,reply)
-    | `Later (fd,reply) -> wait fd (fun () -> send_reply (req, !reply))
+    | `Later (fd,reply) -> wait config.events fd (fun () -> send_reply (req, !reply))
     with
     exn -> abort exn "send"
   end
@@ -293,7 +295,7 @@ let server config answer =
   bind fd (ADDR_INET (config.ip,config.port));
   listen fd config.backlog;
   let status = { reqs = 0; active = 0; errs = 0; } in
-  Async.simple_event fd [Ev.READ] begin fun _ fd _ -> 
+  Async.simple_event config.events fd [Ev.READ] begin fun _ fd _ -> 
 (*     Log.info "client";  *)
     try
       let (fd,addr) = accept fd in
@@ -301,7 +303,7 @@ let server config answer =
     with
       exn -> log #error ~exn "accept"
   end;
-  Ev.dispatch ()
+  Ev.dispatch config.events
 
 end
 
