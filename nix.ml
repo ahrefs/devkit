@@ -4,6 +4,9 @@
 
 open Unix
 
+open Control
+open Prelude
+
 let unparent () =
   match fork () with  (* fork off and die *)
   | 0 -> ()
@@ -109,29 +112,64 @@ let read_process cmd =
 
 module Ev = Liboevent
 
+module UnixImpl = struct
+
+open Unix
+
+(* FD_CLOEXEC should be supported on all Unix systems these days,
+   but just in case... *)
+let try_set_close_on_exec fd =
+  try set_close_on_exec fd; true with Invalid_argument _ -> false
+
+let open_proc cmd input output toclose =
+  let cloexec = List.for_all try_set_close_on_exec toclose in
+  match fork() with
+  |  0 -> if input <> stdin then begin dup2 input stdin; close input end;
+          if output <> stdout then begin dup2 output stdout; close output end;
+          if not cloexec then List.iter close toclose;
+          begin try execv "/bin/sh" [| "/bin/sh"; "-c"; cmd |]
+          with _ -> exit 127
+          end
+  | id -> id
+
+let open_process_in cmd =
+  let (in_read, in_write) = pipe() in
+  let inchan = in_channel_of_descr in_read in
+  let pid = open_proc cmd stdin in_write [in_read] in
+  close in_write;
+  inchan, pid
+
+let close_process_in (cin,pid) = 
+  close_in cin;
+  restart (waitpid []) pid
+
+end (* module UnixImpl *)
+
 let read_process_exn ?timeout cmd =
-  let cin = Unix.open_process_in cmd in
+  bracket (UnixImpl.open_process_in cmd) (ignore $ UnixImpl.close_process_in) & fun (cin, pid) ->
   let fd = Unix.descr_of_in_channel cin in
   Unix.set_nonblock fd;
-  let base = Ev.init () in
+  bracket (Ev.init ()) Ev.free & fun base ->
   let ev = Ev.create () in
   let ok = ref false in
-  let fin b = Ev.del ev; ok := b in
+  let fin b = (* Ev.del called from inside event loop to break it *) Ev.del ev; ok := b in
   let b = Buffer.create 16 in
   Ev.set ev fd [Ev.READ] ~persist:true (fun fd flags ->
     try
     if flags = Ev.TIMEOUT then
+    begin
+      Unix.kill pid Sys.sigkill; (* kill! *)
       fin false
+    end
     else
       match Async.read_available ~limit:max_int fd with
       | `Done s -> Buffer.add_string b s; fin true
-      | `Limit q -> fin false
+      | `Limit q -> assert false
       | `Part s -> Buffer.add_string b s
     with
       exn -> Log.self#warn ~exn "event"; fin false);
   Ev.add base ev timeout;
   Ev.dispatch base;
-  Ev.free base;
   if !ok then
     Some (Buffer.contents b)
   else
