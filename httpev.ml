@@ -70,13 +70,14 @@ let failed reason s =
   | Url -> "url" | Version -> "version" | Method -> "method"
   | RequestLine -> "RequestLine" | Split -> "split" | Header -> "header" | Length -> "length"
   in
-  let s = if String.length s > 100 then (String.slice ~last:100 s) ^ "..." else s in
+  let lim = 1024 in
+  let s = if String.length s > lim then sprintf "%s [%d bytes more]" (String.slice ~last:lim s) (String.length s - lim) else s in
   raise (Parse (reason, sprintf "%s : %s" name s))
 
-let parse_http_req s (addr,conn) =
-  let next s = try String.split s "\r\n" with _ -> failed Split s in
+let parse_http_req data (addr,conn) =
+  let next s = try String.split s "\r\n" with _ -> failed Split data in
   try
-    let (line,s) = next s in
+    let (line,s) = next data in
     match Pcre.split ~rex:space line with
     | [meth;url;version] ->
       if url.[0] <> '/' then (* abs_path *)
@@ -241,15 +242,18 @@ let handle_client config status fd conn_info answer =
   Async.simple_event config.events fd [Ev.READ] begin fun ev fd _ ->
     try
     Ev.del ev; 
-    (* FIXME may not read whole request *)
     let (req,x) = match Async.read_available ~limit:(16*1024) fd with
     | `Limit _ -> 
       log #info "read_all: request too large from %s" peer;
       None, `Now (`Request_too_large,[],"request entity too large")
+(*
     | `Part s ->
+      log #info "%s" s;
       log #warn "read_all: received partial request from %s" peer;
       None, `Now (`Bad_request,[],"")
-    | `Done data ->
+*)
+    (* FIXME may not read whole request *)
+    | `Done data | `Part data ->
       log #debug "read_all: %d bytes from %s" (String.length data) peer;
       match parse_http_req data conn_info with
       | `Error (Parse (what,msg)) ->
