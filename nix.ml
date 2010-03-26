@@ -175,15 +175,23 @@ let read_process_exn ?timeout cmd =
   else
     None
 
-(** Execute process and feed stdin from string *)
-let write_process_exn cmd data =
+(** @return IO.t to feed stdin of spawned process *)
+let output_process cmd =
   let cout = Unix.open_process_out cmd in
-  output_string cout data;
-  flush cout;
-  match Unix.close_process_out cout with
-  | Unix.WEXITED 0 -> ()
-  | Unix.WEXITED n -> Exn.fail "Command \"%s\": Exit code %u" cmd n
-  | Unix.WSIGNALED n | Unix.WSTOPPED n -> Exn.fail "Command \"%s\": Terminated with signal %u" cmd n
+  let close () =
+    match Unix.close_process_out cout with
+    | Unix.WEXITED 0 -> ()
+    | Unix.WEXITED n -> Exn.fail "Command \"%s\": Exit code %u" cmd n
+    | Unix.WSIGNALED n | Unix.WSTOPPED n -> Exn.fail "Command \"%s\": Terminated with signal %u" cmd n
+  in
+  IO.create_out
+    ~write:(output_char cout)
+    ~output:(fun s o l -> output cout s o l; l)
+    ~flush:(fun () -> flush cout)
+    ~close
+
+let write_process_exn cmd data =
+  with_output (output_process cmd) (fun out -> IO.nwrite out data; IO.flush out)
 
 let write_process cmd data = try write_process_exn cmd data; true with _ -> false
 

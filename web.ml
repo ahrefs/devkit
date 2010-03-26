@@ -73,17 +73,15 @@ let () = Curl.global_init Curl.CURLINIT_GLOBALALL
 let with_curl f =
   bracket (Curl.init ()) Curl.cleanup f
 
-let http_get url =
+let http_get_io url out =
   try
-  with_curl (fun h ->
-(*     Curl.set_interface h ip; *)
-    Curl.set_url h url;
-    let b = Buffer.create 1024 in
-    Curl.set_writefunction h (fun s -> Buffer.add_string b s; String.length s);
-    Curl.perform h;
-    Buffer.contents b
-(*     log_trace "%u bytes (%.2f KB/sec) -- %s" (get_sizedownload h >> int_of_float) (get_speeddownload h /. 1024.) url *)
-  )
+    with_curl begin fun h ->
+      Curl.set_url h url;
+      Curl.set_writefunction h (fun s -> IO.nwrite out s; String.length s);
+      Curl.perform h
+    end
   with
-  exn -> Log.main #warn ~exn "http_get(%s)" url; ""
+    exn -> Log.main #warn ~exn "http_get_io(%s)" url
+
+let http_get url = wrapped (IO.output_string ()) IO.close_out (http_get_io url)
 
