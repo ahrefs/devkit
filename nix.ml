@@ -176,6 +176,16 @@ let read_process_exn ?timeout cmd =
     None
 
 (** @return IO.t to feed stdin of spawned process *)
+let output_process_exit cmd =
+  let cout = Unix.open_process_out cmd in
+  let close () = Unix.close_process_out cout in
+  IO.create_out
+    ~write:(output_char cout)
+    ~output:(fun s o l -> output cout s o l; l)
+    ~flush:(fun () -> flush cout)
+    ~close
+
+(** @return IO.t to feed stdin of spawned process *)
 let output_process cmd =
   let cout = Unix.open_process_out cmd in
   let close () =
