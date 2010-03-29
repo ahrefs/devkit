@@ -7,29 +7,56 @@ open Control
 
 (* let log = Log.from "web" *)
 
+module HtmlStream = struct
+
+type elem = Tag of string | Text of string
+
+let rec make = parser
+  | [< ''<'; x = tag; t >] -> [< 'Tag x; make t >]
+  | [< x = chars '<'; xtag = tag; t >] -> [< 'Text x; 'Tag xtag; make t >]
+  and tag s = chars '>' s
+  and chars delim strm =
+    let b = Buffer.create 10 in
+    let rec loop () =
+      let c = Stream.next strm in
+      if c = delim then Buffer.contents b else (Buffer.add_char b c; loop ())
+    in loop ()
+
+let show = Stream.iter (function Tag t -> print_endline ("tag " ^ t) | Text t -> print_endline t)
+
+end
+
 module Provider = struct
 
-  type t = { request : string -> string; extract : string -> string Enum.t; }
+  (**  @return list of (link,title,description)
+
+  raises exn on error *)
+  type extract_full = string -> (string * string * string) Enum.t
+
+  type t = { 
+    request : string -> string; 
+    extract : string -> string Enum.t; 
+    extract_full : extract_full;
+  }
+
+(*
+  let google_full =
+    tag "h3" ~with:["class","r"] 
+    let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l" in
+    fun s ->
+*)
+
+    
 
   let google =
     let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l" in
     { extract = Stre.enum_extract re;
-      request = fun q ->
+      request = (fun q ->
         sprintf "http://www.google.com/search?hl=en&q=%s&btnG=Search&aq=f&oq=&aqi="
-          (Netencoding.Url.encode q)
+          (Netencoding.Url.encode q));
+      extract_full = fun q -> assert false;
     }
 
-  let bing =
-    let re = Pcre.regexp ~flags:[`CASELESS] "<item>.*?<link>([^<]+)</link>.*?</item>" in
-    { extract = Stre.enum_extract re;
-      request = fun q ->
-        sprintf "http://www.bing.com/search?q=%s&count=50&format=rss" (Netencoding.Url.encode q)
-    }
-
-  (** 
-    @return list of (link,title,description)
-
-    raises exn on error *)
   let bing_full s =
     let xml = Xmlm.make_input (`String (0,s)) in
     let rec skip () = 
@@ -50,6 +77,14 @@ module Provider = struct
     with
     | `L l -> List.enum l
     | _ -> assert false
+
+  let bing =
+    let re = Pcre.regexp ~flags:[`CASELESS] "<item>.*?<link>([^<]+)</link>.*?</item>" in
+    { extract = Stre.enum_extract re;
+      request = (fun q ->
+        sprintf "http://www.bing.com/search?q=%s&count=50&format=rss" (Netencoding.Url.encode q));
+      extract_full = bing_full;
+    }
 
 end
 

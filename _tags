@@ -1,6 +1,6 @@
 true: annot, debug, thread
 <*.ml{,i}>: use_extLib
-"web.ml": use_pcre, use_netstring, use_netsys, use_curl
+"web.ml": use_pcre, use_netstring, use_netsys, use_curl, camlp4o
 "netcgi_ext.ml": use_netcgi, use_netstring
 <gzip_*.ml>: use_zip
 "varz_html.ml" or "netcgi_ext.ml": use_xhtml
