@@ -9,20 +9,58 @@ open Control
 
 module HtmlStream = struct
 
-type elem = Tag of string | Text of string
+type elem = Tag of (string * (string*string) list) | Text of string
+
+let eq : char -> char -> bool = (=)
+let neq : char -> char -> bool = (<>)
+let is_alpha = function 
+  | 'a'..'z' | 'A'..'Z' | '0'..'9' -> true 
+  | _ -> false
+let is_ws = function
+  | c when Char.code c <= 32 -> true
+  | _ -> false
 
 let rec make = parser
   | [< ''<'; x = tag; t >] -> [< 'Tag x; make t >]
-  | [< x = chars '<'; xtag = tag; t >] -> [< 'Text x; 'Tag xtag; make t >]
-  and tag s = chars '>' s
-  and chars delim strm =
+  | [< x = till '<'; xtag = tag; t >] -> [< 'Text x; 'Tag xtag; make t >]
+  | [< >] -> [< >]
+  and tag = parser
+  | [< name = chars is_alpha; () = skip is_ws; a=tag_attrs [] >] -> (name,a)
+  and tag_attrs a = parser
+  | [< ''>' >] -> a
+  | [< x = tag_attr; t >] -> tag_attrs (match x with Some x -> x::a | None -> a) t
+  and tag_attr_try = parser 
+  | [< name = chars is_alpha; () = skip is_ws; ''='; () = skip is_ws; v = attr_value; () = skip is_ws >] -> (name,v)
+  and attr_value = parser
+  | [< ''\''; s = till '\'' >] -> s
+  | [<''"'; s = till '"' >] -> s
+  | [< s = chars (fun c -> not (c = '>' || is_ws c)) >] -> s
+  and tag_attr s = Exn.catch tag_attr_try s
+  and chars f strm =
+    let b = Buffer.create 10 in
+    let rec loop () =
+      match Stream.peek strm with
+      | Some c when f c -> Stream.junk strm; Buffer.add_char b c; loop ()
+      | None -> raise Stream.Failure 
+      | _ -> Buffer.contents b 
+    in loop ()
+  and till delim strm =
     let b = Buffer.create 10 in
     let rec loop () =
       let c = Stream.next strm in
       if c = delim then Buffer.contents b else (Buffer.add_char b c; loop ())
     in loop ()
+  and skip f = parser
+  | [< 'c when f c; t >] -> skip f t
+  | [< _ >] -> ()
 
-let show = Stream.iter (function Tag t -> print_endline ("tag " ^ t) | Text t -> print_endline t)
+let show = Stream.iter (function Tag (t,_) -> Printf.printf "<%s>%!" t | Text t -> print_string t; flush stdout)
+
+let rec show_stream = parser
+  | [< 'c; t >] -> Printf.printf "-> %c\n%!" c; [< 'c; show_stream t >]
+  | [< >] -> [< >] 
+
+let test = show $ make $ show_stream $ Stream.of_string
 
 end
 
