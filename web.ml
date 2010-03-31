@@ -5,11 +5,11 @@ open Printf
 open Prelude
 open Control
 
-(* let log = Log.from "web" *)
+let log = Log.self
 
 module HtmlStream = struct
 
-type elem = Tag of (string * (string*string) list) | Text of string
+type elem = Tag of (string * (string*string) list) | Text of string | Close of string
 
 let eq : char -> char -> bool = (=)
 let neq : char -> char -> bool = (<>)
@@ -22,13 +22,17 @@ let is_ws = function
 
 exception EndTag
 
-let rec make = parser
-  | [< ''<'; x = tag; t >] -> [< 'Tag x; make t >]
-  | [< x = till '<'; xtag = tag; t >] -> [< 'Text x; 'Tag xtag; make t >]
+let rec parse = parser
+  | [< ''<'; x = tag; t >] -> [< 'x; parse t >]
+  | [< 'c; x = chars c (neq '<'); t >] -> [< 'Text x; parse t >]
   | [< >] -> [< >]
   and tag = parser
-  | [< 'c when is_alpha c; name = chars c is_alpha; () = skip is_ws; a=tag_attrs [] >] -> (name,a)
-  | [< t >] -> skip_till '>' t; ("",[]) (* skip garbage *)
+  | [< 'c when is_alpha c; name = chars c is_alpha; () = skip is_ws; a=tag_attrs [] >] -> Tag (name,List.rev a)
+  | [< ''/'; () = skip is_ws; x = close_tag >] -> Close x
+  | [< t >] -> skip_till '>' t; Tag ("",[]) (* skip garbage *)
+  and close_tag = parser
+  | [< 'c when is_alpha c; name = chars c is_alpha; () = skip_till '>' >] -> name
+  | [< t >] -> skip_till '>' t; ""
   and tag_attrs a = parser
   | [< ''>' >] -> a
   | [< 'c when is_alpha c; name = chars c is_alpha; () = skip is_ws; t >] ->
@@ -54,7 +58,7 @@ let rec make = parser
     let rec loop () =
       match Stream.peek strm with
       | Some c when f c -> Stream.junk strm; Buffer.add_char b c; loop ()
-      | None -> raise Stream.Failure 
+      | None -> Buffer.contents b
       | _ -> Buffer.contents b 
     in loop ()
   (** @return everything till [delim] (consumed but not included) *)
@@ -62,49 +66,45 @@ let rec make = parser
     let b = Buffer.create 10 in
     let rec loop () =
       let c = Stream.next strm in
-      if c = delim then Buffer.contents b else (Buffer.add_char b c; loop ())
-    in loop ()
+      if c = delim then () else (Buffer.add_char b c; loop ())
+    in 
+    begin try loop () with Stream.Failure -> () end;
+    Buffer.contents b
   (** skip all that match [f] *)
   and skip f = parser
   | [< 'c when f c; t >] -> skip f t
   | [< >] -> ()
   (** skip all till [delim] (including) *)
   and skip_till delim strm =
-    if Stream.next strm = delim then () else skip_till delim strm
+    if try Stream.next strm = delim with Stream.Failure -> true then () else skip_till delim strm
 
-(* let make s = try make s with Stream.Failure ->  *)
+let parse s = try parse s with exn -> log #warn ~exn "HtmlStream.parse"; [< >]
 
 (* open Printf *)
 
-let rex = Pcre.regexp "\""
+let quote =
+  let rex = Pcre.regexp "['\"&]" in
+  Pcre.substitute ~rex ~subst:(function "'" -> "&apos;" | "\"" -> "&quot;" | "&" -> "&amp;" | _ -> assert false)
 
-let show elem = 
+let show c elem = 
   match elem with
   | Tag (name,attrs) ->
     wrapped_output (IO.output_string ()) begin fun out ->
       IO.printf out "<%s" name; 
-      List.iter (fun (k,v) -> IO.printf out " %s=\"%s\"" k (Pcre.replace ~rex ~templ:"&quot;" v)) attrs;
+      List.iter (fun (k,v) -> IO.printf out " %s=%c%s%c" k c (quote v) c) attrs;
       IO.printf out ">"
     end
   | Text t -> t
+  | Close name -> sprintf "</%s>" name
 
-let rex = Pcre.regexp "'"
-
-let show' elem =
-  match elem with
-  | Tag (name,attrs) ->
-    wrapped_output (IO.output_string ()) begin fun out ->
-      IO.printf out "<%s" name; 
-      List.iter (fun (k,v) -> IO.printf out " %s='%s'" k (Pcre.replace ~rex ~templ:"&apos;" v)) attrs;
-      IO.printf out ">"
-    end
-  | Text t -> t
+let show' = show '\''
+let show = show '"'
 
 let rec show_stream = parser
   | [< 'c; t >] -> Printf.printf "-> %c\n%!" c; [< 'c; show_stream t >]
   | [< >] -> [< >] 
 
-let test = Stream.iter (print_endline $ show) $ make $ 
+let dump = Stream.iter (print_endline $ show) $ parse $ 
 (*   show_stream $ *)
   Stream.of_string
 
@@ -129,8 +129,6 @@ module Provider = struct
     let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l" in
     fun s ->
 *)
-
-    
 
   let google =
     let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l" in
