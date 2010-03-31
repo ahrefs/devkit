@@ -18,6 +18,16 @@ let extract rex str =
   with
     _ -> None
 
+(** ascii case-insensitive equality *)
+let iequal s1 s2 =
+  if String.length s1 <> String.length s2 then false else
+  try
+  for i = 0 to String.length s1 - 1 do
+    let c1 = s1.[i] and c2 = s2.[i] in
+    if c1 <> c2 && Char.lowercase c1 <> Char.lowercase c2 then raise Not_found
+  done; true
+  with Not_found -> false
+
 (** sequence of matches *)
 let enum_matches rex s =
   try
