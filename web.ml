@@ -22,13 +22,15 @@ let is_ws = function
 
 exception EndTag
 
+let label = String.lowercase
+
 let rec parse = parser
   | [< ''<'; x = tag; t >] -> [< 'x; parse t >]
   | [< 'c; x = chars c (neq '<'); t >] -> [< 'Text x; parse t >]
   | [< >] -> [< >]
   and tag = parser
-  | [< 'c when is_alpha c; name = chars c is_alpha; () = skip is_ws; a=tag_attrs [] >] -> Tag (name,List.rev a)
-  | [< ''/'; () = skip is_ws; x = close_tag >] -> Close x
+  | [< 'c when is_alpha c; name = chars c is_alpha; () = skip is_ws; a=tag_attrs [] >] -> Tag (label name,List.rev a)
+  | [< ''/'; () = skip is_ws; x = close_tag >] -> Close (label x)
   | [< t >] -> skip_till '>' t; Tag ("",[]) (* skip garbage *)
   and close_tag = parser
   | [< 'c when is_alpha c; name = chars c is_alpha; () = skip_till '>' >] -> name
@@ -37,8 +39,8 @@ let rec parse = parser
   | [< ''>' >] -> a
   | [< 'c when is_alpha c; name = chars c is_alpha; () = skip is_ws; t >] ->
     begin match try Some (maybe_value t) with EndTag -> None with
-    | Some v -> skip is_ws t; tag_attrs ((name,v) :: a) t
-    | None -> (name,"") :: a
+    | Some v -> skip is_ws t; tag_attrs ((label name,v) :: a) t
+    | None -> (label name,"") :: a
     end
   | [< t >] -> skip_till '>' t; a (* skip garbage *)
   and maybe_value = parser
@@ -78,6 +80,8 @@ let rec parse = parser
   and skip_till delim strm =
     if try Stream.next strm = delim with Stream.Failure -> true then () else skip_till delim strm
 
+(** convert char stream to html elements stream.
+  Names (tags and attributes) are lowercased *)
 let parse s = try parse s with exn -> log #warn ~exn "HtmlStream.parse"; [< >]
 
 (* open Printf *)
@@ -108,6 +112,42 @@ let dump = Stream.iter (print_endline $ show) $ parse $
 (*   show_stream $ *)
   Stream.of_string
 
+let tag name ?(a=[]) x =
+  match x with
+  | Tag (name',attrs) when name = name' -> 
+    begin try List.for_all (fun (k,v) -> List.assoc k attrs = v) a with Not_found -> false end
+  | _ -> false
+
+let rec stream_get f = parser
+  | [< 'x when f x; t >] -> x
+  | [< 'x; t >] -> stream_get f t
+  | [< >] -> raise Not_found
+
+let rec stream_find f s = ignore (stream_get f s)
+
+let stream_get_next f = parser
+  | [< 'x when f x >] -> x
+  | [< >] -> raise Not_found
+
+let stream_next f s = ignore (stream_get_next f s)
+
+let stream_extract_while f s =
+  let rec loop acc = 
+    match Stream.peek s with
+    | Some x when f x -> Stream.junk s; loop (x::acc)
+    | _ -> List.rev acc
+  in
+  loop []
+
+let stream_extract_till x = stream_extract_while ((<>) x)
+
+let to_text = function
+  | Tag _ -> None
+  | Text x -> Some x
+  | Close _ -> None
+
+let make_text l = wrapped_outs (fun out -> List.iter (Option.may (IO.nwrite out) $ to_text) l)
+
 end
 
 module Provider = struct
@@ -123,12 +163,27 @@ module Provider = struct
     extract_full : extract_full;
   }
 
-(*
-  let google_full =
-    tag "h3" ~with:["class","r"] 
-    let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l" in
-    fun s ->
-*)
+  open HtmlStream
+
+  let google_full s =
+    let s = parse & Stream.of_string s in
+    let acc = ref [] in
+    let rec loop () =
+      stream_find (tag "li" ~a:["class","g"]) s;
+      begin try
+        stream_next (tag "h3" ~a:["class","r"]) s;
+        let href = match stream_get_next (tag "a" ~a:["class","l"]) s with
+        | Tag (_,l) -> List.assoc "href" l
+        | _ -> assert false in
+        let h = stream_extract_till (Close "h3") s in
+        stream_find (tag "div"(* ~a:["class","s"]*)) s;
+        let t = stream_extract_while (not $ tag "br") s in
+        acc := (href,make_text h,make_text t) :: !acc;
+      with _ -> log #info "skipped" end;
+      loop ()
+    in
+    begin try loop () with Not_found -> () | exn -> log #warn ~exn "google_full" end;
+    List.rev !acc
 
   let google =
     let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l" in
@@ -136,7 +191,7 @@ module Provider = struct
       request = (fun q ->
         sprintf "http://www.google.com/search?hl=en&q=%s&btnG=Search&aq=f&oq=&aqi="
           (Netencoding.Url.encode q));
-      extract_full = fun q -> assert false;
+      extract_full = List.enum $ google_full;
     }
 
   let bing_full s =
