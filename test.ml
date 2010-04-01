@@ -4,10 +4,10 @@ open Printf
 
 open Prelude
 
-let test_search p =
+let test_search p s =
   let module WP = Web.Provider in
   let pr = print_endline in
-  Enum.iter (fun (l,t,d) -> pr l; pr t; pr d; pr "") & p.WP.extract_full & Web.http_get & p.WP.request "cats"
+  Enum.iter (fun (l,t,d) -> pr l; pr t; pr d; pr "") & p.WP.extract_full & Web.http_get & p.WP.request s
 
 let test_htmlstream () =
   Printexc.record_backtrace true;
@@ -57,6 +57,10 @@ let tests () =
 
 let () =
   match List.tl & Array.to_list Sys.argv with
-  | ["bing"] -> test_search Web.Provider.bing
-  | ["google"] -> test_search Web.Provider.google
+  | ["bing";s] -> test_search Web.Provider.bing s
+  | ["google";s] -> test_search Web.Provider.google s
+  | ["google_blogs";s] -> test_search Web.Provider.google_blogs s
+  | ["google_day";s] -> test_search Web.Provider.google_day s
+  | ["boardreader";s] -> test_search Web.Provider.boardreader s
   | _ -> tests ()
+

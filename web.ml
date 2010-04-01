@@ -200,6 +200,15 @@ module Provider = struct
       extract_full = List.enum $ google_full;
     }
 
+  let google_day =
+    let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l" in
+    { extract = Stre.enum_extract re;
+      request = (fun ?(num=10) q ->
+        sprintf "http://www.google.com/search?hl=en&q=%s&num=%u&btnG=Search&aq=f&oq=&aqi=&tbs=qdr:d,sbd:1"
+          (Netencoding.Url.encode q) num);
+      extract_full = List.enum $ google_full;
+    }
+
   let parse_rss s =
     let xml = Xmlm.make_input ~strip:true (`String (0,s)) in
     let rec skip () = 
@@ -241,6 +250,7 @@ module Provider = struct
 
   let bing = rss_source ~default:50 "http://www.bing.com/search?q=%s&count=%u&format=rss"
   let google_blogs = rss_source ~default:50 "http://blogsearch.google.com/blogsearch_feeds?q=%s&num=%u&hl=en&safe=off&output=rss"
+  let boardreader = rss_source ~default:50 "http://boardreader.com/rss/%s?extended_search=1&s=time_desc&p=%u&format=RSS2.0"
 
 end
 
