@@ -56,11 +56,7 @@ let tests () =
   ]) >> ignore
 
 let () =
-  match List.tl & Array.to_list Sys.argv with
-  | ["bing";s] -> test_search Web.Provider.bing s
-  | ["google";s] -> test_search Web.Provider.google s
-  | ["google_blogs";s] -> test_search Web.Provider.google_blogs s
-  | ["google_day";s] -> test_search Web.Provider.google_day s
-  | ["boardreader";s] -> test_search Web.Provider.boardreader s
+  match Array.to_list Sys.argv with
+  | [_;src;query] -> test_search (Web.Provider.by_name src) query
   | _ -> tests ()
 

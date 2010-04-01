@@ -252,6 +252,14 @@ module Provider = struct
   let google_blogs = rss_source ~default:50 "http://blogsearch.google.com/blogsearch_feeds?q=%s&num=%u&hl=en&safe=off&output=rss"
   let boardreader = rss_source ~default:50 "http://boardreader.com/rss/%s?extended_search=1&s=time_desc&p=%u&format=RSS2.0"
 
+  let by_name = function
+  | "bing" -> bing
+  | "google" -> google
+  | "google_blogs" -> google_blogs
+  | "google_day" -> google_day
+  | "boardreader" -> boardreader
+  | s -> Exn.fail "unknown search provider : %s" s
+
 end
 
 module Search(GET : sig val get : string -> string end) = struct
