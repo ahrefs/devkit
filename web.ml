@@ -112,11 +112,12 @@ let dump = Stream.iter (print_endline $ show) $ parse $
 (*   show_stream $ *)
   Stream.of_string
 
-let tag name ?(a=[]) x =
-  match x with
+let tag name ?(a=[]) = function
   | Tag (name',attrs) when name = name' -> 
     begin try List.for_all (fun (k,v) -> List.assoc k attrs = v) a with Not_found -> false end
   | _ -> false
+
+let close name = function Close name' when name = name' -> true | _ -> false 
 
 let rec stream_get f = parser
   | [< 'x when f x; t >] -> x
@@ -124,6 +125,10 @@ let rec stream_get f = parser
   | [< >] -> raise Not_found
 
 let rec stream_find f s = ignore (stream_get f s)
+
+let rec stream_skip f = parser
+  | [< 'x when f x; t >] -> stream_skip f t
+  | [< >] -> ()
 
 let stream_get_next f = parser
   | [< 'x when f x >] -> x
@@ -177,6 +182,7 @@ module Provider = struct
         | _ -> assert false in
         let h = stream_extract_till (Close "h3") s in
         stream_find (tag "div"(* ~a:["class","s"]*)) s;
+        if tag "span" ~a:["class","f"] (Option.get & Stream.peek s) then stream_find (tag "br") s;
         let t = stream_extract_while (not $ tag "br") s in
         acc := (href,make_text h,make_text t) :: !acc;
       with _ -> log #info "skipped" end;
