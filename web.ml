@@ -163,7 +163,7 @@ module Provider = struct
   type extract_full = string -> (string * string * string) Enum.t
 
   type t = { 
-    request : string -> string; 
+    request : ?num:int -> string -> string; 
     extract : string -> string Enum.t; 
     extract_full : extract_full;
   }
@@ -194,9 +194,9 @@ module Provider = struct
   let google =
     let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l" in
     { extract = Stre.enum_extract re;
-      request = (fun q ->
-        sprintf "http://www.google.com/search?hl=en&q=%s&btnG=Search&aq=f&oq=&aqi="
-          (Netencoding.Url.encode q));
+      request = (fun ?(num=10) q ->
+        sprintf "http://www.google.com/search?hl=en&q=%s&num=%u&btnG=Search&aq=f&oq=&aqi="
+          (Netencoding.Url.encode q) num);
       extract_full = List.enum $ google_full;
     }
 
@@ -232,15 +232,15 @@ module Provider = struct
     | `L l -> List.enum l
     | _ -> log #warn "unrecognized result"; Enum.empty ()
 
-  let rss_source fmt =
+  let rss_source ~default fmt =
     let re = Pcre.regexp ~flags:[`CASELESS] "<item>.*?<link>([^<]+)</link>.*?</item>" in
     { extract = Stre.enum_extract re;
-      request = (fun q -> sprintf fmt (Netencoding.Url.encode q));
+      request = (fun ?(num=default) q -> sprintf fmt (Netencoding.Url.encode q) default);
       extract_full = parse_rss;
     }
 
-  let bing = rss_source "http://www.bing.com/search?q=%s&count=50&format=rss"
-  let google_blogs = rss_source "http://blogsearch.google.com/blogsearch_feeds?q=%s&hl=en&safe=off&output=rss"
+  let bing = rss_source ~default:50 "http://www.bing.com/search?q=%s&count=%u&format=rss"
+  let google_blogs = rss_source ~default:50 "http://blogsearch.google.com/blogsearch_feeds?q=%s&num=%u&hl=en&safe=off&output=rss"
 
 end
 
