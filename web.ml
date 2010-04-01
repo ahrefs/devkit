@@ -200,14 +200,22 @@ module Provider = struct
       extract_full = List.enum $ google_full;
     }
 
-  let bing_full s =
-    let xml = Xmlm.make_input (`String (0,s)) in
+  let parse_rss s =
+    let xml = Xmlm.make_input ~strip:true (`String (0,s)) in
     let rec skip () = 
       match Xmlm.peek xml with
       | `Dtd _ -> ignore & Xmlm.input xml; skip ()
       | _ -> () in
     skip ();
     let link = ref "" and title = ref "" and desc = ref "" in
+(*
+    let rec show = function
+      | `R (l,_,_) -> log #info "result : %s _ _" l
+      | `U -> log #info "undef"
+      | `L l -> log #info "list"; List.iter (fun (l,_,_) -> log #info "list result %s" l) l; log #info "list end"
+      | `D s -> log #info "data %s" s
+    in
+*)
     match Xmlm.input_tree ~data:(fun s -> `D s) ~el:(fun ((_,name),_) ch ->
       match name,ch with
       | "item", _ -> let r = (!link, !title, !desc) in link := ""; title := ""; desc := ""; `R r
@@ -216,18 +224,23 @@ module Provider = struct
       | "title", [`D s] -> title := s; `U
       | "channel", l -> `L (List.filter_map (function (`R x) -> Some x | _ -> None) l)
       | "rss",[x] -> x
-      | _ -> `U) xml
+      | "rss",l -> 
+          log #warn "bad rss (%d)" (List.length l); 
+          begin try List.find (function `L _ -> true | _ -> false) l with _ -> `U end
+      | _ -> (*log #warn "unrec : %s" s;*) `U) xml
     with
     | `L l -> List.enum l
-    | _ -> assert false
+    | _ -> log #warn "unrecognized result"; Enum.empty ()
 
-  let bing =
+  let rss_source fmt =
     let re = Pcre.regexp ~flags:[`CASELESS] "<item>.*?<link>([^<]+)</link>.*?</item>" in
     { extract = Stre.enum_extract re;
-      request = (fun q ->
-        sprintf "http://www.bing.com/search?q=%s&count=50&format=rss" (Netencoding.Url.encode q));
-      extract_full = bing_full;
+      request = (fun q -> sprintf fmt (Netencoding.Url.encode q));
+      extract_full = parse_rss;
     }
+
+  let bing = rss_source "http://www.bing.com/search?q=%s&count=50&format=rss"
+  let google_blogs = rss_source "http://blogsearch.google.com/blogsearch_feeds?q=%s&hl=en&safe=off&output=rss"
 
 end
 
