@@ -65,6 +65,7 @@ dispatch begin function
      flag ["ocaml"; "doc"; "use_zip"] (S[A"-I"; A (C.lib "zip")]);
      flag ["ocaml"; "doc"; "use_pcre"] (S[A"-I"; A (C.lib "pcre")]);
      flag ["ocaml"; "doc"; "use_netcgi"] (S[A"-I"; A (C.lib "netcgi2")]);
+     flag ["ocaml"; "doc"; "use_netsys"] (S[A"-I"; A (C.lib "netsys")]);
      flag ["ocaml"; "doc"; "use_xhtml"] (S[A"-I"; A (C.lib "ocsigen.xhtml")]);
      flag ["ocaml"; "doc"; "use_liboevent"] (S[A"-I"; A (C.lib "event")]);
      flag ["ocaml"; "doc"; "use_curl"] (S[A"-I"; A (C.lib "curl")]);

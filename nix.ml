@@ -127,6 +127,7 @@ let open_proc cmd input output toclose =
   |  0 -> if input <> stdin then begin dup2 input stdin; close input end;
           if output <> stdout then begin dup2 output stdout; close output end;
           if not cloexec then List.iter close toclose;
+          Netsys.setpgid 0 0; (* separate process group *)
           begin try execv "/bin/sh" [| "/bin/sh"; "-c"; cmd |]
           with _ -> exit 127
           end
@@ -158,7 +159,7 @@ let read_process_exn ?timeout cmd =
     try
     if flags = Ev.TIMEOUT then
     begin
-      Unix.kill pid Sys.sigkill; (* kill! *)
+      Unix.kill (-pid) Sys.sigkill; (* kill the whole process group *)
       fin false
     end
     else
