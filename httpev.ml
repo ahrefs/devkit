@@ -291,25 +291,38 @@ let handle_client config status fd conn_info answer =
 include struct
 open Unix
 
-let server config answer = 
-(*   open Unix in *)
+let start_listen config =
   let fd = socket PF_INET SOCK_STREAM 0 in
   set_nonblock fd;
   setsockopt fd SO_REUSEADDR true;
   bind fd (ADDR_INET (config.ip,config.port));
   listen fd config.backlog;
+  fd
+
+let setup_fd fd config answer = 
+(*   open Unix in *)
   let status = { reqs = 0; active = 0; errs = 0; } in
   Async.simple_event config.events fd [Ev.READ] begin fun _ fd _ -> 
 (*     Log.info "client";  *)
     try
       let (fd,addr) = accept fd in
-      handle_client config status fd (addr,Time.get()) answer
+      try
+        handle_client config status fd (addr,Time.get()) answer
+      with
+        exn -> log #error ~exn "accepted"
     with
-      exn -> log #error ~exn "accept"
-  end;
-  Ev.dispatch config.events
+      _ -> () (* forked on single listening socket *)
+  end
+
+  let setup config answer =
+    let fd = start_listen config in
+    setup_fd fd config answer
 
 end
+
+let server config answer =
+  setup config answer;
+  Ev.dispatch config.events
 
 let header n v = n,v
 let forbidden = `Forbidden, [], "forbidden"
