@@ -242,7 +242,7 @@ let handle_client config status fd conn_info answer =
   Async.simple_event config.events fd [Ev.READ] begin fun ev fd _ ->
     try
     Ev.del ev; 
-    let (req,x) = match Async.read_available ~limit:(16*1024) fd with
+    let (req,x) = match Async.read_available ~limit:(64*1024) fd with
     | `Limit _ -> 
       log #info "read_all: request too large from %s" peer;
       None, `Now (`Request_too_large,[],"request entity too large")
