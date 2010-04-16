@@ -95,7 +95,7 @@ let () =
   handle_sig_reload_with (fun () ->
     List.iter (fun fin -> try fin () with exn -> Log.self #warn ~exn "sig_reload_funcs") !sig_reload_funcs)
 
-let string_of_sockaddr = function
+let show_addr = function
   | Unix.ADDR_UNIX s -> Printf.sprintf "unix:%s" s
   | Unix.ADDR_INET (addr,port) -> Printf.sprintf "%s:%u" (Unix.string_of_inet_addr addr) port
 

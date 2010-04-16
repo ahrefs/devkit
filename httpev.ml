@@ -47,7 +47,7 @@ type request = { addr : Unix.sockaddr ;
                  }
 
 let show_request c =
-  let client = Nix.string_of_sockaddr c.addr in
+  let client = Nix.show_addr c.addr in
   let client = try sprintf "%s (%s)" (List.assoc "x-real-ip" c.headers) client with Not_found -> client in
   sprintf "%s time %.4f (recv %.4f) %s%s"
     client
@@ -206,7 +206,7 @@ let wait base fd k =
   end
 
 let handle_client config status fd conn_info answer =
-  let peer = Nix.string_of_sockaddr (fst conn_info) in
+  let peer = Nix.show_addr (fst conn_info) in
   INC status.reqs;
   INC status.active;
   Unix.set_nonblock fd;
@@ -295,8 +295,10 @@ let start_listen config =
   let fd = socket PF_INET SOCK_STREAM 0 in
   set_nonblock fd;
   setsockopt fd SO_REUSEADDR true;
-  bind fd (ADDR_INET (config.ip,config.port));
+  let addr = ADDR_INET (config.ip,config.port) in
+  bind fd addr;
   listen fd config.backlog;
+  log #info "HTTP server ready on %s" (Nix.show_addr addr);
   fd
 
 let setup_fd fd config answer = 
@@ -309,7 +311,7 @@ let setup_fd fd config answer =
       try
         handle_client config status fd (addr,Time.get()) answer
       with
-        exn -> log #error ~exn "accepted"
+        exn -> log #error ~exn "accepted (%s)" (Nix.show_addr addr)
     with
       _ -> () (* forked on single listening socket *)
   end
@@ -381,7 +383,6 @@ let serve_html req html =
     XHTML.M.pretty_print (IO.nwrite out) html)
 
 let run ?(ip=Unix.inet_addr_loopback) port answer =
-  log #info "Ready for HTTP on %s:%u" (Unix.string_of_inet_addr ip) port;
   server { default with ip = ip; port = port } answer
 
 let input_header req name =
