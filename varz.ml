@@ -66,6 +66,21 @@ initializer
 
 end
 
+(** Exponential Weighted Moving Average 
+  (smooth) 0.05 < alpha < 0.15 (dynamic)
+*)
+let ewma alpha name =
+object (self)
+val mutable x = 0.
+method add n = x <- x +. alpha *. (n -. x)
+method gets = string_of_float x
+method name = name
+
+initializer
+  reg_value name self
+
+end
+
 let time_value name =
 object(self)
 val mutable x = 0.
