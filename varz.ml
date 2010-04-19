@@ -19,6 +19,14 @@ let reg_value (name:string) x =
 let reg_control (name:string) x =
   Hashtbl.add controls name (x:><gets:string; sets:string->bool>)
 
+exception Unknown of string
+
+let get name =
+  try
+    (Hashtbl.find values name) #gets
+  with
+    Not_found -> raise (Unknown name)
+
 let set_control name x =
   try let c = Hashtbl.find controls name in c#sets x
   with _ -> false
