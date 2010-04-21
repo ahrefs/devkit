@@ -214,3 +214,17 @@ let mounts () =
     | [_dev;mount;_fs;opt;_;_] -> mount, String.nsplit opt ","
     | _ -> Exn.fail "bad mount : %s" s)
 
+(** @param path must be normalized *)
+let find_mount path =
+  assert (not & Filename.is_relative path);
+  assert (not & String.exists path "//");
+  assert (not & String.exists path "/./");
+  assert (not & String.exists path "/../");
+  let mount = ref ("",[]) in
+  mounts () >>
+  List.iter (fun (bind,o) -> 
+    if String.starts_with path bind && String.length bind > String.length (fst !mount) then
+      mount := (bind,o));
+  assert (fst !mount <> "");
+  !mount
+
