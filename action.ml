@@ -31,6 +31,14 @@ let partition l n =
   ExtList.List.iteri (fun i x -> let i = i mod n in a.(i) <- x :: a.(i)) l;
   a
 
+let file_lines_exn file =
+  let ch = open_in file in
+  let l = Std.input_lines ch >> List.of_enum in
+  close_in_noerr ch;
+  l
+
+let file_lines file = try file_lines_exn file with _ -> []
+
 (** [chunks e n] splits [e] into chunks of [n] elements each (except the last which can be shorter) *)
 (*
 let chunks e n =

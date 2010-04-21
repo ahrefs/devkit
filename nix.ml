@@ -6,6 +6,7 @@ open Unix
 
 open Control
 open Prelude
+open ExtLib
 
 let unparent () =
   match fork () with  (* fork off and die *)
@@ -205,4 +206,11 @@ let write_process_exn cmd data =
   with_output (output_process cmd) (fun out -> IO.nwrite out data; IO.flush out)
 
 let write_process cmd data = try write_process_exn cmd data; true with _ -> false
+
+let mounts () =
+  Action.file_lines_exn "/proc/mounts" >>
+  List.map (fun s -> 
+    match String.nsplit s " " with
+    | [_dev;mount;_fs;opt;_;_] -> mount, String.nsplit opt ","
+    | _ -> Exn.fail "bad mount : %s" s)
 
