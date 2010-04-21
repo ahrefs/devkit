@@ -282,14 +282,29 @@ let () = Curl.global_init Curl.CURLINIT_GLOBALALL
 let with_curl f =
   bracket (Curl.init ()) Curl.cleanup f
 
-let http_get_io url out =
+let curl_ok h = Curl.get_httpcode h = 200
+
+let http_get_io_exn ?(check=curl_ok) url out =
+  let inner = ref None in
   try
     with_curl begin fun h ->
+      let check = lazy (check h) in
       Curl.set_url h url;
-      Curl.set_writefunction h (fun s -> IO.nwrite out s; String.length s);
+      Curl.set_writefunction h (fun s -> 
+        try 
+          match Lazy.force check with 
+          | false -> 0
+          | true -> IO.nwrite out s; String.length s
+        with exn -> inner := Some exn; 0);
       Curl.perform h
     end
   with
+    exn -> raise (Option.default exn !inner)
+
+let http_get_io url out =
+  try
+    http_get_io_exn url out
+  with 
     exn -> Log.main #warn ~exn "http_get_io(%s)" url
 
 let http_get url = wrapped (IO.output_string ()) IO.close_out (http_get_io url)
