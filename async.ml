@@ -1,3 +1,4 @@
+(** Asynchronous IO helpers *)
 
 open Prelude
 
@@ -21,20 +22,20 @@ let simple_event base fd flags f =
 
 type result = End | Data of int | Block
 
+let read_some fd buf ofs len =
+  try
+    match Unix.read fd buf ofs len with
+    | 0 -> End
+    | n -> Data n
+  with
+  | Unix.Unix_error (Unix.EAGAIN,_,_) -> Block
+
 (** Read out all immediately available input (no blocking) *)
 let read_available ~limit fd =
-  let read buf =
-    try
-      match Unix.read fd buf 0 (String.length buf) with
-      | 0 -> End
-      | n -> Data n
-    with
-    | Unix.Unix_error (Unix.EAGAIN,_,_) -> Block
-  in
   let buf = Buffer.create 1024 in
   let s = String.create 1024 in
   let rec loop () =
-    match read s with
+    match read_some fd s 0 (String.length s) with
     | End -> `Done (Buffer.contents buf)
     | Block -> `Part (Buffer.contents buf)
     | Data len ->
@@ -42,4 +43,25 @@ let read_available ~limit fd =
       if Buffer.length buf > limit then `Limit (Buffer.contents buf) else loop ()
   in
   loop ()
+
+(** [read_buf buf fd err k] - asynchronously fill [buf] with data from [fd] and call [k buf] when done (buffer is full).
+  [fd] should be nonblocking. Call [err] on error (EOF). *)
+let read_buf base buf fd err k =
+  let len = String.length buf in
+  let later cur =
+    let cur = ref cur in
+    simple_event base fd [Ev.READ] (fun ev fd flags ->
+      match read_some fd buf !cur (len - !cur) with
+      | End -> Ev.del ev; err ()
+      | Data n -> cur := !cur + n; if !cur = len then begin Ev.del ev; k buf end
+      | Block -> Ev.del ev; assert false
+    )
+  in
+  match read_some fd buf 0 len with
+  | End -> err ()
+  | Data n when n = len -> k buf
+  | Block -> later 0
+  | Data n -> later n
+
+let read_n base n fd err k = read_buf base (String.create n) fd err k
 
