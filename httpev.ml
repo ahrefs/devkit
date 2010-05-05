@@ -236,7 +236,7 @@ let handle_client config status fd conn_info answer =
     Async.simple_event config.events fd [Ev.WRITE]
       (write_f config status req (ref [Buffer.contents b; body],ref 0))
     with
-      exn -> abort exn "send"
+      exn -> abort exn "send_reply"
   in
   log #debug "accepted %s" peer;
   Async.simple_event config.events fd [Ev.READ] begin fun ev fd _ ->
