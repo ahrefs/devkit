@@ -43,6 +43,8 @@ module TimeLimited(E: sig type t end) = struct
     let found = locked t.mutex (fun () -> M.filter (on_key key) t.m) in
     try M.choose found >> snd >> some with Not_found -> None
 
+  let count t = locked t.mutex (fun () -> M.cardinal t.m)
+
 end
 
 module NoLock = struct
@@ -93,6 +95,8 @@ module TimeLimited2(E: Set.OrderedType)
     (* lock is not needed *)
     let found = Lock.locked t.lock (fun () -> M.filter (fun (x,_) -> 0 = E.compare x v) t.m) in
     try M.choose found >> snd >> some with Not_found -> None
+
+  let count t = Lock.locked t.lock (fun () -> M.cardinal t.m)
 
 end
 
