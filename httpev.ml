@@ -178,6 +178,23 @@ let write_f config status req (data,ack) ev fd _flags =
     | false, Unix.Unix_error (Unix.EPIPE,_,_) -> ()
     | _ -> log #warn ~exn "write_f %s" & Option.map_default show_request "" req
 
+type reply_status = 
+  [ `Ok
+  | `Found
+  | `Bad_request
+  | `Unauthorized
+  | `Forbidden
+  | `Not_found
+  | `Length_required
+  | `Request_too_large
+  | `Internal_server_error
+  | `Not_implemented
+  | `Service_unavailable
+  | `Version_not_supported
+  | `Custom of string ]
+
+type reply = reply_status * (string * string) list * string
+
 let http_reply = function
   | `Ok -> "HTTP/1.0 200 OK"
 
@@ -217,7 +234,7 @@ let handle_client config status fd conn_info answer =
     Exn.suppress close fd;
     log #warn ~exn "handle_client %s %s" msg peer
   in 
-  let send_reply (req,(code,hdrs,body)) =
+  let send_reply req (code,hdrs,body) =
     try
     let b = Buffer.create 1024 in
     let put s = Buffer.add_string b s; Buffer.add_string b "\r\n" in
@@ -242,10 +259,10 @@ let handle_client config status fd conn_info answer =
   Async.simple_event config.events fd [Ev.READ] begin fun ev fd _ ->
     try
     Ev.del ev; 
-    let (req,x) = match Async.read_available ~limit:(256*1024) fd with
+    match Async.read_available ~limit:(256*1024) fd with
     | `Limit _ -> 
       log #info "read_all: request too large from %s" peer;
-      None, `Now (`Request_too_large,[],"request entity too large")
+      send_reply None (`Request_too_large,[],"request entity too large")
 (*
     | `Part s ->
       log #info "%s" s;
@@ -263,27 +280,26 @@ let handle_client config status fd conn_info answer =
         | Length -> `Length_required
         in
         log #warn "parse_http_req from %s : %s" peer msg;
-        None, `Now (error,[],"")
+        send_reply None (error,[],"")
       | `Error exn -> 
         log #warn ~exn "parse_http_req from %s" peer;
-        None, `Now (`Bad_request,[],"")
+        send_reply None (`Bad_request,[],"")
       | `Ok req ->
         try
-          let reply = 
-            match req.version with
-            | (1,_) -> answer status req
-            | _ -> 
-              log #info "version %u.%u not supported from %s" (fst req.version) (snd req.version) (show_request req);
-              `Now (`Version_not_supported, [], "HTTP/1.0 is supported")
-          in
-          Some req, reply
+          match req.version with
+          | (1,_) -> answer status req (send_reply (Some req))
+          | _ ->
+            log #info "version %u.%u not supported from %s" (fst req.version) (snd req.version) (show_request req);
+            send_reply (Some req) (`Version_not_supported, [], "HTTP/1.0 is supported")
         with exn ->
           log #error ~exn "answer %s" & show_request req;
-          None, `Now (`Internal_server_error,[],"Internal server error")
+          send_reply (Some req) (`Internal_server_error,[],"Internal server error")
+(*
     in
     match x with
     | `Now reply -> send_reply (req,reply)
     | `Later (fd,reply) -> wait config.events fd (fun () -> send_reply (req, !reply))
+*)
     with
     exn -> abort exn "send"
   end
@@ -351,7 +367,8 @@ module Args(T : sig val req : request end) =
 struct
   let arg name = List.assoc name T.req.args
   exception Bad of string
-  let get name = Exn.catch arg name
+  let get = Exn.catch arg
+  let get_int = Exn.catch (int_of_string $ arg)
   let str name = match get name with Some s -> s | None -> raise (Bad name)
   let int name = let s = str name in try int_of_string s with _ -> raise (Bad name)
 end
