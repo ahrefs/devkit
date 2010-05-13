@@ -72,8 +72,8 @@ end
 *)
 let ewma alpha name =
 object (self)
-val mutable x = 0.
-method add n = x <- x +. alpha *. (n -. x)
+val mutable x = nan
+method add n = if compare nan x = 0 then x <- n else x <- x +. alpha *. (n -. x)
 method gets = string_of_float x
 method get = x
 method name = name
