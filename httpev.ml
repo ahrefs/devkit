@@ -100,13 +100,17 @@ let parse_http_req data (addr,conn) =
           let headers = List.rev_map (fun (n,v) -> String.lowercase n,v) hs in
           if version = (1,1) && not (List.mem_assoc "host" headers) then failed Header "Host is required for HTTP/1.1"; 
           let length = match Exn.catch (List.assoc "content-length") headers with
-                       | None -> None
-                       | Some s -> try Some (int_of_string s) with _ -> failed Header (sprintf "content-length %s" s)
+                       | None -> 0
+                       | Some s -> try int_of_string s with _ -> failed Header (sprintf "content-length %s" s)
           in
-          begin match length, String.length body with
-          | Some len, n when len <> n -> Exn.fail "not full body : %u <> %u" len n
-          | None, n when n <> 0 -> failed Length "required"
-          | _ ->
+          let body =
+            let body_len = String.length body in
+            match body_len - length with
+            | 0 -> body
+            (* workaround MSIE 6 *)
+            | 2 when meth = `POST && s.[body_len - 2] = '\r' && s.[body_len - 1] = '\n' -> String.slice ~last:(-2) body
+            | _ -> Exn.fail "wrong content-length : %d <> %d" length body_len
+          in
           let (path,args) = try String.split url "?" with _ -> url,"" in
           let decode_args s = try Netencoding.Url.dest_url_encoded_parameters s with _ -> log #debug "failed to parse args : %s" s; [] in
           let args = match meth with
@@ -125,7 +129,6 @@ let parse_http_req data (addr,conn) =
             meth = meth;
             version = version;
           }
-          end
         | line,s ->
           let (n,v) = try String.split line ":" with _ -> failed Header line in
           loop ((n, String.strip v) :: hs) s
@@ -135,7 +138,7 @@ let parse_http_req data (addr,conn) =
   with
   exn -> `Error exn
 
-let int_of_fd : Unix.file_descr -> int = Obj.magic
+(* let int_of_fd : Unix.file_descr -> int = Obj.magic *)
 
 let close fd =
 (*   Log.info "close %u" (int_of_fd fd); *)
