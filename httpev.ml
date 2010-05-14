@@ -309,7 +309,6 @@ open Unix
 
 let start_listen config =
   let fd = socket PF_INET SOCK_STREAM 0 in
-  set_nonblock fd;
   setsockopt fd SO_REUSEADDR true;
   let addr = ADDR_INET (config.ip,config.port) in
   bind fd addr;
@@ -319,17 +318,20 @@ let start_listen config =
 
 let setup_fd fd config answer = 
 (*   open Unix in *)
+  set_nonblock fd;
   let status = { reqs = 0; active = 0; errs = 0; } in
   Async.simple_event config.events fd [Ev.READ] begin fun _ fd _ -> 
-(*     Log.info "client";  *)
     try
-      let (fd,addr) = accept fd in
-      try
-        handle_client config status fd (addr,Time.get()) answer
-      with
-        exn -> log #error ~exn "accepted (%s)" (Nix.show_addr addr)
+      while true do (* accept as much as possible, socket is nonblocking *)
+        let (fd,addr) = accept fd in
+        try
+          handle_client config status fd (addr,Time.get()) answer
+        with
+          exn -> log #error ~exn "accepted (%s)" (Nix.show_addr addr)
+      done
     with
-      _ -> () (* forked on single listening socket *)
+    | Unix_error(EAGAIN,_,_) -> ()
+    | exn -> log #error ~exn "accept"
   end
 
   let setup config answer =

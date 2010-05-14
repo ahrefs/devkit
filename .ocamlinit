@@ -1,2 +1,5 @@
 #use "topfind";;
 #directory "_build";;
+#thread;;
+#require "extlib,curl,pcre,event,zip,netsys,netstring,netcgi2,ocsigen_xhtml";;
+#load "devkit.cma";;
