@@ -110,6 +110,8 @@ method warn : 'a. 'a pr = perform warn_s
 method info : 'a. 'a pr = perform info_s
 method error : 'a. 'a pr = perform error_s
 method allow (level:Logger.level) = Logger.set_filter facil level
+method level : Logger.level = Logger.get_level facil
+method name = facil.Logger.name
 end
 
 let from name = new logger (facility name)

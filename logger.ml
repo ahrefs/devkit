@@ -2,13 +2,18 @@
 open Printf
 
 type level = [`Debug | `Info | `Warn | `Error]
-type facil = { name : string; mutable show : int }
+type facil = { name : string; mutable show : int; }
 let int_level = function
   | `Debug -> 0
   | `Info -> 1
   | `Warn -> 2
   | `Error -> 3
 let set_filter facil level = facil.show <- int_level level
+let get_level facil = match facil.show with
+  | 0 -> `Debug
+  | 1 -> `Info
+  | 2 -> `Warn
+  | _ -> `Error (* ! *)
 let allowed facil level = int_level level >= facil.show
 
 let string_level = function
