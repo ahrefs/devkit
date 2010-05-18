@@ -351,6 +351,8 @@ let header n v = n,v
 let forbidden = `Forbidden, [], "forbidden"
 let not_found = `Not_found, [], "not found"
 let found url = `Found,[header "Location" url], "found"
+let cache_no = [header "Pragma" "no-cache"; header "Cache-Control" "max-age=0"]
+let cache_yes t = [header "Last-Modified" (Time.to_rfc2822 t)]
 
 (*
 let answer st url =
