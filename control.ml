@@ -28,6 +28,7 @@ let wrapped_output io = wrapped io IO.close_out
 let wrapped_outs k = wrapped_output (IO.output_string ()) k
 let with_input io = bracket io IO.close_in
 let with_input_bin name k = with_open_in_bin name (fun ch -> k (IO.input_channel ch))
+let with_output_bin name k = with_open_out_bin name (fun ch -> k (IO.output_channel ch))
 
 let locked mutex f = Mutex.lock mutex; Std.finally (fun () -> Mutex.unlock mutex) f ()
 
