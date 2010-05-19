@@ -274,7 +274,8 @@ module Search(GET : sig val get : string -> string end) = struct
 end
 
 let get_host = String.lowercase $ Neturl.url_host $ Neturl.parse_url
-let urlencode = Netencoding.Url.encode
+let rawurlencode = Netencoding.Url.encode ~plus:false
+let urlencode = Netencoding.Url.encode ~plus:true
 let urldecode = Netencoding.Url.decode
 
 let () = Curl.global_init Curl.CURLINIT_GLOBALALL
