@@ -9,6 +9,7 @@ type t = float
 
 let get = Unix.gettimeofday
 
+(** @see <http://www.w3.org/TR/NOTE-datetime> W3C Datetime *)
 let gmt_string t = 
   let module U = Unix in
   let t = U.gmtime t in

@@ -12,3 +12,6 @@ let const x = fun () -> x
 let apply2 f = fun (x,y) -> f x, f y
 (* let println = print_endline *)
 
+let curry f a b = f (a, b)
+let uncurry f (a,b) = f a b
+
