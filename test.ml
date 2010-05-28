@@ -14,7 +14,7 @@ let test_htmlstream () =
   let module HS = Web.HtmlStream in
   let (==>) s s' = 
   try
-    let s'' = Control.wrapped_output (IO.output_string ()) (fun io -> Stream.iter (IO.nwrite io $ HS.show') (HS.parse (Stream.of_string s))) in
+    let s'' = Control.wrapped_output (IO.output_string ()) (fun io -> ExtStream.iter (IO.nwrite io $ HS.show') (HS.parse (ExtStream.of_string s))) in
     if s' = s'' then () else
       failwith (sprintf "%s ==> %s (got %s)" s s' s'')
   with 

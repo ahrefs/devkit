@@ -1,3 +1,4 @@
+(** web utilities *)
 
 open ExtLib
 open Printf
@@ -7,9 +8,14 @@ open Control
 
 let log = Log.self
 
+(** Stream of html elements *)
 module HtmlStream = struct
 
+module Stream = ExtStream
+
 type elem = Tag of (string * (string*string) list) | Text of string | Close of string
+
+module Parser = struct 
 
 let eq : char -> char -> bool = (=)
 let neq : char -> char -> bool = (<>)
@@ -24,6 +30,7 @@ exception EndTag
 
 let label = String.lowercase
 
+(** parse stream of characters @return stream of html elements *)
 let rec parse = parser
   | [< ''<'; x = tag; t >] -> [< 'x; parse t >]
   | [< 'c; x = chars c (neq '<'); t >] -> [< 'Text x; parse t >]
@@ -80,9 +87,11 @@ let rec parse = parser
   and skip_till delim strm =
     if try Stream.next strm = delim with Stream.Failure -> true then () else skip_till delim strm
 
+end (* Parser *)
+
 (** convert char stream to html elements stream.
   Names (tags and attributes) are lowercased *)
-let parse s = try parse s with exn -> log #warn ~exn "HtmlStream.parse"; [< >]
+let parse s = try Parser.parse s with exn -> log #warn ~exn "HtmlStream.parse"; [< >]
 
 (* open Printf *)
 
@@ -119,23 +128,46 @@ let tag name ?(a=[]) = function
 
 let close name = function Close name' when name = name' -> true | _ -> false 
 
+let to_text = function
+  | Tag _ -> None
+  | Text x -> Some x
+  | Close _ -> None
+
+(** extract text from the list elements *)
+let make_text l = wrapped_outs (fun out -> List.iter (Option.may (IO.nwrite out) $ to_text) l)
+
+end
+
+module T = struct
+
+module Stream = ExtStream
+
+(** scan stream until predicate is true
+  @return matching element
+  @raise Not_found on stream end *)
 let rec stream_get f = parser
   | [< 'x when f x; t >] -> x
   | [< 'x; t >] -> stream_get f t
   | [< >] -> raise Not_found
 
+(** see {!stream_get} *)
 let rec stream_find f s = ignore (stream_get f s)
 
+(** scan stream while predicate holds, stop on first non-matching element or stream end *)
 let rec stream_skip f = parser
   | [< 'x when f x; t >] -> stream_skip f t
   | [< >] -> ()
 
+(** @return next stream element if predicate matches
+    @raise Not_found otherwise *)
 let stream_get_next f = parser
   | [< 'x when f x >] -> x
   | [< >] -> raise Not_found
 
+(** see {!stream_get_next} *)
 let stream_next f s = ignore (stream_get_next f s)
 
+(** scan stream while predicate holds @return list of matching elements *)
 let stream_extract_while f s =
   let rec loop acc = 
     match Stream.peek s with
@@ -144,16 +176,12 @@ let stream_extract_while f s =
   in
   loop []
 
+(** equivalent to [stream_extract_while ((<>) x)] *)
 let stream_extract_till x = stream_extract_while ((<>) x)
 
-let to_text = function
-  | Tag _ -> None
-  | Text x -> Some x
-  | Close _ -> None
+end (* T *)
 
-let make_text l = wrapped_outs (fun out -> List.iter (Option.may (IO.nwrite out) $ to_text) l)
-
-end
+include T
 
 module Provider = struct
 
