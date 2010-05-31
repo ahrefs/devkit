@@ -25,9 +25,9 @@ let from_channel ch =
   if s <> V.tag then raise Error;
   (Marshal.from_channel ch : t)
 
-let to_file name ?(flags=[]) x =
+let to_file name ?(mode=0o644) ?(flags=[]) x =
   let temp = name^".temp" in
-  bracket (Unix.openfile temp [Unix.O_WRONLY;Unix.O_CREAT;Unix.O_EXCL] 0o640) Unix.close begin fun fd ->
+  bracket (Unix.openfile temp [Unix.O_WRONLY;Unix.O_CREAT;Unix.O_EXCL] mode) Unix.close begin fun fd ->
     try
       let ch = Unix.out_channel_of_descr fd in
       to_channel ch ~flags x;
