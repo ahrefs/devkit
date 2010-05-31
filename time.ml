@@ -43,3 +43,7 @@ let duration_str t =
   List.dropwhile (fun (_,x) -> x = 0) >>
   List.map (fun (n,x) -> sprintf "%u %s" x n) >> String.concat " "
 
+let minutes x = float & 60 * x
+let hours x = minutes & 60 * x
+let days x = hours & 24 * x
+

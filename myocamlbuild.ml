@@ -60,6 +60,11 @@ dispatch begin function
      C.extern "ocsigen.xhtml" ~cma:"xhtml";
      C.extern "ocsigen_xhtml" ~cma:"xhtml"; (* http://bugs.debian.org/579689 *)
      C.extern "event" ~cma:"liboevent";
+(*
+     C.extern "bin_prot";
+     C.extern "sexplib";
+     C.extern "core";
+*)
 
      flag ["ocaml"; "doc"; "use_extLib"] (S[A"-I"; A (C.lib "extlib")]);
      flag ["ocaml"; "doc"; "use_netstring"] (S[A"-I"; A (C.lib "netstring")]);
