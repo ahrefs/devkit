@@ -65,3 +65,12 @@ let read_buf base buf fd err k =
 
 let read_n base n fd err k = read_buf base (String.create n) fd err k
 
+let setup_periodic_timer events delay ?(name="") f =
+  let timer = Ev.create () in
+  let loop () =
+    begin try f () with exn -> log #warn ~exn "periodic_timer %s" name end;
+    Ev.add events timer (Some delay)
+  in
+  Ev.set_timer timer loop;
+  Ev.add events timer (Some 0.)
+
