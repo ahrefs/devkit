@@ -228,18 +228,5 @@ let find_mount path =
   assert (fst !mount <> "");
   !mount
 
-(*
-external unsafe_fsync : int -> int = "fsync"
-let fsync (fd:Unix.file_descr) =
-  assert (Sys.os_type <> "Win32");
-  assert (Obj.is_int (Obj.repr fd));
-  let fd = (Obj.magic fd : int) / 2 in
-  match unsafe_fsync fd with
-  | 0 -> ()
-  | n -> raise & Unix.Unix_error (Unix.EUNKNOWNERR n, "fsync", "")
-*)
-
-let fsync fd =
-  Log.main #warn "fsync not implemented FIXME";
-  ()
+external fsync : Unix.file_descr -> unit = "caml_devkit_fsync"
 

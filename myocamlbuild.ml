@@ -94,7 +94,18 @@ dispatch begin function
      flag ["link"; "ocaml"; "use_equeue"; "thread"; "byte"] (S[A"unixqueue_mt.cmo"]);
      flag ["link"; "ocaml"; "use_equeue"; "thread"; "native"] (S[A"unixqueue_mt.cmx"]);
 
+     let stubs_lib = "libdevkit_stubs." ^ !Options.ext_lib in
+     let stubs_dll = "dlldevkit_stubs." ^ !Options.ext_dll in
+     flag ["link"; "ocaml"; "library"] (S[A"-cclib"; A stubs_lib;]);
+     flag ["link"; "ocaml"; "library"; "byte"] (S[A"-dllib"; A stubs_dll;]);
+     dep  ["link"; "ocaml"; "library"] [stubs_lib; stubs_dll];
+
+     (* toplevel and tests use compiled devkit library *)
+     ocaml_lib "devkit";
+     flag ["link"; "ocaml"; "byte"; "use_devkit"] (atomize ["-dllpath"; "_build"]);
+
      ()
  
 | _ -> ()
 end
+
