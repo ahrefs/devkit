@@ -1,7 +1,7 @@
 
 .PHONY: all lib top doc clean install uninstall test
 
-INSTALL_FILES=$(wildcard _build/*.cmx _build/*.cmi _build/*.mli _build/devkit.cma _build/devkit.cmxa _build/*.lib _build/*.a)
+INSTALL_FILES=$(wildcard _build/*.cmx _build/*.cmi _build/*.mli _build/devkit.cma _build/devkit.cmxa _build/*.lib _build/*.a _build/*.dll _build/*.so)
 OCAMLBUILD=ocamlbuild -j 0
 
 all:
