@@ -25,9 +25,15 @@ let daemonize () =
   (* Ignore TTY signals, SIGHUP and SIGPIPE *)
   List.iter (fun n -> Sys.set_signal n Sys.Signal_ignore) [Sys.sigtstp; Sys.sigttou; Sys.sigttin; Sys.sighup; Sys.sigpipe];
 
-(*   umask 0o027; *)
-(*   chdir "/"; *)
-(*   redirect standard channels *)
+(*   umask 0; *) (* TODO investigate *)
+(*   chdir "/"; *) (* TODO this will break lots of code - fix *)
+
+  (* redirect standard channels *)
+  let null = openfile "/dev/null" [O_RDWR] 0 in
+  dup2 null stdin;
+  dup2 null stdout;
+  dup2 null stderr;
+  close null;
   ()
 
 let write_pidfile path =
