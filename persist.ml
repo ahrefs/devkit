@@ -25,11 +25,14 @@ let from_channel ch =
   if s <> V.tag then raise Error;
   (Marshal.from_channel ch : t)
 
+(** FIXME windows *)
 let to_file name ?(mode=0o644) ?(flags=[]) x =
-  let temp = name^".temp" in
-  bracket (Unix.openfile temp [Unix.O_WRONLY;Unix.O_CREAT;Unix.O_EXCL] mode) Unix.close begin fun fd ->
+  (* not using make_temp_file cause same dir is needed for atomic rename *)
+  let temp = Printf.sprintf "%s.dvkt.tmp.%s" name (ExtString.String.map (fun c -> if Stre.ASCII.is_alnum c then c else '_') V.tag) in
+  bracket (Unix.openfile temp [Unix.O_WRONLY;Unix.O_CREAT] mode) Unix.close begin fun fd ->
     try
       let ch = Unix.out_channel_of_descr fd in
+(*       Unix.fchmod fd mode; *)
       to_channel ch ~flags x;
       flush ch;
       Nix.fsync fd;

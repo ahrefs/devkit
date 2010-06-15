@@ -68,3 +68,13 @@ let split_words s = try split_words s with exn -> Log.self #warn ~exn "split_wor
 
 let concat sep e = String.concat " " (List.of_enum e)
 
+module ASCII = struct
+let is_alpha = function
+| 'a'..'z' | 'A'..'Z' -> true
+| _ -> false
+let is_digit = function
+| '0'..'9' -> true
+| _ -> false
+let is_alnum c = is_alpha c || is_digit c
+end
+
