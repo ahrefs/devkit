@@ -225,6 +225,40 @@ let wait base fd k =
     k ()
   end
 
+let write_some fd s =
+  let slen = String.length s in
+  if slen = 0 then `Done else
+  try
+    let len = Unix.write fd s 0 (String.length s) in
+    if len = slen then `Done else `Some len
+  with
+  | Unix.Unix_error (Unix.EAGAIN,_,_) -> `Some 0
+
+let write_reply config fd status req l =
+  let finish () =
+    log #debug "finished %s" & Option.map_default show_request "" req;
+    close fd;
+    DEC status.active
+  in
+  let rec loop l =
+    match l with
+    | [] -> finish ()
+    | s::tl ->
+      match write_some fd s with
+      | `Some n -> Async.simple_event config.events fd [Ev.WRITE] (write_f config status req (ref l,ref n))
+      | `Done -> loop tl
+  in
+  try
+    loop l
+  with
+  | exn ->
+    Exn.suppress close fd;
+    INC status.errs;
+    DEC status.active;
+    match config.log_epipe, exn with
+    | false, Unix.Unix_error (Unix.EPIPE,_,_) -> ()
+    | _ -> log #warn ~exn "write_reply %s" & Option.map_default show_request "" req
+
 let handle_client config status fd conn_info answer =
   let peer = Nix.show_addr (fst conn_info) in
   INC status.reqs;
@@ -253,8 +287,7 @@ let handle_client config status fd conn_info answer =
       (Buffer.length b) 
       (String.length body);
 (*     Buffer.add_string b body; *)
-    Async.simple_event config.events fd [Ev.WRITE]
-      (write_f config status req (ref [Buffer.contents b; body],ref 0))
+    write_reply config fd status req [Buffer.contents b;body]
     with
       exn -> abort exn "send_reply"
   in
