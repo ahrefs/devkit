@@ -20,12 +20,16 @@ let () =
    fprintf out "let id=\"%s\"\n" (String.escaped revision)
   )
 
+let win32 = Sys.os_type = "Win32"
+
+let c_opts = if win32 then ["-W3"] else ["-Wall"]
+
 ;;
 
 dispatch begin function
 | Before_options ->
 
-     if Sys.os_type = "Win32" then
+     if win32 then
      begin
        Options.ext_lib := "lib";
        Options.ext_obj := "obj";
@@ -106,6 +110,8 @@ dispatch begin function
      flag ["link"; "ocaml"; "byte"; "use_devkit"] (atomize ["-dllpath"; "_build"]);
      (* for ld to find -ldevkit_stubs locally *)
      flag ["link"; "ocaml"; "use_devkit"] (atomize ["-I"; ".";]);
+
+     flag ["compile"; "c"] & atomize (List.concat & List.map (fun o -> ["-ccopt";o]) c_opts);
 
      ()
  

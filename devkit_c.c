@@ -10,8 +10,17 @@
 CAMLprim value caml_devkit_fsync(value v)
 {
    CAMLparam1(v);
-   caml_failwith("fsync not implemented");
-   CAMLnoreturn; 
+   HANDLE h = INVALID_HANDLE_VALUE;
+   int r = 0;
+   if (KIND_HANDLE != Descr_kind_val(v))
+     caml_invalid_argument("fsync");
+   h = Handle_val(v);
+   caml_enter_blocking_section();
+   r = FlushFileBuffers(h);
+   caml_leave_blocking_section();
+   if (0 == r)
+     uerror("fsync",Nothing);
+   CAMLreturn(Val_unit); 
 }
 
 #else
