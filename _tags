@@ -11,3 +11,4 @@ true: annot, debug, thread
 <*.{top,byte,native}>: use_extLib, use_pcre, use_netstring, use_netcgi, use_xhtml, use_netsys, use_zip, use_unix, use_liboevent, use_curl, use_devkit
 #use_core, use_sexplib, use_bigarray, use_nums, use_bin_prot
 <test.*>: use_oUnit
+<netstring_pcre.ml*>: use_pcre
