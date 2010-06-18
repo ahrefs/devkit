@@ -8,6 +8,11 @@ open Control
 
 let log = Log.self
 
+let get_host = String.lowercase $ Neturl.url_host $ Neturl.parse_url
+let rawurlencode = Netencoding.Url.encode ~plus:false
+let urlencode = Netencoding.Url.encode ~plus:true
+let urldecode = Netencoding.Url.decode
+
 (** Stream of html elements *)
 module HtmlStream = struct
 
@@ -225,7 +230,7 @@ module Provider = struct
     { extract = Stre.enum_extract re;
       request = (fun ?(num=10) q ->
         sprintf "http://www.google.com/search?hl=en&q=%s&num=%u&btnG=Search&aq=f&oq=&aqi="
-          (Netencoding.Url.encode q) num);
+          (urlencode q) num);
       extract_full = List.enum $ google_full;
     }
 
@@ -234,7 +239,7 @@ module Provider = struct
     { extract = Stre.enum_extract re;
       request = (fun ?(num=10) q ->
         sprintf "http://www.google.com/search?hl=en&q=%s&num=%u&btnG=Search&aq=f&oq=&aqi=&tbs=qdr:d,sbd:1"
-          (Netencoding.Url.encode q) num);
+          (urlencode q) num);
       extract_full = List.enum $ google_full;
     }
 
@@ -273,7 +278,7 @@ module Provider = struct
   let rss_source ~default fmt =
     let re = Pcre.regexp ~flags:[`CASELESS] "<item>.*?<link>([^<]+)</link>.*?</item>" in
     { extract = Stre.enum_extract re;
-      request = (fun ?(num=default) q -> sprintf fmt (Netencoding.Url.encode q) default);
+      request = (fun ?(num=default) q -> sprintf fmt (urlencode q) default);
       extract_full = parse_rss;
     }
 
@@ -301,11 +306,6 @@ module Search(GET : sig val get : string -> string end) = struct
   let bing = search bing
 
 end
-
-let get_host = String.lowercase $ Neturl.url_host $ Neturl.parse_url
-let rawurlencode = Netencoding.Url.encode ~plus:false
-let urlencode = Netencoding.Url.encode ~plus:true
-let urldecode = Netencoding.Url.decode
 
 let () = Curl.global_init Curl.CURLINIT_GLOBALALL
 
