@@ -30,6 +30,23 @@ let rec iter_names dirname f =
     )
   in loop dirname ""
 
+let rec iter_names_q dirname f =
+  let rec loop path rel =
+  with_readdir path (fun d ->
+    enum_dir d >>
+    Enum.iter (function
+      | "." | ".." -> ()
+      | name ->
+        let path = Filename.concat path name in
+        let rel = Filename.concat rel name in
+        match try Some (Unix.stat path).Unix.st_kind with _ -> None with
+        | Some Unix.S_REG -> f path rel
+        | Some Unix.S_DIR -> loop path rel
+        | _ -> ()
+      )
+    )
+  in loop dirname ""
+
 let iter_files dirname f =
   iter_names dirname (fun fd path _ ->
     bracket (Unix.in_channel_of_descr fd) close_in_noerr (fun ch -> f path ch))
