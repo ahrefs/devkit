@@ -107,3 +107,14 @@ let log ?name f x =
 let log_thread ?name f x =
   Thread.create (fun () -> log ?name f x) ()
 
+(** Copy all data from [input] to [output] *)
+let io_copy input output =
+  try
+    let size = 16 * 1024 in
+    let s = String.create size in
+    while true do
+      let n = IO.input input s 0 size in
+      ignore & IO.really_output output s 0 n
+    done
+  with IO.No_more_input -> ()
+
