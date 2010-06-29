@@ -102,6 +102,55 @@ module TimeLimited2(E: Set.OrderedType)
 
 end
 
+(** Limited cache which remembers only the fixed number of last inserted values, mt-safe *)
+module SizeLimited : sig
+
+  (** The type of the cache *)
+  type 'a t
+
+  (** The type of the key assigned to each value in the cache *)
+  type key = private int
+  
+  val key : int -> key
+
+  (** 
+    [create size dummy] creates new empty cache. 
+    [size] is the number of last entries to remember.
+  *)
+  val create : int -> 'a t
+
+  val add : 'a t -> 'a -> key  
+  val get : 'a t -> key -> 'a option
+  val random : 'a t -> 'a option
+
+end = struct
+
+  type key = int
+
+  let key = id
+
+  type 'a t = { mutable arr : 'a array option; size : int; mutable key : key; mutex : Mutex.t; }
+
+  let create size = { arr = None; size = size; key = 0; mutex = Mutex.create (); }
+
+  let add t x = locked t.mutex (fun () ->
+    let arr = match t.arr with | Some a -> a | None -> let a = Array.make t.size x in t.arr <- Some a; a in
+    arr.(t.key mod t.size) <- x;
+    t.key <- t.key + 1;
+    t.key - 1)
+
+  let get t k = locked t.mutex (fun () ->
+    match t.arr with
+    | None -> None
+    | Some a -> if k < t.key && t.key <= k + t.size then Some (a.(k mod t.size)) else None)
+
+  let random t = locked t.mutex (fun () ->
+    match t.arr,t.key with
+    | None,_ | _,0 -> None
+    | Some a, key -> Some a.(Random.int key mod t.size))
+
+end
+
 (** Count elements *)
 module Count =
 struct
