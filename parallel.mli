@@ -18,6 +18,11 @@ val perform : t -> task Enum.t -> (result -> unit) -> unit
 val kill : t -> unit
 end
 
+(*
+val create : ('a -> 'b) -> int -> ('a,'b) t
+val perform : ('a,'b) t -> 'a Enum.t -> ('b -> unit) -> unit
+*)
+
 (** Thread workers *)
 module Threads(T:WorkerT) : Workers
   with type task = T.task
