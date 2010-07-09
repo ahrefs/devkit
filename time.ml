@@ -8,12 +8,18 @@ open Prelude
 type t = float
 
 let get = Unix.gettimeofday
+let now = Unix.gettimeofday
 
 (** @see <http://www.w3.org/TR/NOTE-datetime> W3C Datetime *)
 let gmt_string t = 
   let module U = Unix in
   let t = U.gmtime t in
   sprintf "%04u-%02u-%02uT%02u:%02u:%02uZ" (1900 + t.U.tm_year) (t.U.tm_mon+1) t.U.tm_mday t.U.tm_hour t.U.tm_min t.U.tm_sec
+
+let to_string t =
+  let module U = Unix in
+  let t = U.localtime t in
+  sprintf "%04u-%02u-%02uT%02u:%02u:%02u" (1900 + t.U.tm_year) (t.U.tm_mon+1) t.U.tm_mday t.U.tm_hour t.U.tm_min t.U.tm_sec
 
 let gmt_string_ms f = 
   let module U = Unix in
