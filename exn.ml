@@ -5,6 +5,7 @@
 let catch f x = try Some (f x) with _ -> None
 let default def f x = try f x with _ -> def
 let suppress f x = try f x with _ -> ()
+let map f x = try `Ok (f x) with exn -> `Exn exn
 
 let fail fmt = Printf.ksprintf failwith fmt
 
