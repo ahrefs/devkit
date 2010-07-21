@@ -118,5 +118,7 @@ let io_copy input output =
     done
   with IO.No_more_input -> ()
 
+let io_null = IO.create_out (fun _ -> ()) (fun _ _ len -> len) id id
+
 let compare_by f a b = compare (f a) (f b)
 

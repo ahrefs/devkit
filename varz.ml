@@ -183,6 +183,7 @@ val mutable x = 0L
 method add n = x <- Int64.add x (Int64.of_int n)
 method addl n = x <- Int64.add x n
 method gets = Int64.to_float x >> bytes_string_f
+method get = x
 method name = name
 
 initializer
