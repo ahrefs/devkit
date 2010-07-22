@@ -85,7 +85,8 @@ class timer =
 let tm = Unix.gettimeofday  in
 object
 
-val start = tm ()
+val mutable start = tm ()
+method reset = start <- tm ()
 method get = tm () -. start
 method gets = sprintf "%.6f" & tm () -. start
 method get_str = Time.duration_str & tm () -. start
@@ -121,4 +122,37 @@ let io_copy input output =
 let io_null = IO.create_out (fun _ -> ()) (fun _ _ len -> len) id id
 
 let compare_by f a b = compare (f a) (f b)
+
+let hexdump str =
+  let buf = Buffer.create 80 and num = ref 0 in
+  let rec loop chars =
+    match List.take 16 chars with
+    | [] -> Buffer.contents buf
+    | l ->
+          bprintf buf "%08x|  " !num;
+          num := !num + 16;
+          let rec bytes pos = function
+            | [] -> 
+                blanks pos
+            | x :: l ->
+                if pos = 8 then Buffer.add_char buf ' ';
+                Printf.bprintf buf "%02x " (Char.code x);
+                bytes (pos + 1) l
+          and blanks pos =
+            if pos < 16 then begin
+              if pos = 8 then
+                Buffer.add_string buf "    "
+              else
+                Buffer.add_string buf "   ";
+              blanks (pos + 1)
+            end
+          in
+          bytes 0 l;
+          Buffer.add_string buf " |";
+          List.iter (fun ch -> Buffer.add_char buf (if ch >= '\x20' && ch <= '\x7e' then ch else '.')) l;
+          Buffer.add_char buf '|';
+          Buffer.add_char buf '\n';
+          loop (List.drop 16 chars)
+  in
+   loop (String.explode str)
 

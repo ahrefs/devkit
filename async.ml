@@ -11,14 +11,14 @@ end
 open Internal
 
 (** Create persistent event. Don't forget [del]. No (infinite) timeout. *)
-let simple_event base fd flags f =
+let simple_event base ?timeout fd flags f =
   let ev = Ev.create () in
   Ev.set ev fd flags ~persist:true (fun fd flags ->
     try
       f ev fd flags
     with
       exn -> log #warn ~exn "event");
-  Ev.add base ev None
+  Ev.add base ev timeout
 
 type result = End | Data of int | Block
 

@@ -157,6 +157,7 @@ struct
   open Hashtbl
   type 'a t = ('a,int) Hashtbl.t
   let create () : 'a t = create 100
+  let clear = Hashtbl.clear
   let add t x = match find_option t x with None -> add t x 1 | Some n -> replace t x (n+1)
   let enum t = enum t
   let show t f = enum t >> 

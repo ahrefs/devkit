@@ -45,7 +45,10 @@ let duration_str t =
   | [] -> List.rev acc
   | n::tl -> loop (t/n) (t mod n :: acc) tl
   in
-  loop (int_of_float t) [] factors >> List.combine names >> List.rev >> 
+  match int_of_float t with
+  | 0 -> sprintf "%.4f secs" t
+  | n ->
+  loop n [] factors >> List.combine names >> List.rev >> 
   List.dropwhile (fun (_,x) -> x = 0) >>
   List.map (fun (n,x) -> sprintf "%u %s" x n) >> String.concat " "
 
