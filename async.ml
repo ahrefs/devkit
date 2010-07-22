@@ -10,15 +10,18 @@ end
 
 open Internal
 
+let add_simple_event events ev ?timeout fd flags f =
+  Ev.set ev fd flags ~persist:true f;
+  Ev.add events ev timeout
+
 (** Create persistent event. Don't forget [del]. No (infinite) timeout. *)
-let simple_event base ?timeout fd flags f =
+let simple_event events ?timeout fd flags f =
   let ev = Ev.create () in
-  Ev.set ev fd flags ~persist:true (fun fd flags ->
+  add_simple_event events ev ?timeout fd flags (fun fd flags ->
     try
       f ev fd flags
     with
-      exn -> log #warn ~exn "event");
-  Ev.add base ev timeout
+      exn -> log #warn ~exn "event")
 
 type result = End | Data of int | Block
 
@@ -65,12 +68,19 @@ let read_buf base buf fd err k =
 
 let read_n base n fd err k = read_buf base (String.create n) fd err k
 
-let setup_periodic_timer events delay ?(name="") f =
-  let timer = Ev.create () in
+let add_periodic_timer events timer delay ?(name="") f =
   let loop () =
-    begin try f () with exn -> log #warn ~exn "periodic_timer %s" name end;
-    Ev.add events timer (Some delay)
+    try 
+      if f () then
+        Ev.add events timer (Some delay)
+    with exn -> log #warn ~exn "periodic_timer %s" name
   in
   Ev.set_timer timer loop;
   Ev.add events timer (Some 0.)
+
+let setup_periodic_timer events delay ?(name="") f =
+  let ev = Ev.create () in
+  add_periodic_timer events ev delay ~name (fun () ->
+    begin try f () with exn -> log #warn ~exn "periodic_timer %s" name end; 
+    true)
 
