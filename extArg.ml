@@ -6,12 +6,12 @@ open Prelude
 include Arg
 
 let describe t name = function
-  | None | Some "" -> sprintf "<%s> %s" t name
-  | Some s when s.[0] = ' ' -> sprintf "<%s>%s" t s
-  | Some s -> s
+  | "" -> sprintf "<%s> %s" t name
+  | s when s.[0] = ' ' -> sprintf "<%s>%s" t s
+  | s -> s
 
 let make_arg x = 
-  fun name ?desc var ->
+  fun name var desc ->
   "-"^name,
   x#store var,
   sprintf "%s (default: %s)" (describe x#kind name desc) (x#show var)
