@@ -160,6 +160,7 @@ struct
   let clear = Hashtbl.clear
   let add t x = match find_option t x with None -> add t x 1 | Some n -> replace t x (n+1)
   let enum t = enum t
+  let count t k = Option.default 0 & Hashtbl.find_option t k
   let show t f = enum t >> 
     Enum.map (fun (k,v) -> Printf.sprintf "%s: %u" (f k) v) >>
     Stre.concat " "

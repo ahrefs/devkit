@@ -23,12 +23,14 @@ let with_open_out_bin name = bracket (open_out_bin name) close_out_noerr
 let with_open_out_temp_file ~mode = bracket (Filename.open_temp_file ~mode "dvkt" "tmp") (fun (_,ch) -> close_out_noerr ch)
 let with_open_out_temp_bin k = with_open_out_temp_file ~mode:[Open_binary] k
 
-let with_output io = bracket io IO.close_out
 let wrapped_output io = wrapped io IO.close_out
 let wrapped_outs k = wrapped_output (IO.output_string ()) k
 let with_input io = bracket io IO.close_in
 let with_input_bin name k = with_open_in_bin name (fun ch -> k (IO.input_channel ch))
+let with_input_txt name k = with_open_in_txt name (fun ch -> k (IO.input_channel ch))
+let with_output io = bracket io IO.close_out
 let with_output_bin name k = with_open_out_bin name (fun ch -> k (IO.output_channel ch))
+let with_output_txt name k = with_open_out_txt name (fun ch -> k (IO.output_channel ch))
 
 let locked mutex f = Mutex.lock mutex; Std.finally (fun () -> Mutex.unlock mutex) f ()
 
