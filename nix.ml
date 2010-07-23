@@ -103,8 +103,13 @@ let () =
     List.iter (fun fin -> try fin () with exn -> Log.self #warn ~exn "sig_reload_funcs") !sig_reload_funcs)
 
 let show_addr = function
-  | Unix.ADDR_UNIX s -> Printf.sprintf "unix:%s" s
-  | Unix.ADDR_INET (addr,port) -> Printf.sprintf "%s:%u" (Unix.string_of_inet_addr addr) port
+  | ADDR_UNIX s -> Printf.sprintf "unix:%s" s
+  | ADDR_INET (addr,port) -> Printf.sprintf "%s:%u" (string_of_inet_addr addr) port
+
+let make_inet_addr_exn host port =
+  let a = (gethostbyname host).h_addr_list in
+  if Array.length a = 0 then Exn.fail "make_inet_addr %s %d" host port else
+  ADDR_INET (a.(0), port)
 
 (** Execute process and capture stdout to string, @return empty string on error *)
 let read_process cmd =
