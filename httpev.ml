@@ -2,7 +2,7 @@
 
 open Printf
 open ExtLib
-module Ev = Liboevent
+module Ev = Libevent
 
 open Prelude
 

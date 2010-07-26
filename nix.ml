@@ -122,7 +122,7 @@ let read_process cmd =
     data
   with _ -> ""
 
-module Ev = Liboevent
+module Ev = Libevent
 
 module UnixImpl = struct
 
@@ -163,7 +163,7 @@ let read_process_exn ?timeout cmd =
   let fd = Unix.descr_of_in_channel cin in
   Unix.set_nonblock fd;
   bracket (Ev.init ()) Ev.free & fun base ->
-  let ev = Ev.create () in
+  let ev = Ev.create base in
   let ok = ref false in
   let fin b = (* Ev.del called from inside event loop to break it *) Ev.del ev; ok := b in
   let b = Buffer.create 16 in
@@ -181,7 +181,7 @@ let read_process_exn ?timeout cmd =
       | `Part s -> Buffer.add_string b s
     with
       exn -> Log.self#warn ~exn "event"; fin false);
-  Ev.add base ev timeout;
+  Ev.add ev timeout;
   Ev.dispatch base;
   if !ok then
     Some (Buffer.contents b)
