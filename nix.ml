@@ -163,11 +163,10 @@ let read_process_exn ?timeout cmd =
   let fd = Unix.descr_of_in_channel cin in
   Unix.set_nonblock fd;
   bracket (Ev.init ()) Ev.free & fun base ->
-  let ev = Ev.create base in
   let ok = ref false in
-  let fin b = (* Ev.del called from inside event loop to break it *) Ev.del ev; ok := b in
   let b = Buffer.create 16 in
-  Ev.set ev fd [Ev.READ] ~persist:true (fun fd flags ->
+  let ev = Ev.create base fd [Ev.READ] ~persist:true (fun ev fd flags ->
+    let fin b = (* Ev.del called from inside event loop to break it *) Ev.del ev; ok := b in
     try
     if flags = Ev.TIMEOUT then
     begin
@@ -180,7 +179,8 @@ let read_process_exn ?timeout cmd =
       | `Limit q -> assert false
       | `Part s -> Buffer.add_string b s
     with
-      exn -> Log.self#warn ~exn "event"; fin false);
+      exn -> Log.self#warn ~exn "event"; fin false)
+  in
   Ev.add ev timeout;
   Ev.dispatch base;
   if !ok then
