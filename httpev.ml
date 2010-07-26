@@ -245,7 +245,7 @@ let write_reply config fd status req l =
     | [] -> finish ()
     | s::tl ->
       match write_some fd s with
-      | `Some n -> Async.simple_event config.events fd [Ev.WRITE] (write_f config status req (ref l,ref n))
+      | `Some n -> Async.setup_simple_event config.events fd [Ev.WRITE] (write_f config status req (ref l,ref n))
       | `Done -> loop tl
   in
   try
@@ -292,7 +292,7 @@ let handle_client config status fd conn_info answer =
       exn -> abort exn "send_reply"
   in
   log #debug "accepted %s" peer;
-  Async.simple_event config.events fd [Ev.READ] begin fun ev fd _ ->
+  Async.setup_simple_event config.events fd [Ev.READ] begin fun ev fd _ ->
     try
     Ev.del ev; 
     match Async.read_available ~limit:(256*1024) fd with
@@ -356,7 +356,7 @@ let setup_fd fd config answer =
 (*   open Unix in *)
   set_nonblock fd;
   let status = { reqs = 0; active = 0; errs = 0; } in
-  Async.simple_event config.events fd [Ev.READ] begin fun _ fd _ -> 
+  Async.setup_simple_event config.events fd [Ev.READ] begin fun _ fd _ -> 
     try
       while true do (* accept as much as possible, socket is nonblocking *)
         let (fd,addr) = accept fd in

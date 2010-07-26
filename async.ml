@@ -18,7 +18,12 @@ let simple_event events ?timeout fd flags f =
     with
       exn -> log #warn ~exn "simple_event")
   in
-  Ev.add ev timeout
+  Ev.add ev timeout;
+  ev
+
+let setup_simple_event events ?timeout fd flags f =
+  let (_:Ev.event) = simple_event events ?timeout fd flags f in
+  ()
 
 type result = End | Data of int | Block
 
@@ -50,7 +55,7 @@ let read_buf base buf fd err k =
   let len = String.length buf in
   let later cur =
     let cur = ref cur in
-    simple_event base fd [Ev.READ] (fun ev fd flags ->
+    setup_simple_event base fd [Ev.READ] (fun ev fd flags ->
       match read_some fd buf !cur (len - !cur) with
       | End -> Ev.del ev; err ()
       | Data n -> cur := !cur + n; if !cur = len then begin Ev.del ev; k buf end
@@ -65,7 +70,7 @@ let read_buf base buf fd err k =
 
 let read_n base n fd err k = read_buf base (String.create n) fd err k
 
-let setup_periodic_timer events delay ?(name="") f =
+let periodic_timer events delay ?(name="") f =
   let loop timer =
     try
       Ev.add timer (Some delay);
@@ -73,5 +78,10 @@ let setup_periodic_timer events delay ?(name="") f =
     with exn -> log #warn ~exn "periodic_timer %s" name
   in
   let timer = Ev.create_timer events ~persist:false loop in
-  Ev.add timer (Some 0.)
+  Ev.add timer (Some 0.);
+  timer
+
+let setup_periodic_timer events delay ?name f =
+  let (_:Ev.event) = periodic_timer events delay ?name f in
+  ()
 
