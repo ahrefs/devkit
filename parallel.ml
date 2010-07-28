@@ -1,4 +1,6 @@
 
+open ExtLib
+
 module type WorkerT = sig
   type task
   type result
@@ -10,7 +12,7 @@ type result
 type t
 val create : (task -> result) -> int -> t
 val perform : t -> task Enum.t -> (result -> unit) -> unit
-val kill : t -> unit
+val kill : ?wait:float -> t -> unit
 end
 
 module Threads(T:WorkerT) =
@@ -25,7 +27,7 @@ let worker qi f qo =
     Mtq.put qo (f (Mtq.get qi))
   done
 
-let kill (qi,_,_) = Mtq.clear qi
+let kill ?wait (qi,_,_) = Mtq.clear qi
 
 let create f n =
   let qi = Mtq.create () and qo = Mtq.create () in
@@ -94,11 +96,32 @@ type t = (in_channel * out_channel * int) list * (task -> result)
 
 let create f n = let l = ref [] in for i = 1 to n do l := worker f :: !l done; !l, f
 
-let kill (l,_) =
-  List.iter (fun (cin,cout,pid) ->
+open Unix
+
+let kill ?(wait=1.) (l,_) =
+  Log.self #info "Stopping %d workers" (List.length l);
+  let l = List.map (fun (cin,cout,pid) ->
     close_in_noerr cin;
     close_out_noerr cout;
-    Unix.kill pid Sys.sigkill) l
+    begin try kill pid Sys.sigterm with exn -> Log.self #warn ~exn "Worker PID %d lost (SIGTERM)" pid end;
+    pid) l in
+  let l = List.filter_map (fun pid ->
+    try 
+      if pid = fst (waitpid [WNOHANG] pid) then None (* exited *) else Some pid 
+    with 
+    | Unix_error (ECHILD,_,_) -> None (* exited *)
+    | exn -> Log.self #warn "Worker PID %d lost (wait)" pid; None) l
+  in
+  match l with
+  | [] -> ()
+  | l -> 
+    Thread.delay wait;
+    List.iter (fun pid -> 
+      try 
+        kill pid Sys.sigkill; Log.self #warn "Worker PID %d killed with SIGKILL" pid 
+      with 
+      | Unix_error (ESRCH,_,_) -> ()
+      | exn -> Log.self #warn ~exn "Worker PID %d (SIGKILL)" pid) l
 
 let perform (l,execute) e f =
     match l with
