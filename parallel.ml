@@ -105,14 +105,15 @@ let kill ?(wait=1.) (l,_) =
     close_out_noerr cout;
     begin try kill pid Sys.sigterm with exn -> Log.self #warn ~exn "Worker PID %d lost (SIGTERM)" pid end;
     pid) l in
-  let l = List.filter_map (fun pid ->
+  let reap l =
+    List.filter_map (fun pid ->
     try 
       if pid = fst (waitpid [WNOHANG] pid) then None (* exited *) else Some pid 
     with 
     | Unix_error (ECHILD,_,_) -> None (* exited *)
     | exn -> Log.self #warn "Worker PID %d lost (wait)" pid; None) l
   in
-  match l with
+  match reap l with
   | [] -> ()
   | l -> 
     Thread.delay wait;
@@ -121,7 +122,7 @@ let kill ?(wait=1.) (l,_) =
         kill pid Sys.sigkill; Log.self #warn "Worker PID %d killed with SIGKILL" pid 
       with 
       | Unix_error (ESRCH,_,_) -> ()
-      | exn -> Log.self #warn ~exn "Worker PID %d (SIGKILL)" pid) l
+      | exn -> Log.self #warn ~exn "Worker PID %d (SIGKILL)" pid) (reap l)
 
 let perform (l,execute) e f =
     match l with
