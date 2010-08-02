@@ -11,7 +11,7 @@ let test_search p s =
 
 let test_htmlstream () =
   Printexc.record_backtrace true;
-  let module HS = Web.HtmlStream in
+  let module HS = HtmlStream in
   let (==>) s s' = 
   try
     let s'' = Control.wrapped_output (IO.output_string ()) (fun io -> ExtStream.iter (IO.nwrite io $ HS.show') (HS.parse (ExtStream.of_string s))) in
