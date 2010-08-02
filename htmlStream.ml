@@ -119,8 +119,8 @@ let dump = Stream.iter (print_endline $ show) $ parse $
 
 let tag name ?(a=[]) = function
   | Tag (name',attrs) when name = name' ->
-    let attrs = List.map (fun (k,v) -> (k,String.nsplit v " ")) attrs in
-    begin try List.for_all (fun (k,v) -> assert (not & String.contains v ' '); List.mem v (List.assoc k attrs)) a with Not_found -> false end
+    let attrs = lazy (List.map (fun (k,v) -> (k,String.nsplit v " ")) attrs) in
+    begin try List.for_all (fun (k,v) -> assert (not & String.contains v ' '); List.mem v (List.assoc k !!attrs)) a with Not_found -> false end
   | _ -> false
 
 let close name = function Close name' when name = name' -> true | _ -> false 
