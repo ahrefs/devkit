@@ -1,6 +1,8 @@
 
 open ExtLib
 
+let log = Log.from "parallel"
+
 module type WorkerT = sig
   type task
   type result
@@ -81,7 +83,7 @@ let worker (execute : task -> result) =
         let r = execute v in
         Marshal.to_channel output (r : result) []; flush output
       done
-      with e -> Log.self #error "Paraller.worker exception %s" (Exn.str e)
+      with e -> log #error "Paraller.worker exception %s" (Exn.str e)
       end;
       close_in_noerr input;
       close_out_noerr output;
@@ -99,11 +101,11 @@ let create f n = let l = ref [] in for i = 1 to n do l := worker f :: !l done; !
 open Unix
 
 let kill ?(wait=1.) (l,_) =
-  Log.self #info "Stopping %d workers" (List.length l);
+  log #info "Stopping %d workers" (List.length l);
   let l = List.map (fun (cin,cout,pid) ->
     close_in_noerr cin;
     close_out_noerr cout;
-    begin try kill pid Sys.sigterm with exn -> Log.self #warn ~exn "Worker PID %d lost (SIGTERM)" pid end;
+    begin try kill pid Sys.sigterm with exn -> log #warn ~exn "Worker PID %d lost (SIGTERM)" pid end;
     pid) l in
   let reap l =
     List.filter_map (fun pid ->
@@ -111,7 +113,7 @@ let kill ?(wait=1.) (l,_) =
       if pid = fst (waitpid [WNOHANG] pid) then None (* exited *) else Some pid 
     with 
     | Unix_error (ECHILD,_,_) -> None (* exited *)
-    | exn -> Log.self #warn "Worker PID %d lost (wait)" pid; None) l
+    | exn -> log #warn "Worker PID %d lost (wait)" pid; None) l
   in
   match reap l with
   | [] -> ()
@@ -119,10 +121,10 @@ let kill ?(wait=1.) (l,_) =
     Thread.delay wait;
     List.iter (fun pid -> 
       try 
-        kill pid Sys.sigkill; Log.self #warn "Worker PID %d killed with SIGKILL" pid 
+        kill pid Sys.sigkill; log #warn "Worker PID %d killed with SIGKILL" pid 
       with 
       | Unix_error (ESRCH,_,_) -> ()
-      | exn -> Log.self #warn ~exn "Worker PID %d (SIGKILL)" pid) (reap l)
+      | exn -> log #warn ~exn "Worker PID %d (SIGKILL)" pid) (reap l)
 
 let perform (l,execute) e f =
     match l with
@@ -140,13 +142,19 @@ let perform (l,execute) e f =
 (*         print_endline "select done"; *)
         assert (err = []);
         let channels = List.map (fun fd -> let (i,o,_) = List.find (fun (i,_,_) -> Unix.descr_of_in_channel i = fd) l in i,o) r in
-        let answers = List.map (fun (r,w) ->
+        let answers = List.filter_map (fun (r,w) ->
           let task = Enum.get e in
-          let answer = (Marshal.from_channel r : result) in
-          begin match task with
-          | None -> decr workers
-          | Some x -> Marshal.to_channel w (x : task) []; flush w
-          end; answer) channels in
+          try 
+            let answer = (Marshal.from_channel r : result) in
+            begin match task with
+            | None -> decr workers
+            | Some x -> Marshal.to_channel w (x : task) []; flush w
+            end;
+            Some answer
+          with 
+          | exn -> log #warn ~exn "perform"; decr workers; None) 
+        channels 
+        in
         List.iter f answers
       done
 
