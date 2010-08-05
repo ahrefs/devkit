@@ -60,7 +60,7 @@ module State = struct
 
   let format_simple level facil msg =
     sprintf "[%s] %06u:%04u %8s [%5s] %s\n" 
-      (Time.gmt_string_ms (Unix.gettimeofday ())) 
+      (Time.to_string ~gmt:false ~ms:true (Unix.gettimeofday ())) 
       (Unix.getpid ()) 
       (Thread.id (Thread.self ()))
       facil.Logger.name

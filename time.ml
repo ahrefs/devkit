@@ -10,22 +10,15 @@ type t = float
 let get = Unix.gettimeofday
 let now = Unix.gettimeofday
 
+let to_string ?(gmt=false) ?(ms=false) f =
+  let t = (if gmt then Unix.gmtime else Unix.localtime) f in
+  let sec = if ms then sprintf "%07f" (mod_float f 60.) else sprintf "%02u" t.Unix.tm_sec in
+  sprintf "%04u-%02u-%02uT%02u:%02u:%s%s"
+    (1900 + t.Unix.tm_year) (t.Unix.tm_mon+1) t.Unix.tm_mday t.Unix.tm_hour t.Unix.tm_min sec (if gmt then "Z" else "")
+
 (** @see <http://www.w3.org/TR/NOTE-datetime> W3C Datetime *)
-let gmt_string t = 
-  let module U = Unix in
-  let t = U.gmtime t in
-  sprintf "%04u-%02u-%02uT%02u:%02u:%02uZ" (1900 + t.U.tm_year) (t.U.tm_mon+1) t.U.tm_mday t.U.tm_hour t.U.tm_min t.U.tm_sec
-
-let to_string t =
-  let module U = Unix in
-  let t = U.localtime t in
-  sprintf "%04u-%02u-%02uT%02u:%02u:%02u" (1900 + t.U.tm_year) (t.U.tm_mon+1) t.U.tm_mday t.U.tm_hour t.U.tm_min t.U.tm_sec
-
-let gmt_string_ms f = 
-  let module U = Unix in
-  let t = U.gmtime f in
-  sprintf "%04u-%02u-%02uT%02u:%02u:%09fZ" (1900 + t.U.tm_year) (t.U.tm_mon+1) t.U.tm_mday t.U.tm_hour t.U.tm_min 
-  (mod_float f 60.)
+let gmt_string = to_string ~gmt:true ~ms:false
+let gmt_string_ms = to_string ~gmt:true ~ms:true
 
 (** unix timestamp to RFC-2822 date
     Example: Tue, 15 Nov 1994 12:45:26 GMT *)
