@@ -45,6 +45,10 @@ let str = make_arg string
 let may_int = make_arg int_option
 let may_str = make_arg str_option
 
+let parse args =
+  let f = Exn.fail "unrecognized argument %S, try \"-help\"" in
+  parse (align args) f (sprintf "Usage: %s [options]\nOptions are:" Sys.argv.(0))
+
 (*
   "-"^name, 
   Arg.Set_int var, 
