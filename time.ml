@@ -12,7 +12,7 @@ let now = Unix.gettimeofday
 
 let to_string ?(gmt=false) ?(ms=false) f =
   let t = (if gmt then Unix.gmtime else Unix.localtime) f in
-  let sec = if ms then sprintf "%07f" (mod_float f 60.) else sprintf "%02u" t.Unix.tm_sec in
+  let sec = if ms then sprintf "%07.4f" (mod_float f 60.) else sprintf "%02u" t.Unix.tm_sec in
   sprintf "%04u-%02u-%02uT%02u:%02u:%s%s"
     (1900 + t.Unix.tm_year) (t.Unix.tm_mon+1) t.Unix.tm_mday t.Unix.tm_hour t.Unix.tm_min sec (if gmt then "Z" else "")
 
