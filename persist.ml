@@ -2,9 +2,9 @@
 
 open Control
 
-module type Value = 
+module type Value =
 sig
-type value
+type t
 val tag : string
 end
 
@@ -13,7 +13,7 @@ exception Error
 module Marshal(V : Value) =
 struct
 
-type t = V.value
+type t = V.t
 
 let to_channel ch ?(flags=[]) x =
   output_string ch V.tag;
