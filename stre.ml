@@ -11,8 +11,8 @@ let replace_all ~str ~sub ~by =
   Str.global_substitute (Str.regexp_string sub) (fun _ -> by) str
 *)
 
-let replace str sub by =
-  Pcre.qreplace ~rex:(Pcre.regexp sub) ~templ:by str
+let qreplace str sub by =
+  Pcre.qreplace ~rex:(Pcre.regexp & Pcre.quote sub) ~templ:by str
 
 (** contents of the first submatch *)
 let extract rex str = 
