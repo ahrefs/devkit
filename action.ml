@@ -27,6 +27,7 @@ let list_random = function
 
 (** [partition l n] splits [l] into [n] chunks *)
 let partition l n =
+  if n < 2 then [| l |] else
   let a = Array.make n [] in
   ExtList.List.iteri (fun i x -> let i = i mod n in a.(i) <- x :: a.(i)) l;
   a
