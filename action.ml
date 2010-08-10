@@ -49,8 +49,6 @@ let chunks e n =
   a
 *)
 
-let printfn fmt = ksprintf print_endline fmt
-
 (* FIXME *)
 
 let bytes_string_f f = (* oh ugly *)
