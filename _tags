@@ -13,3 +13,4 @@ true: annot, debug, thread
 #use_core, use_sexplib, use_bigarray, use_nums, use_bin_prot
 <test.*>: use_oUnit
 <netstring_pcre.ml*>: use_pcre
+"php_serialize.ml": camlp4o

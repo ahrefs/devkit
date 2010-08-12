@@ -80,7 +80,7 @@ dispatch begin function
      flag ["ocaml"; "doc"; "use_liboevent"] (S[A"-I"; A (C.lib "event")]);
      flag ["ocaml"; "doc"; "use_curl"] (S[A"-I"; A (C.lib "curl")]);
 
-     flag ["ocaml"; "doc"] (S[A"-short-functors"; A"-sort"; A"-m"; A"A"]);
+     flag ["ocaml"; "doc"] (S[A"-short-functors"; A"-sort"; A"-m"; A"A"; A"-hide-warnings"]);
 
      flag ["ocaml"; "pp"; "use_json-static"] (A (Filename.concat (C.lib "json-static") "pa_json_static.cmo"));
 
