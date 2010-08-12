@@ -122,3 +122,8 @@ let self = from State.self
 (** general logging facility *)
 let main = from "main"
 
+(** reopen log file *)
+let reopen = function
+| None -> ()
+| Some name -> State.reopen_log_ch name
+
