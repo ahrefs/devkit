@@ -42,6 +42,14 @@ let stream_get_next f = parser
 (** see {!stream_get_next} *)
 let stream_next f s = ignore (stream_get_next f s)
 
+let stream_match_next f s =
+  match Stream.peek s with
+  | None -> raise Not_found
+  | Some x ->
+    match f x with
+    | Some x -> Stream.junk s; x
+    | None -> raise Not_found
+
 (** scan stream while predicate holds @return list of matching elements *)
 let stream_extract_while f s =
   let rec loop acc = 
