@@ -28,6 +28,11 @@ install: lib
 uninstall:
 		ocamlfind remove devkit
 
+reinstall:
+		$(MAKE) clean
+		$(MAKE) uninstall
+		$(MAKE) install
+
 clean:
 		ocamlbuild -clean
 
