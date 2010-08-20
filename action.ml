@@ -40,6 +40,22 @@ let file_lines_exn file =
 
 let file_lines file = try file_lines_exn file with _ -> []
 
+(** array must be sorted *)
+let binary_search arr cmp x =
+  let rec loop a b =
+    match b - a with
+    | 0 -> false
+    | 1 -> cmp arr.(a) x = 0
+    | n ->
+      let mid = a + n / 2 in
+      let v = arr.(mid) in
+      match cmp v x with
+      | 0 -> true 
+      | 1 -> loop a mid
+      | _ (* -1 *) -> loop (mid+1) b
+  in
+  loop 0 (Array.length arr)
+
 (** [chunks e n] splits [e] into chunks of [n] elements each (except the last which can be shorter) *)
 (*
 let chunks e n =
