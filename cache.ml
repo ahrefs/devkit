@@ -162,8 +162,12 @@ struct
   let enum t = enum t
   let count t k = Option.default 0 & Hashtbl.find_option t k
   let show t f = enum t >> 
-    Enum.map (fun (k,v) -> Printf.sprintf "%s: %u" (f k) v) >>
+    Enum.map (fun (x,n) -> Printf.sprintf "%s: %u" (f x) n) >>
     Stre.concat " "
+  let show_sorted ?(sep="\n") t f = enum t >> 
+    List.of_enum >> List.sort ~cmp:(flip & Action.compare_by snd) >>
+    List.map (fun (x,n) -> Printf.sprintf "%6d : %s" n (f x)) >> 
+    String.concat sep
 end
 
 module Group : sig
