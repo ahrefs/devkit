@@ -130,6 +130,7 @@ let io_copy input output =
     let s = String.create size in
     while true do
       let n = IO.input input s 0 size in
+      if n = 0 then raise IO.No_more_input;
       ignore & IO.really_output output s 0 n
     done
   with IO.No_more_input -> ()
