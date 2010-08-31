@@ -69,9 +69,10 @@ let chunks e n =
 (* FIXME *)
 
 let bytes_string_f f = (* oh ugly *)
-  if f < 1024. then sprintf "%uB" (int_of_float f) else
-  if f < 1024. *. 1024. then sprintf "%uKB" (int_of_float (f /. 1024.)) else
-  if f < 1024. *. 1024. *. 1024. then sprintf "%.1fMB" (f /. 1024. /. 1024.) else
+  let a = abs_float f in
+  if a < 1024. then sprintf "%dB" (int_of_float f) else
+  if a < 1024. *. 1024. then sprintf "%dKB" (int_of_float (f /. 1024.)) else
+  if a < 1024. *. 1024. *. 1024. then sprintf "%.1fMB" (f /. 1024. /. 1024.) else
   sprintf "%.1fGB" (f /. 1024. /. 1024. /. 1024.)
 
 let bytes_string = bytes_string_f $ float_of_int
@@ -171,4 +172,25 @@ let hexdump str =
           loop (List.drop 16 chars)
   in
    loop (String.explode str)
+
+open Gc
+
+let gc_diff st1 st2 =
+  let allocated st = st.minor_words +. st.major_words -. st.promoted_words in
+  let a = allocated st2 -. allocated st1 in
+  let minor = st2.minor_collections - st1.minor_collections in
+  let major = st2.major_collections - st1.major_collections in
+  let compact = st2.compactions - st1. compactions in
+  let heap = st2.heap_words - st1.heap_words in
+  Printf.sprintf "allocated %10s, heap %10s, collection %d %d %d" (caml_words_f a) (caml_words heap) compact major minor
+
+let gc_show f x =
+  let st = Gc.quick_stat () in
+  Std.finally (fun () -> let st2 = Gc.quick_stat () in Log.main #info "GC DIFF: %s" (gc_diff st st2)) f x
+
+(*
+let mem_usage v =
+  let x = Objsize.objsize v in
+  Printf.sprintf "%s (data %s)" (Action.bytes_string (Objsize.size_with_headers x)) (Action.bytes_string (Objsize.size_without_headers x))
+*)
 

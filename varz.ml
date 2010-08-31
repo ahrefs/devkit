@@ -153,9 +153,10 @@ let cpu_time = fun_time_value "CPU time" Sys.time
 
 let gc_heap = fun_value "Heap" begin fun () ->
     let st = Gc.quick_stat () in
-    sprintf "%s (max %s)"
+    sprintf "%s (max %s, chunks %d)"
         (caml_words st.Gc.heap_words) 
         (caml_words st.Gc.top_heap_words)
+        st.Gc.heap_chunks
     end
 
 let gc_ctrs = fun_value "Counters(mi,pr,ma)" (fun () ->
