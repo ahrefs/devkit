@@ -6,6 +6,19 @@ open ExtLib
 let by_words = Pcre.regexp ~flags:[`UTF8] "(?:[^\\pL\\pN.]|_)+"
 let split rex str = match Pcre.split ~rex str with ""::l -> l | l -> l
 
+let nsplitc str sep =
+	if str = "" then []
+	else (
+		let rec nsplit p =
+			try
+        let p2 = String.index_from str p sep in
+				String.sub str p (p2 - p) :: nsplit (p2 + 1)
+			with
+				Not_found -> [String.sub str p (String.length str - p)]
+		in
+		nsplit 0
+	)
+
 (*
 let replace_all ~str ~sub ~by =
   Str.global_substitute (Str.regexp_string sub) (fun _ -> by) str
