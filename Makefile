@@ -29,7 +29,6 @@ uninstall:
 		ocamlfind remove devkit
 
 reinstall:
-		$(MAKE) clean
 		$(MAKE) uninstall
 		$(MAKE) install
 

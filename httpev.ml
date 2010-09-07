@@ -340,41 +340,47 @@ let handle_client config status fd conn_info answer =
     exn -> abort exn "send"
   end
 
-include struct
+module Tcp = struct
+
 open Unix
 
-let start_listen config =
+let start_listen ~name ?(backlog=100) addr port =
   let fd = socket PF_INET SOCK_STREAM 0 in
   setsockopt fd SO_REUSEADDR true;
-  let addr = ADDR_INET (config.ip,config.port) in
+  let addr = ADDR_INET (addr,port) in
   bind fd addr;
-  listen fd config.backlog;
-  log #info "HTTP server ready on %s" (Nix.show_addr addr);
+  listen fd backlog;
+  log #info "%s listen TCP %s" name (Nix.show_addr addr);
   fd
 
-let setup_fd fd config answer = 
-(*   open Unix in *)
+let setup_fd events fd handle =
   set_nonblock fd;
   let status = { reqs = 0; active = 0; errs = 0; } in
-  Async.setup_simple_event config.events fd [Ev.READ] begin fun _ fd _ -> 
+  Async.setup_simple_event events fd [Ev.READ] begin fun _ fd _ ->
     try
       while true do (* accept as much as possible, socket is nonblocking *)
-        let (fd,addr) = accept fd in
+        let peer = accept fd in
         try
-          handle_client config status fd (addr,Time.get()) answer
+          handle status peer
         with
-          exn -> log #error ~exn "accepted (%s)" (Nix.show_addr addr)
+          exn -> log #error ~exn "accepted (%s)" (Nix.show_addr (snd peer))
       done
     with
     | Unix_error(EAGAIN,_,_) -> ()
     | exn -> log #error ~exn "accept"
   end
 
-  let setup config answer =
-    let fd = start_listen config in
-    setup_fd fd config answer
-
 end
+
+let start_listen config =
+  Tcp.start_listen ~name:"HTTP server" ~backlog:config.backlog config.ip config.port
+
+let setup_fd fd config answer =
+  Tcp.setup_fd config.events fd (fun st (fd,addr) -> handle_client config st fd (addr,Time.get()) answer)
+
+let setup config answer =
+  let fd = start_listen config in
+  setup_fd fd config answer
 
 let server config answer =
   setup config answer;
