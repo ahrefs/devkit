@@ -51,15 +51,19 @@ let read_available ~limit fd =
 
 (** [read_buf buf fd err k] - asynchronously fill [buf] with data from [fd] and call [k buf] when done (buffer is full).
   [fd] should be nonblocking. Call [err] on error (EOF). *)
-let read_buf base buf fd err k =
+let read_buf base ?timeout buf fd err k =
   let len = String.length buf in
   let later cur =
     let cur = ref cur in
-    setup_simple_event base fd [Ev.READ] (fun ev fd flags ->
+    setup_simple_event base ?timeout fd [Ev.READ] (fun ev fd flags ->
+      match flags with
+      | Ev.TIMEOUT -> Ev.del ev; err ()
+      | Ev.WRITE | Ev.SIGNAL -> assert false
+      | Ev.READ ->
       match read_some fd buf !cur (len - !cur) with
       | End -> Ev.del ev; err ()
       | Data n -> cur := !cur + n; if !cur = len then begin Ev.del ev; k buf end
-      | Block -> Ev.del ev; assert false
+      | Block -> assert false
     )
   in
   match read_some fd buf 0 len with
@@ -68,7 +72,7 @@ let read_buf base buf fd err k =
   | Block -> later 0
   | Data n -> later n
 
-let read_n base n fd err k = read_buf base (String.create n) fd err k
+let read_n base ?timeout n fd err k = read_buf base ?timeout (String.create n) fd err k
 
 let periodic_timer events delay ?(name="") f =
   let loop timer =
