@@ -220,9 +220,10 @@ let write_process cmd data = try write_process_exn cmd data; true with _ -> fals
 
 let mounts () =
   Action.file_lines_exn "/proc/mounts" >>
-  List.map (fun s -> 
+  List.filter_map (fun s ->
     match String.nsplit s " " with
-    | [_dev;mount;_fs;opt;_;_] -> mount, String.nsplit opt ","
+    | ["rootfs";_;"rootfs";_;_;_] -> None
+    | [_dev;mount;_fs;opt;_;_] -> Some (mount, String.nsplit opt ",")
     | _ -> Exn.fail "bad mount : %s" s)
 
 (** @param path must be normalized *)
