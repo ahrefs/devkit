@@ -165,8 +165,8 @@ let read_process_exn ?timeout cmd =
   bracket (Ev.init ()) Ev.free & fun base ->
   let ok = ref false in
   let b = Buffer.create 16 in
-  let ev = Ev.create base in
-  Ev.set ev fd [Ev.READ] ~persist:true (fun fd flags ->
+  let ev = Ev.create () in
+  Ev.set base ev fd [Ev.READ] ~persist:true (fun fd flags ->
     let fin b = (* Ev.del called from inside event loop to break it *) Ev.del ev; ok := b in
     try
     if flags = Ev.TIMEOUT then

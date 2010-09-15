@@ -12,8 +12,8 @@ open Internal
 
 (** Create persistent event. Don't forget [del]. No (infinite) timeout. *)
 let simple_event events ?timeout fd flags f =
-  let ev = Ev.create events in
-  Ev.set ev fd flags ~persist:true (fun fd flags ->
+  let ev = Ev.create () in
+  Ev.set events ev fd flags ~persist:true (fun fd flags ->
     try
       f ev fd flags
     with
@@ -74,13 +74,13 @@ let read_buf base ?timeout buf fd err k =
 
 let read_n base ?timeout n fd err k = read_buf base ?timeout (String.create n) fd err k
 
+(** Call [f] with [delay]-second pauses between invocations *)
 let periodic_timer events delay ?(name="") f =
-  let timer = Ev.create events in
-  Ev.set_timer timer ~persist:false (fun () ->
-    try
-      Ev.add timer (Some delay);
-      f timer
-    with exn -> log #warn ~exn "periodic_timer %s" name);
+  let timer = Ev.create () in
+  Ev.set_timer events timer ~persist:false begin fun () ->
+    begin try f timer with exn -> log #warn ~exn "periodic_timer %s" name end;
+    Ev.add timer (Some delay);
+  end;
   Ev.add timer (Some 0.);
   timer
 
