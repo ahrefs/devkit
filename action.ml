@@ -188,6 +188,15 @@ let gc_show f x =
   let st = Gc.quick_stat () in
   Std.finally (fun () -> let st2 = Gc.quick_stat () in Log.main #info "GC DIFF: %s" (gc_diff st st2)) f x
 
+let gc_settings () =
+  let gc = Gc.get () in
+  sprintf "heap %s incr %s major %d%% compact %d%% policy %d" 
+    (caml_words gc.Gc.minor_heap_size) 
+    (caml_words gc.Gc.major_heap_increment)
+    gc.Gc.space_overhead
+    gc.Gc.max_overhead
+    gc.Gc.allocation_policy
+
 (*
 let mem_usage v =
   let x = Objsize.objsize v in
