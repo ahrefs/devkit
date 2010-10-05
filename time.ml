@@ -48,4 +48,5 @@ let duration_str t =
 let minutes x = float & 60 * x
 let hours x = minutes & 60 * x
 let days x = hours & 24 * x
+let seconds x = float x
 
