@@ -223,7 +223,7 @@ let mounts () =
   List.filter_map (fun s ->
     match String.nsplit s " " with
     | ["rootfs";_;"rootfs";_;_;_] -> None
-    | [_dev;mount;_fs;opt;_;_] -> Some (mount, String.nsplit opt ",")
+    | [dev;mount;_fs;opt;_;_] -> Some (dev, mount, String.nsplit opt ",")
     | _ -> Exn.fail "bad mount : %s" s)
 
 (** @param path must be normalized *)
@@ -232,12 +232,13 @@ let find_mount path =
   assert (not & String.exists path "//");
   assert (not & String.exists path "/./");
   assert (not & String.exists path "/../");
-  let mount = ref ("",[]) in
+  let mount = ref ("","",[]) in
+  let bound x = let (_,b,_) = x in b in
   mounts () >>
-  List.iter (fun (bind,o) -> 
-    if String.starts_with path bind && String.length bind > String.length (fst !mount) then
-      mount := (bind,o));
-  assert (fst !mount <> "");
+  List.iter (fun (_,bind,_ as part) -> 
+    if String.starts_with path bind && String.length bind > String.length (bound !mount) then
+      mount := part);
+  assert (bound !mount <> "");
   !mount
 
 external fsync : Unix.file_descr -> unit = "caml_devkit_fsync"

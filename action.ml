@@ -38,6 +38,9 @@ let file_lines_exn file =
   close_in_noerr ch;
   l
 
+let hashtbl_find_insert h f k =
+  try Hashtbl.find h k with Not_found -> let v = f () in Hashtbl.replace h k v; v
+
 let file_lines file = try file_lines_exn file with _ -> []
 
 (** array must be sorted *)

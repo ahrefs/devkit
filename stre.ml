@@ -4,6 +4,7 @@ open Prelude
 open ExtLib
 
 let by_words = Pcre.regexp ~flags:[`UTF8] "(?:[^\\pL\\pN.]|_)+"
+let by_space = Pcre.regexp "\\s+"
 let split rex str = match Pcre.split ~rex str with ""::l -> l | l -> l
 
 let nsplitc str sep =
