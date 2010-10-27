@@ -59,15 +59,16 @@ let binary_search arr cmp x =
   in
   loop 0 (Array.length arr)
 
-(** [chunks e n] splits [e] into chunks of [n] elements each (except the last which can be shorter) *)
-(*
-let chunks e n =
-  let rec loop len =
-    if len = n 
-    match Enum.
-  ExtList.List.iteri (fun i x -> let i = i mod n in a.(i) <- x :: a.(i)) l;
-  a
-*)
+(** [chunk_e e n] splits [e] into chunks of [n] elements each (except the last which can be shorter) *)
+let chunk_e n e =
+  assert (n > 0);
+  let fin () = raise Enum.No_more_elements in
+  Enum.from (fun () ->
+    let i = ref n in
+    if Enum.is_empty e then fin () else
+    Enum.from (fun () -> match !i with 
+      | 0 -> fin ()
+      | _ -> decr i; match Enum.get e with None -> fin () | Some x -> x))
 
 (* FIXME *)
 
