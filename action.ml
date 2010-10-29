@@ -59,6 +59,24 @@ let binary_search arr cmp x =
   in
   loop 0 (Array.length arr)
 
+(* hm FIXME? *)
+let chunk n l =
+  assert (n > 0);
+  let chunks = ref [] in
+  let get_chunk e =
+    let rec loop acc = function
+      | 0 -> acc
+      | n -> match Enum.get e with None -> acc | Some x -> loop (x::acc) (n-1)
+    in
+    chunks := loop [] n :: !chunks
+  in
+  let rec loop e =
+    match Enum.peek e with
+    | None -> List.rev !chunks
+    | _ -> get_chunk e; loop e
+  in
+  loop (List.enum l) 
+
 (** [chunk_e e n] splits [e] into chunks of [n] elements each (except the last which can be shorter) *)
 let chunk_e n e =
   assert (n > 0);
