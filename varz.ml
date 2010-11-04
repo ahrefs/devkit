@@ -10,6 +10,8 @@ open Prelude
 
 (* module Value(T : Lock) = *)
 
+type 'a t = < add : 'a -> unit; gets : string; name : string; >
+
 let values = Hashtbl.create 16
 let controls = Hashtbl.create 16
 
@@ -109,6 +111,7 @@ let fun_value name f =
 object (self)
 
 method gets = f ()
+method add () = ()
 method name = name
 
 initializer
@@ -120,6 +123,7 @@ let const name s =
 object (self)
 
 method gets = s
+method add () = ()
 method name = name
 
 initializer
@@ -131,6 +135,7 @@ let fun_time_value name f =
 object (self)
 
 method gets = Time.duration_str (f ())
+method add () = ()
 method name = name
 
 initializer
