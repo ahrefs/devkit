@@ -38,7 +38,7 @@ let file_lines_exn file =
   close_in_noerr ch;
   l
 
-let hashtbl_find_insert h f k =
+let hashtbl_find h f k =
   try Hashtbl.find h k with Not_found -> let v = f () in Hashtbl.replace h k v; v
 
 let file_lines file = try file_lines_exn file with _ -> []
@@ -206,9 +206,10 @@ let gc_diff st1 st2 =
   let heap = st2.heap_words - st1.heap_words in
   Printf.sprintf "allocated %10s, heap %10s, collection %d %d %d" (caml_words_f a) (caml_words heap) compact major minor
 
-let gc_show f x =
+let gc_show name f x =
+  let t = new timer in
   let st = Gc.quick_stat () in
-  Std.finally (fun () -> let st2 = Gc.quick_stat () in Log.main #info "GC DIFF: %s" (gc_diff st st2)) f x
+  Std.finally (fun () -> let st2 = Gc.quick_stat () in Log.main #info "GC DIFF %s : %s, elapsed %s" name (gc_diff st st2) t#get_str) f x
 
 let gc_settings () =
   let gc = Gc.get () in

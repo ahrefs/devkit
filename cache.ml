@@ -217,3 +217,17 @@ end = struct
   let size = Hashtbl.length
 end
 
+module Lists : sig
+type ('a,'b) t
+val create : unit -> ('a,'b) t
+val add : ('a,'b) t -> 'a -> 'b -> unit
+val get : ('a,'b) t -> 'a -> 'b list
+val enum : ('a,'b) t -> ('a * 'b list) Enum.t
+end = struct
+type ('a,'b) t = ('a,'b list) Hashtbl.t
+let create () = Hashtbl.create 16
+let get h k = try Hashtbl.find h k with Not_found -> []
+let add h k v = Hashtbl.replace h k (v::get h k)
+let enum = Hashtbl.enum
+end
+
