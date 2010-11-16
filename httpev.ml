@@ -54,7 +54,7 @@ let show_method = function
 
 let show_request c =
   let client = Nix.show_addr c.addr in
-  let client = try sprintf "%s (%s)" (List.assoc "x-real-ip" c.headers) client with Not_found -> client in
+  let client = try sprintf "%15s (%s)" (List.assoc "x-real-ip" c.headers) client with Not_found -> client in
   sprintf "#%d %s time %.4f (recv %.4f) %s %s%s"
     c.id
     client
