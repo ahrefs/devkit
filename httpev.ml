@@ -60,8 +60,8 @@ let show_request c =
     client
     (Time.get () -. c.conn)
     (c.recv -. c.conn)
-    (Exn.default "" (List.assoc "host") c.headers)
     (show_method c.meth)
+    (Exn.default "" (List.assoc "host") c.headers)
     c.url
 
 type status = { mutable total : int; mutable active : int; mutable errs : int; reqs : (int,request) Hashtbl.t; }
@@ -362,7 +362,8 @@ let listen ~name ?(backlog=100) addr port =
 let handle events fd k =
   set_nonblock fd;
   let status = { total = 0; active = 0; errs = 0; reqs = Hashtbl.create 10; } in
-  Async.setup_simple_event events fd [Ev.READ] begin fun _ fd _ ->
+  let rec setup () =
+  Async.setup_simple_event events fd [Ev.READ] begin fun ev fd _ ->
     try
       while true do (* accept as much as possible, socket is nonblocking *)
         let peer = accept fd in
@@ -373,8 +374,21 @@ let handle events fd k =
       done
     with
     | Unix_error(EAGAIN,_,_) -> ()
-    | exn -> log #error ~exn "accept"
+    | exn ->
+      log #error ~exn "accept (total requests %d)" (Hashtbl.length status.reqs);
+      Hashtbl.iter (fun _ req -> log #error "%s" (show_request req)) status.reqs;
+      match exn with
+      | Unix_error(EMFILE,_,_) ->
+        let tm = 2. in
+        log #error "disable listening socket for %s " (Time.duration_str tm);
+        Ev.del ev; 
+        let timer = Ev.create () in
+        Ev.set_timer events timer ~persist:false (fun () -> Ev.del timer; log #info "reenable listening socket"; setup ());
+        Ev.add timer (Some tm)
+      | _ -> ()
   end
+  in
+  setup ()
 
 end
 
