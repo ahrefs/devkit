@@ -44,19 +44,27 @@ type request = { addr : Unix.sockaddr ;
                  headers : (string * string) list;
                  body : string;
                  version : int * int; (* client HTTP version *)
+                 id : int; (* request id *)
                  }
+
+let show_method = function
+  | `GET -> "GET"
+  | `POST -> "POST"
+  | `HEAD -> "HEAD"
 
 let show_request c =
   let client = Nix.show_addr c.addr in
   let client = try sprintf "%s (%s)" (List.assoc "x-real-ip" c.headers) client with Not_found -> client in
-  sprintf "%s time %.4f (recv %.4f) %s%s"
+  sprintf "#%d %s time %.4f (recv %.4f) %s %s%s"
+    c.id
     client
     (Time.get () -. c.conn)
     (c.recv -. c.conn)
     (Exn.default "" (List.assoc "host") c.headers)
+    (show_method c.meth)
     c.url
 
-type status = { mutable reqs : int; mutable active : int; mutable errs : int; }
+type status = { mutable total : int; mutable active : int; mutable errs : int; reqs : (int,request) Hashtbl.t; }
 
 type ('a,'b) result = [ `Ok of 'a | `Error of 'b ]
 
@@ -74,7 +82,7 @@ let failed reason s =
   let s = if String.length s > lim then sprintf "%s [%d bytes more]" (String.slice ~last:lim s) (String.length s - lim) else s in
   raise (Parse (reason, sprintf "%s : %s" name s))
 
-let parse_http_req data (addr,conn) =
+let parse_http_req req_id data (addr,conn) =
   let next s = try String.split s "\r\n" with _ -> failed Split data in
   try
     let (line,s) = next data in
@@ -118,6 +126,7 @@ let parse_http_req data (addr,conn) =
           | `GET | `HEAD -> decode_args args
           in
           {
+            id = req_id;
             addr = addr;
             url = url;
             path = path;
@@ -145,13 +154,17 @@ let close fd =
   Exn.suppress (Unix.shutdown fd) Unix.SHUTDOWN_ALL;
   Unix.close fd
 
+let finish status fd req =
+  DEC status.active;
+  close fd;
+  match req with
+  | None -> ()
+  | Some req ->
+    Hashtbl.remove status.reqs req.id;
+    log #debug "finished %s" (show_request req)
+
 let write_f config status req (data,ack) ev fd _flags =
-  let finish () =
-    log #debug "finished %s" & Option.map_default show_request "" req;
-    Ev.del ev; 
-    close fd;
-    DEC status.active
-  in
+  let finish () = finish status fd req; Ev.del ev in
   let rec loop l ack =
     match l with
     | [] -> finish (); ([],0)
@@ -173,10 +186,8 @@ let write_f config status req (data,ack) ev fd _flags =
     ack := a
   with
   exn -> 
-    Exn.suppress Ev.del ev;
-    Exn.suppress close fd;
     INC status.errs;
-    DEC status.active;
+    finish ();
     match config.log_epipe, exn with
     | false, Unix.Unix_error (Unix.EPIPE,_,_) -> ()
     | _ -> log #warn ~exn "write_f %s" & Option.map_default show_request "" req
@@ -235,14 +246,9 @@ let write_some fd s =
   | Unix.Unix_error (Unix.EAGAIN,_,_) -> `Some 0
 
 let write_reply config fd status req l =
-  let finish () =
-    log #debug "finished %s" & Option.map_default show_request "" req;
-    close fd;
-    DEC status.active
-  in
   let rec loop l =
     match l with
-    | [] -> finish ()
+    | [] -> finish status fd req
     | s::tl ->
       match write_some fd s with
       | `Some n -> Async.setup_simple_event config.events fd [Ev.WRITE] (write_f config status req (ref l,ref n))
@@ -252,23 +258,22 @@ let write_reply config fd status req l =
     loop l
   with
   | exn ->
-    Exn.suppress close fd;
     INC status.errs;
-    DEC status.active;
+    finish status fd req;
     match config.log_epipe, exn with
     | false, Unix.Unix_error (Unix.EPIPE,_,_) -> ()
     | _ -> log #warn ~exn "write_reply %s" & Option.map_default show_request "" req
 
 let handle_client config status fd conn_info answer =
   let peer = Nix.show_addr (fst conn_info) in
-  INC status.reqs;
+  INC status.total;
+  let req_id = status.total in
   INC status.active;
   Unix.set_nonblock fd;
-  let abort exn msg =
+  let abort req exn msg =
     (*Exn.suppress Ev.del ev;*)
     INC status.errs;
-    DEC status.active;
-    Exn.suppress close fd;
+    finish status fd req;
     log #warn ~exn "handle_client %s %s" msg peer
   in 
   let send_reply req (code,hdrs,body) =
@@ -289,7 +294,7 @@ let handle_client config status fd conn_info answer =
 (*     Buffer.add_string b body; *)
     write_reply config fd status req [Buffer.contents b;body]
     with
-      exn -> abort exn "send_reply"
+      exn -> abort req exn "send_reply"
   in
   log #debug "accepted %s" peer;
   Async.setup_simple_event config.events fd [Ev.READ] begin fun ev fd _ ->
@@ -308,7 +313,7 @@ let handle_client config status fd conn_info answer =
     (* FIXME may not read whole request *)
     | `Done data | `Part data ->
       log #debug "read_all: %d bytes from %s" (String.length data) peer;
-      match parse_http_req data conn_info with
+      match parse_http_req req_id data conn_info with
       | `Error (Parse (what,msg)) ->
         let error = match what with
         | Url | RequestLine | Header | Split | Version -> `Bad_request
@@ -322,6 +327,7 @@ let handle_client config status fd conn_info answer =
         send_reply None (`Bad_request,[],"")
       | `Ok req ->
         try
+          Hashtbl.replace status.reqs req.id req;
           match req.version with
           | (1,_) -> answer status req (send_reply (Some req))
           | _ ->
@@ -337,7 +343,7 @@ let handle_client config status fd conn_info answer =
     | `Later (fd,reply) -> wait config.events fd (fun () -> send_reply (req, !reply))
 *)
     with
-    exn -> abort exn "send"
+    exn -> abort None exn "send"
   end
 
 module Tcp = struct
@@ -355,7 +361,7 @@ let listen ~name ?(backlog=100) addr port =
 
 let handle events fd k =
   set_nonblock fd;
-  let status = { reqs = 0; active = 0; errs = 0; } in
+  let status = { total = 0; active = 0; errs = 0; reqs = Hashtbl.create 10; } in
   Async.setup_simple_event events fd [Ev.READ] begin fun _ fd _ ->
     try
       while true do (* accept as much as possible, socket is nonblocking *)
