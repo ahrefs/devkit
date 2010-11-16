@@ -78,16 +78,17 @@ and parse_str_array acc = parser
   | [< k=parse_str; v=parse_one; t >] -> parse_str_array ((k,v)::acc) t
   | [< >] -> List.rev acc
 
-let parse stream =
-  let show () =
-    let tail = Stream.npeek 10 stream >> List.map (String.make 1) >> String.concat "" in
-    Printf.sprintf "Position %u : %s" (Stream.count stream) tail
-  in
+let stream_show stream =
+  let tail = Stream.npeek 10 stream >> List.map (String.make 1) >> String.concat "" in
+  Printf.sprintf "Position %u : %s" (Stream.count stream) tail
+
+let parse ?(full=true) stream =
   try 
     let r = parse_one stream in
-    Stream.empty stream; r
+    if full then Stream.empty stream;
+    r
   with 
-  | Stream.Error _ | Stream.Failure -> failwith (show ())
+  | Stream.Error _ | Stream.Failure -> failwith (stream_show stream)
 
 let parse_string = parse $ Stream.of_string
 
