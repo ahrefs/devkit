@@ -80,7 +80,7 @@ let handle_sig_reload_with fin =
         (try fin () with exn -> Log.self #warn ~exn "handle_sig_reload");
         Log.self #info "Signal handler done."
         )))
-    [Sys.sighup; Sys.sigusr1; Sys.sigusr2]
+    [Sys.sighup]
 
 
 type sig_stack = (unit -> unit) list ref

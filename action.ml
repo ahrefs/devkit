@@ -98,6 +98,7 @@ let bytes_string_f f = (* oh ugly *)
   sprintf "%.1fGB" (f /. 1024. /. 1024. /. 1024.)
 
 let bytes_string = bytes_string_f $ float_of_int
+let bytes_string_i64 = bytes_string_f $ Int64.to_float
 
 let caml_words_f f =
   bytes_string_f (f *. (float_of_int (Sys.word_size / 8)))
