@@ -158,6 +158,7 @@ let close_process_in (cin,pid) =
 
 end (* module UnixImpl *)
 
+(*
 let read_process_exn ?timeout cmd =
   bracket (UnixImpl.open_process_in cmd) (ignore $ UnixImpl.close_process_in) & fun (cin, pid) ->
   let fd = Unix.descr_of_in_channel cin in
@@ -187,6 +188,7 @@ let read_process_exn ?timeout cmd =
     Some (Buffer.contents b)
   else
     None
+*)
 
 (** @return IO.t to feed stdin of spawned process *)
 let output_process_exit cmd =
