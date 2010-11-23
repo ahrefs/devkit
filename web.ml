@@ -209,12 +209,12 @@ let http_get_io_exn ?(extra=ignore) ?(check=curl_ok) url out =
   with
     exn -> raise (Option.default exn !inner)
 
-let http_get_io url ?extra out =
+let http_get_io url ?(verbose=true) ?extra out =
   try
     http_get_io_exn url ?extra out
   with 
   | Curl.CurlException(Curl.CURLE_WRITE_ERROR,_,_) -> ()
-  | exn -> Log.main #warn ~exn "http_get_io(%s)" url
+  | exn -> if verbose then Log.main #warn ~exn "http_get_io(%s)" url else ()
 
-let http_get ?extra url = wrapped (IO.output_string ()) IO.close_out (http_get_io ?extra url)
+let http_get ?verbose ?extra url = wrapped (IO.output_string ()) IO.close_out (http_get_io ?verbose ?extra url)
 
