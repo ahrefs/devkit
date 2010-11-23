@@ -83,7 +83,7 @@ let worker (execute : task -> result) =
         let r = execute v in
         Marshal.to_channel output (r : result) []; flush output
       done
-      with e -> log #error "Paraller.worker exception %s" (Exn.str e)
+      with e -> log #error "Paraller.worker exception %s\n%s" (Exn.str e) (Printexc.get_backtrace ())
       end;
       close_in_noerr input;
       close_out_noerr output;

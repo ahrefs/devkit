@@ -191,12 +191,13 @@ let with_curl f =
 
 let curl_ok h = Curl.get_httpcode h = 200
 
-let http_get_io_exn ?(check=curl_ok) url out =
+let http_get_io_exn ?(extra=ignore) ?(check=curl_ok) url out =
   let inner = ref None in
   try
     with_curl begin fun h ->
       let check = lazy (check h) in
       Curl.set_url h url;
+      extra h;
       Curl.set_writefunction h (fun s -> 
         try 
           match Lazy.force check with 
@@ -208,11 +209,11 @@ let http_get_io_exn ?(check=curl_ok) url out =
   with
     exn -> raise (Option.default exn !inner)
 
-let http_get_io url out =
+let http_get_io url ?extra out =
   try
-    http_get_io_exn url out
+    http_get_io_exn url ?extra out
   with 
     exn -> Log.main #warn ~exn "http_get_io(%s)" url
 
-let http_get url = wrapped (IO.output_string ()) IO.close_out (http_get_io url)
+let http_get ?extra url = wrapped (IO.output_string ()) IO.close_out (http_get_io ?extra url)
 

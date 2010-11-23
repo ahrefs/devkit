@@ -1,6 +1,7 @@
 true: annot, debug, thread
 <*.ml{,i}>: use_extLib
 "web.ml": use_pcre, use_netstring, use_netsys, use_curl, camlp4o
+"exn.ml": use_curl
 "htmlStream.ml": use_pcre, camlp4o
 "nix.ml": use_netsys
 "netcgi_ext.ml": use_netcgi, use_netstring
