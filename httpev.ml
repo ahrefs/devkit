@@ -45,6 +45,7 @@ type request = { addr : Unix.sockaddr ;
                  body : string;
                  version : int * int; (* client HTTP version *)
                  id : int; (* request id *)
+                 mutable blocking : bool; (* hack for forked childs *)
                  }
 
 let show_method = function
@@ -137,6 +138,7 @@ let parse_http_req req_id data (addr,conn) =
             body = body;
             meth = meth;
             version = version;
+            blocking = false;
           }
         | line,s ->
           let (n,v) = try String.split line ":" with _ -> failed Header line in
@@ -205,9 +207,12 @@ type reply_status =
   | `Not_implemented
   | `Service_unavailable
   | `Version_not_supported
+  | `No_reply
   | `Custom of string ]
 
 type reply = reply_status * (string * string) list * string
+
+exception No_reply
 
 let http_reply = function
   | `Ok -> "HTTP/1.0 200 OK"
@@ -227,6 +232,8 @@ let http_reply = function
   | `Version_not_supported -> "HTTP/1.0 505 HTTP Version Not Supported"
 
   | `Custom s -> s
+
+  | `No_reply -> raise No_reply
 
 (** Wait until [fd] becomes readable and close it (for eventfd-backed notifications) *)
 let wait base fd k =
@@ -278,6 +285,7 @@ let handle_client config status fd conn_info answer =
   in 
   let send_reply req (code,hdrs,body) =
     try
+    if match req with Some x -> x.blocking | None -> false then Unix.clear_nonblock fd;
     let b = Buffer.create 1024 in
     let put s = Buffer.add_string b s; Buffer.add_string b "\r\n" in
     put (http_reply code);
@@ -294,7 +302,8 @@ let handle_client config status fd conn_info answer =
 (*     Buffer.add_string b body; *)
     write_reply config fd status req [Buffer.contents b;body]
     with
-      exn -> abort req exn "send_reply"
+    | No_reply -> finish status fd req
+    | exn -> abort req exn "send_reply"
   in
   log #debug "accepted %s" peer;
   Async.setup_simple_event config.events fd [Ev.READ] begin fun ev fd _ ->
