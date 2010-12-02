@@ -142,7 +142,8 @@ let log ?name f x =
     e ->
       let name = Option.map_default (Printf.sprintf " \"%s\"") "" name in
       Log.self #error "Action%s aborted with uncaught exception : %s" name (Exn.str e);
-      Log.self #error "%s" (Printexc.get_backtrace ())
+      let trace = Printexc.get_backtrace () in
+      if trace <> "" then Log.self #error "%s" trace
 
 let log_thread ?name f x =
   Thread.create (fun () -> log ?name f x) ()
