@@ -19,7 +19,7 @@ let rec iter_names dirname f =
         match try Some (Unix.openfile path [Unix.O_RDONLY] 0) with _ -> None with 
         | None -> ()
         | Some fd ->
-          bracket fd (suppress Unix.close) (fun fd ->
+          bracket fd (Exn.suppress Unix.close) (fun fd ->
             let rel = Filename.concat rel name in
             match (Unix.fstat fd).Unix.st_kind with
             | Unix.S_REG -> f fd path rel
