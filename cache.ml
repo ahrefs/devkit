@@ -164,9 +164,10 @@ struct
   let show t f = enum t >> 
     Enum.map (fun (x,n) -> Printf.sprintf "%s: %u" (f x) n) >>
     Stre.concat " "
-  let show_sorted ?(sep="\n") t f = enum t >> 
+  let show_sorted ?limit ?(sep="\n") t f = enum t >> 
     List.of_enum >> List.sort ~cmp:(flip & Action.compare_by snd) >>
-    List.map (fun (x,n) -> Printf.sprintf "%6d : %s" n (f x)) >> 
+    List.map (fun (x,n) -> Printf.sprintf "%6d : %s" n (f x)) >>
+    (match limit with None -> id | Some n -> List.take n) >>
     String.concat sep
 end
 
