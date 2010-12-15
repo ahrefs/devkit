@@ -152,19 +152,31 @@ end = struct
 end
 
 (** Count elements *)
-module Count =
-struct
+module Count : sig
+  type 'a t
+  val create : unit -> 'a t
+  val clear : 'a t -> unit
+  val add : 'a t -> 'a -> unit
+  val del : 'a t -> 'a -> unit
+  val enum : 'a t -> ('a * int) Enum.t
+  val iter : 'a t -> ('a -> int -> unit) -> unit
+  val count : 'a t -> 'a -> int
+  val show : 'a t -> ('a -> string) -> string
+  val show_sorted : 'a t -> ?limit:int -> ?sep:string -> ('a -> string) -> string
+end = struct
   open Hashtbl
   type 'a t = ('a,int) Hashtbl.t
   let create () : 'a t = create 100
   let clear = Hashtbl.clear
-  let add t x = match find_option t x with None -> add t x 1 | Some n -> replace t x (n+1)
+  let add t x = try replace t x (find t x + 1) with Not_found -> Hashtbl.add t x 1
+  let del t x = try replace t x (find t x - 1) with Not_found -> Hashtbl.add t x (-1)
   let enum t = enum t
+  let iter t k = iter k t
   let count t k = Option.default 0 & Hashtbl.find_option t k
   let show t f = enum t >> 
     Enum.map (fun (x,n) -> Printf.sprintf "%s: %u" (f x) n) >>
     Stre.concat " "
-  let show_sorted ?limit ?(sep="\n") t f = enum t >> 
+  let show_sorted t ?limit ?(sep="\n") f = enum t >> 
     List.of_enum >> List.sort ~cmp:(flip & Action.compare_by snd) >>
     List.map (fun (x,n) -> Printf.sprintf "%6d : %s" n (f x)) >>
     (match limit with None -> id | Some n -> List.take n) >>
@@ -176,11 +188,13 @@ module Group : sig
   val by : ('a -> 'b) -> ('a,'b) t
   val add : ('a,'b) t -> 'a -> unit
   val get : ('a,'b) t -> 'b -> 'a list
+  val iter : ('a,'b) t -> ('b -> 'a list -> unit) -> unit
 end = struct
-  type ('a,'b) t = ('b,'a) Hashtbl.t * ('a -> 'b)
+  type ('a,'b) t = ('b,'a list) Hashtbl.t * ('a -> 'b)
   let by f = Hashtbl.create 32, f
-  let add (h,f) x = Hashtbl.add h (f x) x
-  let get (h,_) k = Hashtbl.find_all h k
+  let add (h,f) x = let k = f x in try Hashtbl.replace h k (x :: Hashtbl.find h k) with Not_found -> Hashtbl.add h k [x]
+  let get (h,_) k = try Hashtbl.find h k with Not_found -> []
+  let iter (h,_) k = Hashtbl.iter k h
 end
 
 (** One-to-one associations *)
