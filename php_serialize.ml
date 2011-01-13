@@ -138,7 +138,7 @@ let output out v =
     | AI a -> put_arr (fun (k,v) -> put (I k); put v) a
     | I n -> IO.printf out "i:%i;" n
     | B b -> IO.printf out "b:%u;" (if b then 1 else 0)
-    | F f -> IO.printf out "d:%f;" (if compare nan f = 0 then 0. else f)
+    | F f -> IO.printf out "d:%g;" (if compare nan f = 0 then 0. else f)
     | N -> IO.nwrite out "N;"
     | S s -> IO.printf out "s:%u:\"%s\";" (String.length s) s
   in
@@ -160,7 +160,7 @@ let show out v =
     | AI a -> put_arr (fun (k,v) -> pr "%d : " k; put v) a
     | I n -> pr "%d" n
     | B b -> pr "%B" b
-    | F f -> pr "%f" f
+    | F f -> pr "%g" f
     | N -> pr "<NULL>"
     | S s -> pr "%S" s
   in

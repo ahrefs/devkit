@@ -12,6 +12,7 @@ let get_host = String.lowercase $ Neturl.url_host $ Neturl.parse_url
 let rawurlencode = Netencoding.Url.encode ~plus:false
 let urlencode = Netencoding.Url.encode ~plus:true
 let urldecode = Netencoding.Url.decode
+let htmlencode = Netencoding.Html.encode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
 
 module T = struct
 
