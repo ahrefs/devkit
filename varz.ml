@@ -134,6 +134,7 @@ end
 let fun_time_value name f =
 object (self)
 
+method get = f ()
 method gets = Time.duration_str (f ())
 method add () = ()
 method name = name

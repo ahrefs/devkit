@@ -132,6 +132,8 @@ method get_str = Time.duration_str & tm () -. start
 
 end
 
+let speed n t = float n /. (max t epsilon_float)
+
 let log ?name f x =
   try
     Option.may (Log.self #info "Action \"%s\" started") name;
@@ -215,7 +217,7 @@ let gc_show name f x =
 
 let gc_settings () =
   let gc = Gc.get () in
-  sprintf "heap %s incr %s major %d%% compact %d%% policy %d" 
+  sprintf "minor %s incr %s major %d%% compact %d%% policy %d" 
     (caml_words gc.Gc.minor_heap_size) 
     (caml_words gc.Gc.major_heap_increment)
     gc.Gc.space_overhead
