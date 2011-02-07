@@ -197,6 +197,7 @@ let write_f config status req (data,ack) ev fd _flags =
 type reply_status = 
   [ `Ok
   | `Found
+  | `Moved
   | `Bad_request
   | `Unauthorized
   | `Forbidden
@@ -214,9 +215,10 @@ type reply = reply_status * (string * string) list * string
 
 exception No_reply
 
-let http_reply = function
+let http_reply : reply_status -> string = function
   | `Ok -> "HTTP/1.0 200 OK"
 
+  | `Moved -> "HTTP/1.0 301 Moved Permanently"
   | `Found -> "HTTP/1.0 302 Found"
 
   | `Bad_request -> "HTTP/1.0 400 Bad Request"
