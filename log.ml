@@ -59,7 +59,7 @@ module State = struct
     fun str -> output_string ch str; flush ch
 
   let format_simple level facil msg =
-    sprintf "[%s] %06u:%04u %8s [%5s] %s\n" 
+    sprintf "[%s] %06u:%04u [%s:%s] %s\n" 
       (Time.to_string ~gmt:false ~ms:true (Unix.gettimeofday ())) 
       (Unix.getpid ()) 
       (Thread.id (Thread.self ()))
