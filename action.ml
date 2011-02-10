@@ -135,15 +135,15 @@ end
 let speed n t = float n /. (max t epsilon_float)
 
 let log ?name f x =
+  let t = new timer in
   try
-    Option.may (Log.self #info "Action \"%s\" started") name;
-    let t = Unix.gettimeofday () in
+    Option.may (Log.self #info "Action %S started") name;
     let () = f x in
-    Option.may (fun name -> Log.self #info "Action \"%s\" finished (%f secs)" name (Unix.gettimeofday () -. t)) name
+    Option.may (fun name -> Log.self #info "Action %S finished (elapsed %s)" name t#get_str) name
   with
     e ->
-      let name = Option.map_default (Printf.sprintf " \"%s\"") "" name in
-      Log.self #error "Action%s aborted with uncaught exception : %s" name (Exn.str e);
+      let name = Option.map_default (Printf.sprintf " %S") "" name in
+      Log.self #error "Action%s aborted with uncaught exception : %s (elapsed %s)" name (Exn.str e) t#get_str;
       let trace = Printexc.get_backtrace () in
       if trace <> "" then Log.self #error "%s" trace
 
