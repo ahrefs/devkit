@@ -1,6 +1,6 @@
 (** Control flow *)
 
-(** [bracker resource destroy k]
+(** [bracket resource destroy k]
     @return [k resource] and guarantee that [resource] is [destroy]'ed at the end. *)
 let bracket resource destroy k = Std.finally (fun () -> destroy resource) k resource
 
