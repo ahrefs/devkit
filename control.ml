@@ -34,3 +34,5 @@ let with_output_txt name k = with_open_out_txt name (fun ch -> k (IO.output_chan
 
 let locked mutex f = Mutex.lock mutex; Std.finally (fun () -> Mutex.unlock mutex) f ()
 
+let with_opendir dir = bracket (Unix.opendir dir) Unix.closedir
+

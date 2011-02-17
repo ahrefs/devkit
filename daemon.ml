@@ -13,12 +13,8 @@ let args =
   ]
 
 let manage () =
-  begin match !pidfile with
-  | Some pidfile -> Nix.manage_pidfile pidfile
-(*   | None -> Exn.fail "PID file not specified" *)
-  | None -> ()
-  end;
   if not !foreground then Nix.daemonize ();
+  Option.may Nix.manage_pidfile !pidfile;
   Log.reopen !logfile;
   log #info "GC settings: %s" (Action.gc_settings ());
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;

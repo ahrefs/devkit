@@ -45,9 +45,13 @@ let str = make_arg string
 let may_int = make_arg int_option
 let may_str = make_arg str_option
 
+let usage_header = sprintf "Usage: %s [options]\nOptions are:" Sys.argv.(0)
+
 let parse ?f args =
   let f = Option.default (fun s -> Exn.fail "unrecognized argument %S, try \"-help\"" s) f in
-  parse (align args) f (sprintf "Usage: %s [options]\nOptions are:" Sys.argv.(0))
+  parse (align args) f usage_header
+
+let usage args = Arg.usage (align args) usage_header
 
 (*
   "-"^name, 
