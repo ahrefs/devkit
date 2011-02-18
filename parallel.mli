@@ -1,5 +1,7 @@
 (** Parallel *)
 
+val invoke : ('a -> 'b) -> 'a -> unit -> 'b
+
 module type WorkerT = sig 
   type task 
   type result 

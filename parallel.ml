@@ -94,14 +94,15 @@ let worker (execute : task -> result) =
       let input = Unix.in_channel_of_descr main_read in
       input,output,pid
 
-type t = (in_channel * out_channel * int) list * (task -> result)
+type t = (in_channel * out_channel * int) list * (task -> result) * bool ref
 
-let create f n = let l = ref [] in for i = 1 to n do l := worker f :: !l done; !l, f
+let create f n = let l = ref [] in for i = 1 to n do l := worker f :: !l done; !l, f, ref true
 
 open Unix
 
-let kill ?(wait=1.) (l,_) =
+let kill ?(wait=1.) (l,_,alive) =
   log #info "Stopping %d workers" (List.length l);
+  alive := false;
   let l = List.map (fun (cin,cout,pid) ->
     close_in_noerr cin;
     close_out_noerr cout;
@@ -126,7 +127,7 @@ let kill ?(wait=1.) (l,_) =
       | Unix_error (ESRCH,_,_) -> ()
       | exn -> log #warn ~exn "Worker PID %d (SIGKILL)" pid) (reap l)
 
-let perform (l,execute) e f =
+let perform (l,execute,alive) e f =
     match l with
     | [] -> Enum.iter (fun x -> f (execute x)) e (* no workers *)
     | l ->
@@ -136,9 +137,10 @@ let perform (l,execute) e f =
         | None -> ()
         | Some x -> incr workers; Marshal.to_channel o ( x : task) []; flush o) l;
 (*       Printf.printf "workers %u\n%!" !workers; *)
-      while !workers > 0 do
+      let loop () =
+      while !workers > 0 && !alive do
         let fdl = List.map (fun (i,_,_) -> Unix.descr_of_in_channel i) l in
-        let (r,_,err) = Nix.restart (fun () -> Unix.select fdl [] fdl (-1.)) () in
+        let (r,_,err) = Unix.select fdl [] fdl (-1.) in
 (*         print_endline "select done"; *)
         assert (err = []);
         let channels = List.map (fun fd -> let (i,o,_) = List.find (fun (i,_,_) -> Unix.descr_of_in_channel i = fd) l in i,o) r in
@@ -157,6 +159,8 @@ let perform (l,execute) e f =
         in
         List.iter f answers
       done
+      in
+      Nix.restart loop ()
 
 end
 
