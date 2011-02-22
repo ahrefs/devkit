@@ -346,7 +346,7 @@ let handle_client config status fd conn_info answer =
             send_reply (Some req) (`Version_not_supported, [], "HTTP/1.0 is supported")
         with exn ->
           log #error ~exn "answer %s" & show_request req;
-          send_reply (Some req) (`Internal_server_error,[],"Internal server error")
+          send_reply (Some req) (`Not_found,[],"Not found")
 (*
     in
     match x with
