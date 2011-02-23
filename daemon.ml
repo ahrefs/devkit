@@ -14,8 +14,8 @@ let args =
 
 let manage () =
   if not !foreground then Nix.daemonize ();
-  Option.may Nix.manage_pidfile !pidfile;
-  Log.reopen !logfile;
+  Log.reopen !logfile; (* immediately after fork *)
+  Option.may Nix.manage_pidfile !pidfile; (* after fork! *)
   log #info "GC settings: %s" (Action.gc_settings ());
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
   Sys.set_signal Sys.sigusr1 (Sys.Signal_handle (fun _ -> Log.reopen !logfile));
