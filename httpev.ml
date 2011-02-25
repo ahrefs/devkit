@@ -45,7 +45,8 @@ type request = { addr : Unix.sockaddr ;
                  body : string;
                  version : int * int; (* client HTTP version *)
                  id : int; (* request id *)
-                 mutable blocking : bool; (* hack for forked childs *)
+                 fd : Unix.file_descr;
+                 mutable blocking : unit IO.output option; (* hack for forked childs *)
                  }
 
 let show_method = function
@@ -83,7 +84,7 @@ let failed reason s =
   let s = if String.length s > lim then sprintf "%s [%d bytes more]" (String.slice ~last:lim s) (String.length s - lim) else s in
   raise (Parse (reason, sprintf "%s : %s" name s))
 
-let parse_http_req req_id data (addr,conn) =
+let parse_http_req req_id data fd (addr,conn) =
   let next s = try String.split s "\r\n" with _ -> failed Split data in
   try
     let (line,s) = next data in
@@ -138,7 +139,8 @@ let parse_http_req req_id data (addr,conn) =
             body = body;
             meth = meth;
             version = version;
-            blocking = false;
+            blocking = None;
+            fd = fd;
           }
         | line,s ->
           let (n,v) = try String.split line ":" with _ -> failed Header line in
@@ -215,7 +217,7 @@ type reply = reply_status * (string * string) list * string
 
 exception No_reply
 
-let http_reply : reply_status -> string = function
+let http_reply_exn : reply_status -> string = function
   | `Ok -> "HTTP/1.0 200 OK"
 
   | `Moved -> "HTTP/1.0 301 Moved Permanently"
@@ -273,6 +275,26 @@ let write_reply config fd status req l =
     | false, Unix.Unix_error (Unix.EPIPE,_,_) -> ()
     | _ -> log #warn ~exn "write_reply %s" & Option.map_default show_request "" req
 
+let write_reply_blocking_exn config fd status req s =
+  try
+    let n = Unix.write fd s 0 (String.length s) in
+    assert (n = String.length s)
+  with
+  | exn ->
+    INC status.errs;
+    finish status fd req;
+    begin match config.log_epipe, exn with
+    | false, Unix.Unix_error (Unix.EPIPE,_,_) -> ()
+    | _ -> log #warn ~exn "write_reply_blocking %s" & Option.map_default show_request "" req
+    end;
+    raise exn
+
+let set_blocking req =
+  let ch = Unix.out_channel_of_descr req.fd in
+  let io = IO.output_channel ch in
+  req.blocking <- Some io;
+  io
+
 let handle_client config status fd conn_info answer =
   let peer = Nix.show_addr (fst conn_info) in
   INC status.total;
@@ -287,10 +309,9 @@ let handle_client config status fd conn_info answer =
   in 
   let send_reply req (code,hdrs,body) =
     try
-    if match req with Some x -> x.blocking | None -> false then Unix.clear_nonblock fd;
     let b = Buffer.create 1024 in
     let put s = Buffer.add_string b s; Buffer.add_string b "\r\n" in
-    put (http_reply code);
+    put (http_reply_exn code);
     List.iter (fun (n,v) -> bprintf b "%s: %s\r\n" n v) hdrs;
     bprintf b "Content-length: %u\r\n" (String.length body);
     put "Connection: close";
@@ -306,6 +327,37 @@ let handle_client config status fd conn_info answer =
     with
     | No_reply -> finish status fd req
     | exn -> abort req exn "send_reply"
+  in
+  let send_reply_blocking req (code,hdrs) =
+    try
+    let b = Buffer.create 1024 in
+    let put s = Buffer.add_string b s; Buffer.add_string b "\r\n" in
+    put (http_reply_exn code);
+    List.iter (fun (n,v) -> bprintf b "%s: %s\r\n" n v) hdrs;
+(*     bprintf b "Content-length: %u\r\n" (String.length body); *)
+    put "Connection: close";
+    put "";
+    (* do not transfer body for HEAD requests *)
+(*     let body = match req with Some x when x.meth = `HEAD -> "" | _ -> body in *)
+(*
+    log #debug "will answer to %s with %d+%d bytes" 
+      peer
+      (Buffer.length b) 
+      (String.length body);
+*)
+(*     Buffer.add_string b body; *)
+    write_reply_blocking_exn config fd status req (Buffer.contents b)
+    with
+    | No_reply -> finish status fd req
+    | exn -> abort req exn "send_reply"; raise exn
+  in
+  let send_reply_user req (code,hdrs,body) =
+    match match req with Some x -> x.blocking | None -> None with
+    | Some io ->
+      Unix.clear_nonblock fd;
+      send_reply_blocking req (code,hdrs);
+    | None ->
+      send_reply req (code,hdrs,body)
   in
   log #debug "accepted %s" peer;
   Async.setup_simple_event config.events fd [Ev.READ] begin fun ev fd _ ->
@@ -324,7 +376,7 @@ let handle_client config status fd conn_info answer =
     (* FIXME may not read whole request *)
     | `Done data | `Part data ->
       log #debug "read_all: %d bytes from %s" (String.length data) peer;
-      match parse_http_req req_id data conn_info with
+      match parse_http_req req_id data fd conn_info with
       | `Error (Parse (what,msg)) ->
         let error = match what with
         | Url | RequestLine | Header | Split | Version -> `Bad_request
@@ -340,13 +392,15 @@ let handle_client config status fd conn_info answer =
         try
           Hashtbl.replace status.reqs req.id req;
           match req.version with
-          | (1,_) -> answer status req (send_reply (Some req))
+          | (1,_) -> answer status req (send_reply_user (Some req))
           | _ ->
             log #info "version %u.%u not supported from %s" (fst req.version) (snd req.version) (show_request req);
             send_reply (Some req) (`Version_not_supported, [], "HTTP/1.0 is supported")
         with exn ->
           log #error ~exn "answer %s" & show_request req;
-          send_reply (Some req) (`Not_found,[],"Not found")
+          match req.blocking with
+          | None -> send_reply (Some req) (`Not_found,[],"Not found")
+          | Some _ -> Exn.suppress close fd
 (*
     in
     match x with

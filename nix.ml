@@ -268,3 +268,5 @@ end
 
 external mallinfo : unit -> Mallinfo.t = "caml_devkit_mallinfo"
 
+let sleep = restart Thread.delay
+
