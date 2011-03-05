@@ -157,7 +157,9 @@ module Count : sig
   val create : unit -> 'a t
   val clear : 'a t -> unit
   val add : 'a t -> 'a -> unit
+  val plus : 'a t -> 'a -> int -> unit
   val del : 'a t -> 'a -> unit
+  val minus : 'a t -> 'a -> int -> unit
   val enum : 'a t -> ('a * int) Enum.t
   val iter : 'a t -> ('a -> int -> unit) -> unit
   val count : 'a t -> 'a -> int
@@ -168,8 +170,10 @@ end = struct
   type 'a t = ('a,int) Hashtbl.t
   let create () : 'a t = create 100
   let clear = Hashtbl.clear
-  let add t x = try replace t x (find t x + 1) with Not_found -> Hashtbl.add t x 1
-  let del t x = try replace t x (find t x - 1) with Not_found -> Hashtbl.add t x (-1)
+  let plus t x n = try replace t x (find t x + n) with Not_found -> Hashtbl.add t x n
+  let minus t x n = try replace t x (find t x - n) with Not_found -> Hashtbl.add t x (0 - n)
+  let add t x = plus t x 1
+  let del t x = minus t x 1
   let enum t = enum t
   let iter t k = iter k t
   let count t k = Option.default 0 & Hashtbl.find_option t k
