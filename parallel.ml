@@ -14,7 +14,7 @@ type result
 type t
 val create : (task -> result) -> int -> t
 val perform : t -> task Enum.t -> (result -> unit) -> unit
-val kill : ?wait:float -> t -> unit
+val stop : ?wait:int -> t -> unit
 end
 
 module Threads(T:WorkerT) =
@@ -29,7 +29,7 @@ let worker qi f qo =
     Mtq.put qo (f (Mtq.get qi))
   done
 
-let kill ?wait (qi,_,_) = Mtq.clear qi
+let stop ?wait (qi,_,_) = Mtq.clear qi
 
 let create f n =
   let qi = Mtq.create () and qo = Mtq.create () in
@@ -100,14 +100,7 @@ let create f n = let l = ref [] in for i = 1 to n do l := worker f :: !l done; !
 
 open Unix
 
-let kill ?(wait=1.) (l,_,alive) =
-  log #info "Stopping %d workers" (List.length l);
-  alive := false;
-  let l = List.map (fun (cin,cout,pid) ->
-    close_in_noerr cin;
-    close_out_noerr cout;
-    begin try kill pid Sys.sigterm with exn -> log #warn ~exn "Worker PID %d lost (SIGTERM)" pid end;
-    pid) l in
+let stop ?wait (l,_,alive) =
   let reap l =
     List.filter_map (fun pid ->
     try 
@@ -116,16 +109,29 @@ let kill ?(wait=1.) (l,_,alive) =
     | Unix_error (ECHILD,_,_) -> None (* exited *)
     | exn -> log #warn "Worker PID %d lost (wait)" pid; None) l
   in
-  match reap l with
-  | [] -> ()
-  | l -> 
-    Thread.delay wait;
-    List.iter (fun pid -> 
+  let hard_kill l =
+      List.iter (fun pid -> 
       try 
         kill pid Sys.sigkill; log #warn "Worker PID %d killed with SIGKILL" pid 
       with 
       | Unix_error (ESRCH,_,_) -> ()
       | exn -> log #warn ~exn "Worker PID %d (SIGKILL)" pid) (reap l)
+  in
+  let rec reap_loop timeout l =
+    match timeout, reap l with
+    | _, [] -> log #info "All stopped"
+    | Some 0, l -> log #info "Timeouted, killing with SIGKILL"; hard_kill l
+    | _, l -> Nix.sleep 1.; reap_loop (Option.map pred timeout) l
+  in
+  log #info "Stopping %d workers" (List.length l);
+  alive := false;
+  let l = List.map (fun (cin,cout,pid) ->
+    close_in_noerr cin;
+    close_out_noerr cout;
+    begin try kill pid Sys.sigterm with exn -> log #warn ~exn "Worker PID %d lost (SIGTERM)" pid end;
+    pid) l
+  in
+  reap_loop wait l
 
 let perform (l,execute,alive) e f =
     match l with
