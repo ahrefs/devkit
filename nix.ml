@@ -56,7 +56,8 @@ let check_pidfile path =
 let manage_pidfile path =
   check_pidfile path;
   write_pidfile path;
-  at_exit (fun () -> Exn.suppress Sys.remove path)
+  let pid = getpid () in
+  at_exit (fun () -> if getpid () = pid then Exn.suppress Sys.remove path (* else forked child *))
 
 let restart f x = let rec loop () = try f x with Unix.Unix_error (EINTR,_,_) -> loop () in loop ()
 
