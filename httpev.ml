@@ -46,6 +46,7 @@ type request = { addr : Unix.sockaddr ;
                  version : int * int; (* client HTTP version *)
                  id : int; (* request id *)
                  fd : Unix.file_descr;
+                 line : string; (** request line *)
                  mutable blocking : unit IO.output option; (* hack for forked childs *)
                  }
 
@@ -54,12 +55,18 @@ let show_method = function
   | `POST -> "POST"
   | `HEAD -> "HEAD"
 
+let client_addr c =
+  try
+    List.assoc "x-real-ip" c.headers
+  with Not_found ->
+  match c.addr with
+  | Unix.ADDR_UNIX s -> s
+  | Unix.ADDR_INET (addr,_) -> Unix.string_of_inet_addr addr
+
 let show_request c =
-  let client = Nix.show_addr c.addr in
-  let client = try sprintf "%15s (%s)" (List.assoc "x-real-ip" c.headers) client with Not_found -> client in
   sprintf "#%d %s time %.4f (recv %.4f) %s %s%s"
     c.id
-    client
+    (client_addr c)
     (Time.get () -. c.conn)
     (c.recv -. c.conn)
     (show_method c.meth)
@@ -140,6 +147,7 @@ let parse_http_req req_id data fd (addr,conn) =
             meth = meth;
             version = version;
             blocking = None;
+            line = line;
             fd = fd;
           }
         | line,s ->
@@ -216,6 +224,28 @@ type reply_status =
 type reply = reply_status * (string * string) list * string
 
 exception No_reply
+
+let status_code : reply_status -> int = function
+  | `Ok -> 200
+
+  | `Moved -> 301
+  | `Found -> 302
+
+  | `Bad_request -> 400
+  | `Unauthorized -> 401
+  | `Forbidden -> 403
+  | `Not_found -> 404
+  | `Length_required -> 411
+  | `Request_too_large -> 413
+
+  | `Internal_server_error -> 500
+  | `Not_implemented -> 501
+  | `Service_unavailable -> 503
+  | `Version_not_supported -> 505
+
+  | `Custom s -> 999
+
+  | `No_reply -> 0
 
 let http_reply_exn : reply_status -> string = function
   | `Ok -> "HTTP/1.0 200 OK"
@@ -534,6 +564,11 @@ let serve_html req html =
 let run ?(ip=Unix.inet_addr_loopback) port answer =
   server { default with ip = ip; port = port } answer
 
-let input_header req name =
+let header_exn req name =
   List.assoc (String.lowercase name) req.headers
+
+let header_safe req name = try header_exn req name with _ -> ""
+
+let header_referer req =
+  try header_exn req "Referer" with _ -> try header_exn req "Referrer" with _ -> ""
 

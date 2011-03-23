@@ -230,3 +230,13 @@ let mem_usage v =
   Printf.sprintf "%s (data %s)" (Action.bytes_string (Objsize.size_with_headers x)) (Action.bytes_string (Objsize.size_without_headers x))
 *)
 
+(** not closing underlying io *)
+let count_bytes_to count out =
+  IO.create_out
+    ~write:(fun c -> count := Int64.succ !count; IO.write out c)
+    ~output:(fun s o l -> count := Int64.add !count (Int64.of_int l); IO.output out s o l)
+    ~flush:(fun () -> IO.flush out)
+    ~close:(fun () -> !count)
+
+let count_bytes out = let count = ref 0L in count_bytes_to count out
+
