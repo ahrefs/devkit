@@ -15,12 +15,13 @@ module Parser = struct
 
 let eq : char -> char -> bool = (=)
 let neq : char -> char -> bool = (<>)
-let is_alpha = function 
-  | 'a'..'z' | 'A'..'Z' | '0'..'9' -> true 
+let is_ident = function 
+  | 'a'..'z' | 'A'..'Z' | '0'..'9' | '_' | '-' | ':' -> true 
   | _ -> false
-let is_ws = function
-  | c when Char.code c <= 32 -> true
-  | _ -> false
+let is_ws c = Char.code c <= 32
+let is_literal = function
+  | '\000' .. ' ' | '"' | '\'' | '>' -> false
+  | _ -> true
 
 exception EndTag
 
@@ -29,18 +30,19 @@ let label = String.lowercase
 (** parse stream of characters @return stream of html elements *)
 let rec parse = parser
   | [< ''<'; x = tag; t >] -> [< 'x; parse t >]
+  | [< 'c when is_ws c; () = skip is_ws; t >] -> parse t
   | [< 'c; x = chars c (neq '<'); t >] -> [< 'Text x; parse t >]
   | [< >] -> [< >]
   and tag = parser
-  | [< 'c when is_alpha c; name = chars c is_alpha; () = skip is_ws; a=tag_attrs [] >] -> Tag (label name,List.rev a)
+  | [< 'c when is_ident c; name = chars c is_ident; () = skip is_ws; a=tag_attrs [] >] -> Tag (label name,List.rev a)
   | [< ''/'; () = skip is_ws; x = close_tag >] -> Close (label x)
   | [< t >] -> skip_till '>' t; Tag ("",[]) (* skip garbage *)
   and close_tag = parser
-  | [< 'c when is_alpha c; name = chars c is_alpha; () = skip_till '>' >] -> name
+  | [< 'c when is_ident c; name = chars c is_ident; () = skip_till '>' >] -> name
   | [< t >] -> skip_till '>' t; ""
   and tag_attrs a = parser
   | [< ''>' >] -> a
-  | [< 'c when is_alpha c; name = chars c is_alpha; () = skip is_ws; t >] ->
+  | [< 'c when is_ident c; name = chars c is_ident; () = skip is_ws; t >] ->
     begin match try Some (maybe_value t) with EndTag -> None with
     | Some v -> skip is_ws t; tag_attrs ((label name,v) :: a) t
     | None -> (label name,"") :: a
@@ -54,7 +56,7 @@ let rec parse = parser
   | [< ''\''; s = till '\'' >] -> s
   | [< ''"'; s = till '"' >] -> s
   | [< ''>' >] -> raise EndTag
-  | [< 'c when is_alpha c; s = chars c is_alpha >] -> s
+  | [< 'c when is_literal c; s = chars c is_literal >] -> s
   | [< t >] -> skip_till '>' t; raise EndTag (* skip garbage *)
   (** @return all that match [f] *)
   and chars c f strm =
