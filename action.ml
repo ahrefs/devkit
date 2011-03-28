@@ -240,3 +240,18 @@ let count_bytes_to count out =
 
 let count_bytes out = let count = ref 0L in count_bytes_to count out
 
+let bench f =
+  let count = ref 0 in
+  let t = new timer in
+  let st = Gc.quick_stat () in
+  let res = Exn.map f count in
+  let st2 = Gc.quick_stat () in
+  let elapsed = t#get in
+  let res = match res with
+  | `Ok () -> "ok"
+  | `Exn exn -> "exn " ^ Exn.str exn
+  in
+  sprintf "%s, elapsed %s, %.2f/sec : %s" (gc_diff st st2) (Time.duration_str elapsed) (speed !count elapsed) res
+
+let print_bench = print_endline $ bench
+
