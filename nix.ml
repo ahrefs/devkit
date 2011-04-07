@@ -222,12 +222,14 @@ let write_process_exn cmd data =
 let write_process cmd data = try write_process_exn cmd data; true with _ -> false
 
 let mounts () =
-  Action.file_lines_exn "/proc/mounts" >>
-  List.filter_map (fun s ->
+  with_open_in_txt "/proc/mounts" & fun ch ->
+  Std.input_lines ch >>
+  Enum.filter_map (fun s ->
     match String.nsplit s " " with
     | ["rootfs";_;"rootfs";_;_;_] -> None
     | [dev;mount;_fs;opt;_;_] -> Some (dev, mount, String.nsplit opt ",")
-    | _ -> Exn.fail "bad mount : %s" s)
+    | _ -> Exn.fail "bad mount : %s" s) >>
+  List.of_enum
 
 (** @param path must be normalized *)
 let find_mount path =
@@ -244,7 +246,7 @@ let find_mount path =
   assert (bound !mount <> "");
   !mount
 
-external fsync : Unix.file_descr -> unit = "caml_devkit_fsync"
+let fsync = Files.fsync
 
 module Mallinfo = struct
 

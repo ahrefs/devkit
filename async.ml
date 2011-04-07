@@ -98,6 +98,15 @@ let setup_periodic_timer events delay ?name f =
   let (_:Ev.event) = periodic_timer events delay ?name f in
   ()
 
+let periodic_timer_stop stop events delay ?(name="") f =
+  let timer = Ev.create () in
+  Ev.set_timer events timer ~persist:false begin fun () ->
+    begin try f timer with exn -> log #warn ~exn "periodic_timer_stop %s" name end;
+    if not !stop then Ev.add timer (Some delay)
+  end;
+  Ev.add timer (Some 0.);
+  timer
+
 module Peer = struct
 
 type t = { events : Ev.event_base; read : Ev.event; write : Ev.event; timeout : float option; fd : Unix.file_descr; addr : Unix.sockaddr; err : (unit -> unit); }

@@ -193,13 +193,20 @@ module Group : sig
   val add : ('a,'b) t -> 'a -> unit
   val get : ('a,'b) t -> 'b -> 'a list
   val iter : ('a,'b) t -> ('b -> 'a list -> unit) -> unit
+  val keys : ('a,'b) t -> 'b Enum.t
 end = struct
   type ('a,'b) t = ('b,'a list) Hashtbl.t * ('a -> 'b)
   let by f = Hashtbl.create 32, f
   let add (h,f) x = let k = f x in try Hashtbl.replace h k (x :: Hashtbl.find h k) with Not_found -> Hashtbl.add h k [x]
   let get (h,_) k = try Hashtbl.find h k with Not_found -> []
   let iter (h,_) k = Hashtbl.iter k h
+  let keys (h,_) = Hashtbl.keys h
 end
+
+let group_fst e =
+  let h = Hashtbl.create 10 in
+  Enum.iter (fun (k,v) -> Hashtbl.replace h k (try v :: Hashtbl.find h k with Not_found -> [v])) e;
+  Hashtbl.enum h
 
 (** One-to-one associations *)
 module Assoc : sig
