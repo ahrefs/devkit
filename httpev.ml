@@ -564,11 +564,14 @@ let serve_html req html =
 let run ?(ip=Unix.inet_addr_loopback) port answer =
   server { default with ip = ip; port = port } answer
 
-let header_exn req name =
+let find_header req name =
   List.assoc (String.lowercase name) req.headers
 
-let header_safe req name = try header_exn req name with _ -> ""
+let header_exn req name =
+  try find_header req name with _ -> Exn.fail "header %S" name
+
+let header_safe req name = try find_header req name with _ -> ""
 
 let header_referer req =
-  try header_exn req "Referer" with _ -> try header_exn req "Referrer" with _ -> ""
+  try find_header req "Referer" with _ -> try find_header req "Referrer" with _ -> ""
 
