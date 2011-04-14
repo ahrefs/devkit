@@ -27,3 +27,4 @@ Async
 HtmlStream
 Php_serialize
 Daemon
+MVar
