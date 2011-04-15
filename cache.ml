@@ -163,6 +163,7 @@ module Count : sig
   val enum : 'a t -> ('a * int) Enum.t
   val iter : 'a t -> ('a -> int -> unit) -> unit
   val count : 'a t -> 'a -> int
+  val size : 'a t -> int
   val show : 'a t -> ('a -> string) -> string
   val show_sorted : 'a t -> ?limit:int -> ?sep:string -> ('a -> string) -> string
 end = struct
@@ -177,6 +178,7 @@ end = struct
   let enum t = enum t
   let iter t k = iter k t
   let count t k = Option.default 0 & Hashtbl.find_option t k
+  let size = Hashtbl.length
   let show t f = enum t >> 
     Enum.map (fun (x,n) -> Printf.sprintf "%s: %u" (f x) n) >>
     Stre.concat " "

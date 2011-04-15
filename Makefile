@@ -1,12 +1,12 @@
 
-.PHONY: all lib top doc clean install uninstall test
+.PHONY: build lib top doc clean install uninstall test
 
 INSTALL_FILES=$(filter-out \
   $(wildcard _build/myocamlbuild*), \
   $(wildcard _build/*.cmx _build/*.cmi _build/*.mli _build/*.cma _build/*.cmxa _build/*.lib _build/*.a _build/*.dll _build/*.so))
 OCAMLBUILD=ocamlbuild -j 0
 
-all:
+build:
 		$(OCAMLBUILD) devkit.otarget
 
 lib:
