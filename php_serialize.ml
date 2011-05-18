@@ -41,7 +41,8 @@ Anatomy of a serialize()'ed value:
     attempting to use an object as a key will result in the same behavior as using an array will.
 *)
 
-type php = AI of (int * php) list | AS of (string * php) list | S of string | I of int | B of bool | F of float | N 
+type php = AI of (int * php) list | AS of (string * php) list | S of string | I of int | B of bool | F of float | N |
+           EI of (int * php) Enum.t | ES of (string * php) Enum.t
 
 let check x y = if x <> y then failwith (Printf.sprintf "Php_serialize failed : %u <> %u" x y)
 
@@ -126,21 +127,25 @@ module Out = struct
 let str s = S s
 let int n = I n
 
-let  array f e = AI (e >> Enum.mapi (fun i x  -> i, f x) >> List.of_enum)
-let iarray f e = AI (e >> Enum.map (fun (k,v) -> k, f v) >> List.of_enum)
-let sarray f e = AS (e >> Enum.map (fun (k,v) -> k, f v) >> List.of_enum)
+let  array f e = EI (Enum.mapi (fun i x  -> i, f x) e)
+let iarray f e = EI (Enum.map (fun (k,v) -> k, f v) e)
+let sarray f e = ES (Enum.map (fun (k,v) -> k, f v) e)
 
 (** Serialize php value *)
 let output out v =
-  let put_arr f a = IO.printf out "a:%u:{" (List.length a); List.iter f a; IO.write out '}' in
+  let put_enum n f e = IO.printf out "a:%u:{" n; Enum.iter f e; IO.write out '}' in
+  let put_int n = IO.printf out "i:%i;" n in
+  let put_str s = IO.printf out "s:%u:\"%s\";" (String.length s) s in
   let rec put = function
-    | AS a -> put_arr (fun (k,v) -> put (S k); put v) a
-    | AI a -> put_arr (fun (k,v) -> put (I k); put v) a
-    | I n -> IO.printf out "i:%i;" n
+    | AS a -> put_enum (List.length a) (fun (k,v) -> put_str k; put v) (List.enum a)
+    | ES e -> put_enum (Enum.count e) (fun (k,v) -> put_str k; put v) e
+    | AI a -> put_enum (List.length a) (fun (k,v) -> put_int k; put v) (List.enum a)
+    | EI e -> put_enum (Enum.count e) (fun (k,v) -> put_int k; put v) e
+    | I n -> put_int n
     | B b -> IO.printf out "b:%u;" (if b then 1 else 0)
     | F f -> IO.printf out "d:%g;" (if compare nan f = 0 then 0. else f)
     | N -> IO.nwrite out "N;"
-    | S s -> IO.printf out "s:%u:\"%s\";" (String.length s) s
+    | S s -> put_str s
   in
   put v
 
@@ -154,10 +159,12 @@ let to_string v =
 (** Show php value *)
 let show out v =
   let pr fmt = IO.printf out fmt in
-  let put_arr f a = pr "{\n"; List.iter (fun x -> f x; pr "\n") a; pr "}" in
+  let put_enum f e = pr "{\n"; Enum.iter (fun x -> f x; pr "\n") e; pr "}" in
   let rec put = function
-    | AS a -> put_arr (fun (k,v) -> pr "%S : " k; put v) a
-    | AI a -> put_arr (fun (k,v) -> pr "%d : " k; put v) a
+    | AS a -> put_enum (fun (k,v) -> pr "%S : " k; put v) (List.enum a)
+    | ES e -> put_enum (fun (k,v) -> pr "%S : " k; put v) e
+    | AI a -> put_enum (fun (k,v) -> pr "%d : " k; put v) (List.enum a)
+    | EI e -> put_enum (fun (k,v) -> pr "%d : " k; put v) e
     | I n -> pr "%d" n
     | B b -> pr "%B" b
     | F f -> pr "%g" f
