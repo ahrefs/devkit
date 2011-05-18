@@ -62,14 +62,14 @@ let manage_pidfile path =
 let restart f x = let rec loop () = try f x with Unix.Unix_error (EINTR,_,_) -> loop () in loop ()
 
 (** Use [with_sig_exit] *)
-let handle_sig_exit_with fin =
+let handle_sig_exit_with ?(exit=true) fin =
   List.iter
     (fun signal -> Sys.set_signal signal (Sys.Signal_handle 
       (fun n ->
         Log.self #info "Received signal %i (exit)..." n;
         (try fin () with exn -> Log.self #warn ~exn "handle_sig_exit");
-        Log.self #info "Signal handler done. Exiting.";
-        exit 0)))
+        Log.self #info "Signal handler done.%s" (if exit then " Exiting." else "");
+        if exit then Pervasives.exit 0)))
     [Sys.sigint; Sys.sigterm]
 
 (** Use [with_sig_reload] *)
