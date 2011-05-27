@@ -20,7 +20,7 @@ let is_ident = function
   | _ -> false
 let is_ws c = Char.code c <= 32
 let is_literal = function
-  | '\000' .. ' ' | '"' | '\'' | '>' -> false
+  | '\000' .. ' ' | '"' | '\'' | '/' | '=' | '>' -> false
   | _ -> true
 
 exception EndTag
