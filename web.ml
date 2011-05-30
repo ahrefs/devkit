@@ -105,7 +105,7 @@ module Provider = struct
         if tag "span" ~a:["class","f"] (Option.get & Stream.peek s) then stream_find (tag "br") s;
         let t = stream_extract_while (not $ tag "br") s in
         acc := (href,make_text h,make_text t) :: !acc;
-      with exn -> log #info ~exn "skipped search result" end;
+      with exn -> log #debug ~exn "skipped search result" end;
       loop ()
     in
     begin try loop () with Not_found -> () | exn -> log #warn ~exn "google_full" end;
