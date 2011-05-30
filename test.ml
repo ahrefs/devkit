@@ -7,7 +7,10 @@ open Prelude
 let test_search p s =
   let module WP = Web.Provider in
   let pr = print_endline in
-  Enum.iter (fun (l,t,d) -> pr l; pr t; pr d; pr "") & p.WP.extract_full & Web.http_get & p.WP.request s
+  let (n,l) = p.WP.extract_full & Web.http_get & p.WP.request s in
+  printfn "total: %d" n;
+  printfn "";
+  Enum.iter (fun (l,t,d) -> pr l; pr t; pr d; pr "") l
 
 let test_htmlstream () =
   Printexc.record_backtrace true;

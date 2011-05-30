@@ -69,10 +69,10 @@ include T
 
 module Provider = struct
 
-  (**  @return list of (link,title,description)
+  (**  @return total estimate and list of (link,title,description)
 
   raises exn on error *)
-  type extract_full = string -> (string * string * string) Enum.t
+  type extract_full = string -> int * (string * string * string) Enum.t
 
   type t = { 
     request : ?num:int -> string -> string; 
@@ -84,6 +84,14 @@ module Provider = struct
 
   let google_full s =
     let s = parse & Stream.of_string s in
+    let total = ref 0 in
+    begin try
+      stream_find (tag "div" ~a:["id","resultStats"]) s;
+      match Stream.next s with
+      | Text s ->
+        total := String.explode s >> List.filter (function '0'..'9' -> true | _ -> false) >> String.implode >> int_of_string
+      | _ -> ()
+    with exn -> log #warn ~exn "bad resultStats" end;
     let acc = ref [] in
     let rec loop () =
       stream_find (tag "li" ~a:["class","g"]) s;
@@ -97,11 +105,11 @@ module Provider = struct
         if tag "span" ~a:["class","f"] (Option.get & Stream.peek s) then stream_find (tag "br") s;
         let t = stream_extract_while (not $ tag "br") s in
         acc := (href,make_text h,make_text t) :: !acc;
-      with _ -> log #info "skipped" end;
+      with exn -> log #info ~exn "skipped search result" end;
       loop ()
     in
     begin try loop () with Not_found -> () | exn -> log #warn ~exn "google_full" end;
-    List.rev !acc
+    !total, List.enum & List.rev !acc
 
   let google =
     let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l" in
@@ -109,7 +117,7 @@ module Provider = struct
       request = (fun ?(num=10) q ->
         sprintf "http://www.google.com/search?hl=en&q=%s&num=%u&btnG=Search&aq=f&oq=&aqi="
           (urlencode q) num);
-      extract_full = List.enum $ google_full;
+      extract_full = google_full;
     }
 
   let google_day =
@@ -118,7 +126,7 @@ module Provider = struct
       request = (fun ?(num=10) q ->
         sprintf "http://www.google.com/search?hl=en&q=%s&num=%u&btnG=Search&aq=f&oq=&aqi=&tbs=qdr:d,sbd:1"
           (urlencode q) num);
-      extract_full = List.enum $ google_full;
+      extract_full = google_full;
     }
 
   let parse_rss s =
@@ -150,8 +158,8 @@ module Provider = struct
           begin try List.find (function `L _ -> true | _ -> false) l with _ -> `U end
       | _ -> (*log #warn "unrec : %s" s;*) `U) xml
     with
-    | `L l -> List.enum l
-    | _ -> log #warn "unrecognized result"; Enum.empty ()
+    | `L l -> 0, List.enum l
+    | _ -> log #warn "unrecognized result"; 0, Enum.empty ()
 
   let rss_source ~default fmt =
     let re = Pcre.regexp ~flags:[`CASELESS] "<item>.*?<link>([^<]+)</link>.*?</item>" in
@@ -208,7 +216,7 @@ let http_get_io_exn ?(extra=ignore) ?(check=curl_ok) url out =
       Curl.perform h
     end
   with
-    exn -> raise (Option.default exn !inner)
+  | exn -> raise (Option.default exn !inner)
 
 let http_get_io url ?(verbose=true) ?extra out =
   try
@@ -218,4 +226,18 @@ let http_get_io url ?(verbose=true) ?extra out =
   | exn -> if verbose then Log.main #warn ~exn "http_get_io(%s)" url else ()
 
 let http_get ?verbose ?extra url = wrapped (IO.output_string ()) IO.close_out (http_get_io ?verbose ?extra url)
+
+let http_gets ?(setup=ignore) url =
+  try
+  with_curl begin fun h ->
+    Curl.set_url h url;
+    setup h;
+    let b = Buffer.create 10 in
+    Curl.set_writefunction h (fun s -> Buffer.add_string b s; String.length s);
+    Curl.perform h;
+    `Ok (Curl.get_httpcode h, Buffer.contents b)
+  end
+  with
+  | Curl.CurlException (code,_,_) -> `Error code
+
 
