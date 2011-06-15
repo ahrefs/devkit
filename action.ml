@@ -44,7 +44,7 @@ let partition l n =
   a
 
 let file_lines_exn file =
-  with_open_in_txt file begin fun ch ->
+  Control.with_open_in_txt file begin fun ch ->
     Std.input_lines ch >> List.of_enum
   end
 
