@@ -25,6 +25,17 @@ let list_random = function
   | [] -> None
   | l -> list_random_exn l >> some
 
+(** [shuffle a] shuffles an array, giving a uniform random distribution *)
+ let shuffle a =
+   for i = pred (Array.length a) downto 1 do
+     let j = Random.int (succ i) in
+     if i <> j (* faster to omit this test with arrays of about 100000 elements or more *) then (
+       let tmp = Array.unsafe_get a i in
+       Array.unsafe_set a i (Array.unsafe_get a j);
+       Array.unsafe_set a j tmp
+     )
+   done
+
 (** [partition l n] splits [l] into [n] chunks *)
 let partition l n =
   if n < 2 then [| l |] else
@@ -33,10 +44,9 @@ let partition l n =
   a
 
 let file_lines_exn file =
-  let ch = open_in file in
-  let l = Std.input_lines ch >> List.of_enum in
-  close_in_noerr ch;
-  l
+  with_open_in_txt file begin fun ch ->
+    Std.input_lines ch >> List.of_enum
+  end
 
 let hashtbl_find h f k =
   try Hashtbl.find h k with Not_found -> let v = f () in Hashtbl.replace h k v; v

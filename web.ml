@@ -19,15 +19,16 @@ module T = struct
 module Stream = ExtStream
 
 (** scan stream until predicate is true
+  @param limit skip not more than [limit] elements
   @return matching element
   @raise Not_found on stream end *)
-let rec stream_get f = parser
+let rec stream_get ?(limit=max_int) f = parser
   | [< 'x when f x; t >] -> x
-  | [< 'x; t >] -> stream_get f t
+  | [< 'x; t >] -> if limit = 0 then raise Not_found else stream_get ~limit:(limit-1) f t
   | [< >] -> raise Not_found
 
 (** see {!stream_get} *)
-let rec stream_find f s = ignore (stream_get f s)
+let rec stream_find ?limit f s = ignore (stream_get ?limit f s)
 
 (** scan stream while predicate holds, stop on first non-matching element or stream end *)
 let rec stream_skip f = parser
