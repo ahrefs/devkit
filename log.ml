@@ -82,7 +82,7 @@ module State = struct
 
   let reopen_log_ch file =
     try
-      let ch = Files.open_out_append file in
+      let ch = Files.open_out_append_text file in
       output := output_ch ch;
       if !log_ch <> stderr then close_out_noerr !log_ch;
       log_ch := ch
