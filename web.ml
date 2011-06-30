@@ -13,6 +13,7 @@ let rawurlencode = Netencoding.Url.encode ~plus:false
 let urlencode = Netencoding.Url.encode ~plus:true
 let urldecode s = try Netencoding.Url.decode s with _ -> s
 let htmlencode = Netencoding.Html.encode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
+let htmldecode = Netencoding.Html.decode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
 
 module T = struct
 
@@ -165,7 +166,7 @@ module Provider = struct
   let rss_source ~default fmt =
     let re = Pcre.regexp ~flags:[`CASELESS] "<item>.*?<link>([^<]+)</link>.*?</item>" in
     { extract = Stre.enum_extract re;
-      request = (fun ?(num=default) q -> sprintf fmt (urlencode q) default);
+      request = (fun ?(num=default) q -> sprintf fmt (urlencode q) num);
       extract_full = parse_rss;
     }
 

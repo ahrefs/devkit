@@ -20,6 +20,9 @@ let nsplitc str sep =
 		nsplit 0
 	)
 
+(** remove prefix from string if present *)
+let drop_prefix s pre = if String.starts_with s pre then String.slice s ~first:(String.length pre) else s
+
 (*
 let replace_all ~str ~sub ~by =
   Str.global_substitute (Str.regexp_string sub) (fun _ -> by) str
