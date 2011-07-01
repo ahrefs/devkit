@@ -212,3 +212,11 @@ let connect p ?timeout k =
 
 end (* Peer *)
 
+let delay events timeout f x =
+  let timer = Ev.create () in
+  Ev.set_timer events timer ~persist:false begin fun () ->
+    begin try f x with exn -> log #warn ~exn "pause" end;
+    Ev.del timer;
+  end;
+  Ev.add timer (Some timeout)
+
