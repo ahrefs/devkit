@@ -1,6 +1,7 @@
 
 open OUnit
-open Printf 
+open Printf
+open ExtLib
 
 open Prelude
 
@@ -8,9 +9,10 @@ let test_search p s =
   let module WP = Web.Provider in
   let pr = print_endline in
   let (n,l) = p.WP.extract_full & Web.http_get & p.WP.request s in
-  printfn "total: %d" n;
+  let l = List.of_enum l in
+  printfn "results %d of %d" (List.length l) n;
   printfn "";
-  Enum.iter (fun (l,t,d) -> pr l; pr t; pr d; pr "") l
+  List.iter (fun (l,t,d) -> pr l; pr t; pr d; pr "") l
 
 let test_htmlstream () =
   Printexc.record_backtrace true;

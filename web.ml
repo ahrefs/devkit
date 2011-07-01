@@ -163,6 +163,43 @@ module Provider = struct
     | `L l -> 0, List.enum l
     | _ -> log #warn "unrecognized result"; 0, Enum.empty ()
 
+  let bing_html s =
+    let s = parse & Stream.of_string s in
+    let total = ref 0 in
+    begin try
+      stream_find (tag "span" ~a:["class","sb_count"]) s;
+      match Stream.next s with
+      | Text s ->
+        total := Scanf.sscanf s "%_s@ of %s@ " (fun s ->
+          int_of_string & String.replace_chars (function '0'..'9' as c -> String.make 1 c | _ -> "_") s)
+      | _ -> ()
+    with exn -> log #warn ~exn "bad sb_count" end;
+    let acc = ref [] in
+    let rec loop () =
+      stream_find (tag "div" ~a:["class","sb_tlst"]) s;
+      begin try
+        stream_next (tag "h3") s;
+        let href = match stream_get_next (tag "a") s with
+        | Tag (_,l) -> List.assoc "href" l
+        | _ -> assert false in
+        let h = stream_extract_till (Close "h3") s in
+        let t = stream_extract_till (Close "p") s in
+        acc := (href,make_text h,make_text t) :: !acc;
+      with exn -> log #debug ~exn "skipped search result" end;
+      loop ()
+    in
+    begin try loop () with Not_found -> () | exn -> log #warn ~exn "bing_html" end;
+    !total, List.enum & List.rev !acc
+
+  let bing_html =
+    let re = Pcre.regexp ~flags:[`CASELESS] "<div class=\"sb_tlst\"><h3><a href=\"([^\"]+)\"" in
+    { extract = Stre.enum_extract re;
+      request = (fun ?(num=50) q ->
+        sprintf "http://www.bing.com/search?q=%s&count=%u" 
+          (urlencode q) num);
+      extract_full = bing_html;
+    }
+
   let rss_source ~default fmt =
     let re = Pcre.regexp ~flags:[`CASELESS] "<item>.*?<link>([^<]+)</link>.*?</item>" in
     { extract = Stre.enum_extract re;
@@ -176,6 +213,7 @@ module Provider = struct
 
   let by_name = function
   | "bing" -> bing
+  | "bing_html" -> bing_html
   | "google" -> google
   | "google_blogs" -> google_blogs
   | "google_day" -> google_day
