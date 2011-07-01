@@ -212,7 +212,7 @@ module Provider = struct
   let boardreader = rss_source ~default:50 "http://boardreader.com/rss/%s?extended_search=1&s=time_desc&p=%u&format=RSS2.0"
 
   let by_name = function
-  | "bing" -> bing
+  | "bing" (* -> bing *)
   | "bing_html" -> bing_html
   | "google" -> google
   | "google_blogs" -> google_blogs
