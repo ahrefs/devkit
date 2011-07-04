@@ -240,12 +240,21 @@ let with_curl f =
 
 let curl_ok h = Curl.get_httpcode h = 200
 
+let curl_default_setup h =
+  Curl.set_nosignal h true;
+  Curl.set_connecttimeout h 30;
+  Curl.set_timeout h 60;
+  Curl.set_followlocation h false;
+  Curl.set_encoding h Curl.CURL_ENCODING_ANY;
+  ()
+
 let http_get_io_exn ?(extra=ignore) ?(check=curl_ok) url out =
   let inner = ref None in
   try
     with_curl begin fun h ->
       let check = lazy (check h) in
       Curl.set_url h url;
+      curl_default_setup h;
       extra h;
       Curl.set_writefunction h (fun s -> 
         try 
@@ -271,6 +280,7 @@ let http_gets ?(setup=ignore) url =
   try
   with_curl begin fun h ->
     Curl.set_url h url;
+    curl_default_setup h;
     setup h;
     let b = Buffer.create 10 in
     Curl.set_writefunction h (fun s -> Buffer.add_string b s; String.length s);
