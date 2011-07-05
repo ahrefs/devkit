@@ -191,12 +191,12 @@ module Provider = struct
     begin try loop () with Not_found -> () | exn -> log #warn ~exn "bing_html" end;
     !total, List.enum & List.rev !acc
 
-  let bing_html =
+  let bing_html lang =
     let re = Pcre.regexp ~flags:[`CASELESS] "<div class=\"sb_tlst\"><h3><a href=\"([^\"]+)\"" in
     { extract = Stre.enum_extract re;
       request = (fun ?(num=50) q ->
-        sprintf "http://www.bing.com/search?q=%s&count=%u" 
-          (urlencode q) num);
+        sprintf "http://www.bing.com/search?q=%s&count=%u%s" 
+          (urlencode q) num (match lang with None -> "" | Some s -> "&setmkt=" ^ s));
       extract_full = bing_html;
     }
 
@@ -211,9 +211,9 @@ module Provider = struct
   let google_blogs = rss_source ~default:50 "http://blogsearch.google.com/blogsearch_feeds?q=%s&num=%u&hl=en&safe=off&output=rss"
   let boardreader = rss_source ~default:50 "http://boardreader.com/rss/%s?extended_search=1&s=time_desc&p=%u&format=RSS2.0"
 
-  let by_name = function
+  let by_name ?lang = function
   | "bing" (* -> bing *)
-  | "bing_html" -> bing_html
+  | "bing_html" -> bing_html lang
   | "google" -> google
   | "google_blogs" -> google_blogs
   | "google_day" -> google_day
