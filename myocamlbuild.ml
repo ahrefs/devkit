@@ -110,6 +110,7 @@ dispatch begin function
      flag ["link"; "ocaml"; "byte"; "use_devkit"] (atomize ["-dllpath"; "_build"]);
      (* for ld to find -ldevkit_stubs locally *)
      flag ["link"; "ocaml"; "use_devkit"] (atomize ["-I"; ".";]);
+     flag ["compile"; "ocaml"; "native"; "asm"] & atomize ["-S"];
 
      flag ["compile"; "c"] & atomize (List.concat & List.map (fun o -> ["-ccopt";o]) c_opts);
 
