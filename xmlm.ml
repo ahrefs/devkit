@@ -1043,9 +1043,9 @@ struct
     if o.depth = -1 then 
       begin match s with
       | `Dtd d ->
-	  outs o "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n";
+	  outs o "<?xml version=\"1.0\" encoding=\"UTF-8\"?>";
 	  begin match d with 
-	  | Some dtd -> out_utf_8 o dtd; o.outc '\n' 
+	  | Some dtd -> o.outc '\n'; out_utf_8 o dtd
 	  | None -> ()
 	  end;
 	  o.depth <- 0
@@ -1056,7 +1056,8 @@ struct
     else
       begin match s with
       | `El_start (n, atts) -> 
-	  if o.last_el_start then (outs o ">"; unindent o);
+	  if o.last_el_start then (outs o ">");
+          unindent o;
 	  indent o;
 	  let uris = bind_prefixes o atts in
 	  let qn = prefix_name o n in
@@ -1070,21 +1071,21 @@ struct
 	      o.depth <- o.depth - 1;
 	      if o.last_el_start then outs o "/>" else
 	      begin 
-		indent o;
+(* 		indent o; *)
 		outs o "</"; out_qname o n; o.outc '>';
 	      end;
 	      o.scopes <- scopes';
 	      List.iter (Ht.remove o.prefixes) uris;
 	      o.last_el_start <- false;
 	      if o.depth = 0 then (if o.nl then o.outc '\n'; o.depth <- -1;) 
-	      else unindent o
+(* 	      else unindent o *)
 	  | [] -> invalid_arg err_el_end
 	  end
       | `Data d -> 
-	  if o.last_el_start then (outs o ">"; unindent o);
-	  indent o;
+	  if o.last_el_start then (outs o ">"; (*unindent o*));
+(* 	  indent o; *)
 	  out_data o d;
-	  unindent o;
+(* 	  unindent o; *)
 	  o.last_el_start <- false
       | `Dtd _ -> failwith err_dtd
       end
