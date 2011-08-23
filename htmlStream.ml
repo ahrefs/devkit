@@ -134,4 +134,5 @@ let to_text = function
 
 (** extract text from the list elements *)
 let make_text l = wrapped_outs (fun out -> List.iter (Option.may (IO.nwrite out) $ to_text) l)
+let make_text l = List.enum l >> Enum.filter_map to_text >> Enum.map String.strip >> List.of_enum >> String.concat " "
 

@@ -263,5 +263,6 @@ let bench f =
   in
   sprintf "%s, elapsed %s, %.2f/sec : %s" (gc_diff st st2) (Time.duration_str elapsed) (speed !count elapsed) res
 
-let print_bench = print_endline $ bench
+let print_bench name f =
+  printf "%s : %s\n%!" name (bench f)
 
