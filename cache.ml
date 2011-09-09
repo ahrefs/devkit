@@ -163,6 +163,7 @@ module Count : sig
   val minus : 'a t -> 'a -> int -> unit
   val enum : 'a t -> ('a * int) Enum.t
   val iter : 'a t -> ('a -> int -> unit) -> unit
+  val fold : 'a t -> ('a -> int -> 'b -> 'b) -> 'b -> 'b
   val count : 'a t -> 'a -> int
   val size : 'a t -> int
   val show : 'a t -> ('a -> string) -> string
@@ -180,6 +181,7 @@ end = struct
   let del t x = minus t x 1
   let enum t = enum t
   let iter t k = iter k t
+  let fold t f acc = fold f t acc
   let count t k = Option.default 0 & Hashtbl.find_option t k
   let size = Hashtbl.length
   let show t f = enum t >> 
