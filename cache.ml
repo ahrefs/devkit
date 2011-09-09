@@ -203,9 +203,9 @@ end = struct
       let (mi,ma,_) = Array.fold_left begin fun (mi,ma,sum) x ->
         let sum = sum + snd x in
         if !med = None && half <= sum then med := Some x;
-        if snd x < snd mi then x, ma, sum
-        else if snd x > snd ma then mi, x, sum
-        else mi, ma, sum
+        let mi = if snd x < snd mi then x else mi in
+        let ma = if snd x > snd ma then x else ma in
+        mi, ma, sum
       end ((fst a.(0), max_int), (fst a.(0),min_int), 0) a
       in
       let show (x,n) = sprintf "%S (%d)" (f x) n in
