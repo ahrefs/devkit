@@ -1,9 +1,10 @@
 (** In-memory cache *)
 
-open ExtLib
-
 open Prelude
 open Control
+
+open ExtLib
+open Printf
 
 (** Thread safe *)
 module TimeLimited(E: sig type t end) = struct
@@ -166,6 +167,7 @@ module Count : sig
   val size : 'a t -> int
   val show : 'a t -> ('a -> string) -> string
   val show_sorted : 'a t -> ?limit:int -> ?sep:string -> ('a -> string) -> string
+  val stats : 'a t -> ?cmp:('a -> 'a -> int) -> ('a -> string) -> string
 end = struct
   open Hashtbl
   type 'a t = ('a,int) Hashtbl.t
@@ -180,13 +182,34 @@ end = struct
   let count t k = Option.default 0 & Hashtbl.find_option t k
   let size = Hashtbl.length
   let show t f = enum t >> 
-    Enum.map (fun (x,n) -> Printf.sprintf "%s: %u" (f x) n) >>
+    Enum.map (fun (x,n) -> sprintf "%S: %u" (f x) n) >>
     Stre.concat " "
-  let show_sorted t ?limit ?(sep="\n") f = enum t >> 
+  let show_sorted t ?limit ?(sep="\n") f = enum t >>
     List.of_enum >> List.sort ~cmp:(flip & Action.compare_by snd) >>
-    List.map (fun (x,n) -> Printf.sprintf "%6d : %s" n (f x)) >>
     (match limit with None -> id | Some n -> List.take n) >>
+    List.map (fun (x,n) -> sprintf "%6d : %S" n (f x)) >>
     String.concat sep
+  let stats t ?(cmp=compare) f =
+    if Hashtbl.length t = 0 then
+      "<empty>"
+    else
+      let a = Array.of_enum (enum t) in
+      let total = Array.fold_left (fun t (_,n) -> t + n) 0 a in
+      let half = total / 2 in
+      let cmp (x,_) (y,_) = cmp x y in
+      Array.sort cmp a;
+      let med = ref None in
+      let (mi,ma,_) = Array.fold_left begin fun (mi,ma,sum) x ->
+        let sum = sum + snd x in
+        if !med = None && half <= sum then med := Some x;
+        if snd x < snd mi then x, ma, sum
+        else if snd x > snd ma then mi, x, sum
+        else mi, ma, sum
+      end ((fst a.(0), max_int), (fst a.(0),min_int), 0) a
+      in
+      let show (x,n) = sprintf "%S (%d)" (f x) n in
+      sprintf "total %d median %s min %s max %s"
+        total (match !med with None -> "?" | Some x -> show x) (show mi) (show ma)
 end
 
 module Group : sig

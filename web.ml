@@ -36,6 +36,8 @@ let rec stream_skip f = parser
   | [< 'x when f x; t >] -> stream_skip f t
   | [< >] -> ()
 
+let stream_skip_till x = stream_skip ((<>) x)
+
 (** @return next stream element if predicate matches
     @raise Not_found otherwise *)
 let stream_get_next f = parser
