@@ -168,6 +168,7 @@ module Count : sig
   val show : 'a t -> ('a -> string) -> string
   val show_sorted : 'a t -> ?limit:int -> ?sep:string -> ('a -> string) -> string
   val stats : 'a t -> ?cmp:('a -> 'a -> int) -> ('a -> string) -> string
+  val report : 'a t -> ?limit:int -> ?cmp:('a -> 'a -> int) -> ?sep:string -> ('a -> string) -> string
 end = struct
   open Hashtbl
   type 'a t = ('a,int) Hashtbl.t
@@ -210,6 +211,10 @@ end = struct
       let show (x,n) = sprintf "%S (%d)" (f x) n in
       sprintf "total %d median %s min %s max %s"
         total (match !med with None -> "?" | Some x -> show x) (show mi) (show ma)
+  let report t ?limit ?cmp ?(sep="\n") f =
+    let data = show_sorted t ?limit ~sep f in
+    let stats = stats t ?cmp f in
+    stats^sep^data
 end
 
 module Group : sig
