@@ -8,11 +8,22 @@ open Prelude
 let test_search p s =
   let module WP = Web.Provider in
   let pr = print_endline in
-  let (n,l) = p.WP.extract_full & Web.http_get & p.WP.request s in
-  let l = List.of_enum l in
-  printfn "results %d of %d" (List.length l) n;
-  printfn "";
-  List.iter (fun (l,t,d) -> pr l; pr t; pr d; pr "") l
+(*   let url = "http://www.bing.com/search?q=cars&go=&qs=n&sk=&sc=8-4&form=QBRE&filt=all" in *)
+  let url = p.WP.request s in
+  printfn "url: %s" url;
+(*   let (n,res,ads) = WP.bing_html (Std.input_file "search.html") in *)
+  let (n,res,ads) = p.WP.extract_full & Web.http_get & url in
+  let summary = sprintf "results %d of %d and %d ads" (Array.length res) n (Array.length ads) in
+  let show = Array.iter (fun (l,t,d) -> pr l; pr t; pr d; pr "") in
+  pr summary;
+  pr "RESULTS :";
+  pr "";
+  show res;
+(*   pr summary; *)
+  pr "ADS :";
+  pr "";
+  show ads;
+  pr summary
 
 let test_htmlstream () =
   Printexc.record_backtrace true;

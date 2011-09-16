@@ -73,10 +73,13 @@ include T
 
 module Provider = struct
 
-  (**  @return total estimate and list of (link,title,description)
+  (** url, title, snippet *)
+  type entry = string * string * string 
+
+  (**  @return total estimate, organic entries and ads
 
   raises exn on error *)
-  type extract_full = string -> int * (string * string * string) Enum.t
+  type extract_full = string -> int * entry array * entry array
 
   type t = { 
     request : ?num:int -> string -> string; 
@@ -113,7 +116,7 @@ module Provider = struct
       loop ()
     in
     begin try loop () with Not_found -> () | exn -> log #warn ~exn "google_full" end;
-    !total, List.enum & List.rev !acc
+    !total, Array.of_list & List.rev !acc, [||]
 
   let google =
     let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l" in
@@ -162,11 +165,11 @@ module Provider = struct
           begin try List.find (function `L _ -> true | _ -> false) l with _ -> `U end
       | _ -> (*log #warn "unrec : %s" s;*) `U) xml
     with
-    | `L l -> 0, List.enum l
-    | _ -> log #warn "unrecognized result"; 0, Enum.empty ()
+    | `L l -> 0, Array.of_list l, [||]
+    | _ -> log #warn "unrecognized result"; 0, [||], [||]
 
-  let bing_html s =
-    let s = parse & Stream.of_string s in
+  let bing_html s' =
+    let s = parse & Stream.of_string s' in
     let total = ref 0 in
     begin try
       stream_find (tag "span" ~a:["class","sb_count"]) s;
@@ -176,7 +179,7 @@ module Provider = struct
           int_of_string & String.replace_chars (function '0'..'9' as c -> String.make 1 c | _ -> "_") s)
       | _ -> ()
     with exn -> log #debug ~exn "bad sb_count" end;
-    let acc = ref [] in
+    let res = ref [] in
     let rec loop () =
       stream_find (tag "div" ~a:["class","sb_tlst"]) s;
       begin try
@@ -186,12 +189,50 @@ module Provider = struct
         | _ -> assert false in
         let h = stream_extract_till (Close "h3") s in
         let t = stream_extract_till (Close "p") s in
-        acc := (href,make_text h,make_text t) :: !acc;
+        res := (href,make_text h,make_text t) :: !res;
       with exn -> log #debug ~exn "skipped search result" end;
       loop ()
     in
-    begin try loop () with Not_found -> () | exn -> log #warn ~exn "bing_html" end;
-    !total, List.enum & List.rev !acc
+    begin try loop () with Not_found -> () | exn -> log #warn ~exn "bing_html results" end;
+    let s = parse & Stream.of_string s' in
+
+    let ads = ref [] in
+    let rec loop () =
+      s >> stream_find (fun x ->
+        tag "div" ~a:["class","sb_adsW"] x ||
+(*         tag "div" ~a:["class","sb_adsW sb_adsW2"] x || *)
+        tag "div" ~a:["class","sb_adsN"] x);
+      begin try
+        while true do
+        stream_find ~limit:10 (tag "h3") s;
+        let h = stream_extract_till (Close "h3") s in
+        Stream.junk s;
+        begin try 
+          stream_next (tag "span" ~a:["class","sb_adsD"]) s; stream_skip_till (Close "span") s; Stream.junk s;
+        with Not_found -> ()
+        end;
+        let x = Stream.next s in
+        let (t,u) = if tag "p" x then
+          let t = stream_extract_till (Close "p") s in
+          Stream.junk s;
+          let () = stream_next (tag "cite") s in
+          t, stream_extract_till (Close "cite") s
+        else if tag "cite" x then
+          let u = stream_extract_till (Close "cite") s in
+          Stream.junk s;
+          let () = stream_next (tag "p") s in
+          stream_extract_till (Close "p") s, u
+        else
+          Exn.fail "expected <p> or <cite>"
+        in
+        let href = String.concat "" ("http://" :: List.map (function HtmlStream.Text s -> String.lowercase s | _ -> "") u) in
+        ads := (href,make_text h,make_text t) :: !ads;
+        done
+      with exn -> log #debug ~exn "skipped search result" end;
+      loop ()
+    in
+    begin try loop () with Not_found -> () | exn -> log #warn ~exn "bing_html ads" end;
+    !total, Array.of_list & List.rev !res, Array.of_list & List.rev !ads
 
   let bing_html lang =
     let re = Pcre.regexp ~flags:[`CASELESS] "<div class=\"sb_tlst\"><h3><a href=\"([^\"]+)\"" in
