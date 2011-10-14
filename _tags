@@ -15,3 +15,4 @@ true: annot, debug, thread
 <test.*>: use_oUnit
 <netstring_pcre.ml*>: use_pcre
 "php_serialize.ml": camlp4o
+"pa_openin.ml": camlp4of

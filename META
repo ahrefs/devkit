@@ -4,3 +4,9 @@ description="devkit"
 requires="extlib,pcre,netstring,netsys,netcgi2,zip,ocsigen_xhtml,unix,threads,event,curl"
 archive(mt,byte)="devkit.cma"
 archive(mt,native)="devkit.cmxa"
+
+package "openin" (
+  description = "Syntax extension: pa_openin"
+  archive(syntax, preprocessor) = "pa_openin.cmo"
+  archive(syntax, toploop) = "pa_openin.cmo"
+)
