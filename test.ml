@@ -8,7 +8,7 @@ open Prelude
 let test_search p s =
   let module WP = Web.Provider in
   let pr = print_endline in
-(*   let url = "http://www.bing.com/search?q=cars&go=&qs=n&sk=&sc=8-4&form=QBRE&filt=all" in *)
+(*   let url = sprintf "http://www.bing.com/search?q=%s&setmkt=fr-FR&go=&qs=n&sk=&sc=8-4&form=QBRE&filt=all" (Web.urlencode s) in *)
   let url = p.WP.request s in
   printfn "url: %s" url;
 (*   let (n,res,ads) = WP.bing_html (Std.input_file "search.html") in *)

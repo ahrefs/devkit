@@ -171,12 +171,17 @@ module Provider = struct
   let bing_html s' =
     let s = parse & Stream.of_string s' in
     let total = ref 0 in
+    let is_digit = function '0'..'9' -> true | _ -> false in
     begin try
       stream_find (tag "span" ~a:["class","sb_count"]) s;
       match Stream.next s with
       | Text s ->
-        total := Scanf.sscanf s "%_s@ of %s@ " (fun s ->
-          int_of_string & String.replace_chars (function '0'..'9' as c -> String.make 1 c | _ -> "_") s)
+        let l = List.filter (fun s -> s <> "") & Stre.nsplitc s ' ' in
+        let l = List.dropwhile (fun s -> is_digit s.[0]) l in 
+        let l = List.dropwhile (fun s -> not (is_digit s.[0])) l in
+        let s = htmldecode (List.hd l) in
+        let s = String.replace_chars (function '0'..'9' as c -> String.make 1 c | _ -> "_") s in
+        total := int_of_string s
       | _ -> Exn.fail "no text in sb_count"
     with exn -> Exn.fail "bad sb_count : %s" (Exn.str exn) end;
     let res = ref [] in
