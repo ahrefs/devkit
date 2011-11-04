@@ -177,8 +177,8 @@ module Provider = struct
       | Text s ->
         total := Scanf.sscanf s "%_s@ of %s@ " (fun s ->
           int_of_string & String.replace_chars (function '0'..'9' as c -> String.make 1 c | _ -> "_") s)
-      | _ -> ()
-    with exn -> log #debug ~exn "bad sb_count" end;
+      | _ -> Exn.fail "no text in sb_count"
+    with exn -> Exn.fail "bad sb_count : %s" (Exn.str exn) end;
     let res = ref [] in
     let rec loop () =
       stream_find (tag "div" ~a:["class","sb_tlst"]) s;
