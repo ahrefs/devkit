@@ -11,6 +11,13 @@ let get q = locked q.mutex (fun () ->
   while Queue.is_empty q.q do Condition.wait q.cond q.mutex done;
   Queue.pop q.q)
 
+let peek q = locked q.mutex (fun () ->
+  while Queue.is_empty q.q do Condition.wait q.cond q.mutex done;
+  Queue.peek q.q)
+
+let junk q = locked q.mutex (fun () ->
+  let _ = Exn.catch Queue.pop q.q in ())
+
 let try_get q = locked q.mutex (fun () -> Exn.catch Queue.pop q.q)
 
 let length q = locked q.mutex (fun () -> Queue.length q.q)
