@@ -42,7 +42,7 @@ Anatomy of a serialize()'ed value:
 *)
 
 type php = AI of (int * php) list | AS of (string * php) list | S of string | I of int | B of bool | F of float | N |
-           EI of (int * php) Enum.t | ES of (string * php) Enum.t
+           EI of (int * php) Enum.t | ES of (string * php) Enum.t | RS of (string * php) list | RI of php list
 
 let check x y = if x <> y then failwith (Printf.sprintf "Php_serialize failed : %u <> %u" x y)
 
@@ -134,13 +134,16 @@ let sarray f e = ES (Enum.map (fun (k,v) -> k, f v) e)
 (** Serialize php value *)
 let output out v =
   let put_enum n f e = IO.printf out "a:%u:{" n; Enum.iter f e; IO.write out '}' in
+  let put_enumi n f e = IO.printf out "a:%u:{" n; Enum.iteri f e; IO.write out '}' in
   let put_int n = IO.printf out "i:%i;" n in
   let put_str s = IO.printf out "s:%u:\"%s\";" (String.length s) s in
   let rec put = function
     | AS a -> put_enum (List.length a) (fun (k,v) -> put_str k; put v) (List.enum a)
     | ES e -> put_enum (Enum.count e) (fun (k,v) -> put_str k; put v) e
+    | RS a -> put_enum (List.length a) (fun (k,v) -> put_str k; put v) (List.enum & List.rev a)
     | AI a -> put_enum (List.length a) (fun (k,v) -> put_int k; put v) (List.enum a)
     | EI e -> put_enum (Enum.count e) (fun (k,v) -> put_int k; put v) e
+    | RI a -> put_enumi (List.length a) (fun i v -> put_int i; put v) (List.enum & List.rev a)
     | I n -> put_int n
     | B b -> IO.printf out "b:%u;" (if b then 1 else 0)
     | F f -> IO.printf out "d:%g;" (if compare nan f = 0 then 0. else f)
@@ -160,11 +163,14 @@ let to_string v =
 let show out v =
   let pr fmt = IO.printf out fmt in
   let put_enum f e = pr "{\n"; Enum.iter (fun x -> f x; pr "\n") e; pr "}" in
+  let put_enumi f e = pr "{\n"; Enum.iteri (fun i x -> f i x; pr "\n") e; pr "}" in
   let rec put = function
     | AS a -> put_enum (fun (k,v) -> pr "%S : " k; put v) (List.enum a)
     | ES e -> put_enum (fun (k,v) -> pr "%S : " k; put v) e
+    | RS a -> put_enum (fun (k,v) -> pr "%S : " k; put v) (List.enum & List.rev a)
     | AI a -> put_enum (fun (k,v) -> pr "%d : " k; put v) (List.enum a)
     | EI e -> put_enum (fun (k,v) -> pr "%d : " k; put v) e
+    | RI a -> put_enumi (fun i v -> pr "%d : " i; put v) (List.enum & List.rev a)
     | I n -> pr "%d" n
     | B b -> pr "%B" b
     | F f -> pr "%g" f
