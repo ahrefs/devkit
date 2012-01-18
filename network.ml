@@ -40,3 +40,8 @@ let cidr_of_string_exn s =
 
 let ipv4_matches ip (prefix, mask) = Int32.logand ip mask = prefix
 
+let ipv4_of_string_null s = try ipv4_of_string_exn s with _ -> 0l
+
+let is_ipv4 s = 0l <> ipv4_of_string_null s
+
+
