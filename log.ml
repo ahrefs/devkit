@@ -84,7 +84,8 @@ module State = struct
     try
       let ch = Files.open_out_append_text file in
       output := output_ch ch;
-      if !log_ch <> stderr then close_out_noerr !log_ch;
+      Unix.dup2 (Unix.descr_of_out_channel ch)  Unix.stderr;
+(*       if !log_ch <> stderr then close_out_noerr !log_ch; *)
       log_ch := ch
     with
       e -> M.warn (facility self) "reopen_log_ch(%s) failed : %s" file (Printexc.to_string e)
