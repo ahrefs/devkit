@@ -6,6 +6,7 @@
 #include <caml/alloc.h>
 #include <assert.h>
 #include <malloc.h>
+#include <memory.h>
 
 #if defined(_MSC_VER)
 
@@ -61,6 +62,35 @@ CAMLprim value caml_devkit_mallinfo(value u)
   Store_field(v,9,mi.keepcost);
 
   CAMLreturn(v);
+}
+
+CAMLprim value caml_malloc_stats(value v_unit)
+{
+  malloc_stats();
+  return Val_unit;
+}
+
+CAMLprim value caml_malloc_info(value v_unit)
+{
+  CAMLparam0();
+  CAMLlocal1(v_s);
+  char* buf = NULL;
+  size_t size;
+  int r;
+  FILE* f = open_memstream(&buf,&size);
+  if (NULL == f)
+    uerror("malloc_info", Nothing);
+  r = malloc_info(0,f);
+  fclose(f);
+  if (0 != r)
+  {
+    free(buf);
+    uerror("malloc_info", Nothing);
+  }
+  v_s = caml_alloc_string(size);
+  memcpy(Bp_val(v_s), buf, size);
+  free(buf);
+  CAMLreturn(v_s);
 }
 
 #endif
