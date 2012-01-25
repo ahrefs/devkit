@@ -170,6 +170,8 @@ module Count : sig
   val show_sorted : 'a t -> ?limit:int -> ?sep:string -> ('a -> string) -> string
   val stats : 'a t -> ?cmp:('a -> 'a -> int) -> ('a -> string) -> string
   val report : 'a t -> ?limit:int -> ?cmp:('a -> 'a -> int) -> ?sep:string -> ('a -> string) -> string
+  val distrib : float t -> float array
+  val show_distrib : ?sep:string -> float t -> string
 end = struct
   open Hashtbl
   type 'a t = ('a,int) Hashtbl.t
@@ -213,6 +215,28 @@ end = struct
       let show (x,n) = sprintf "%S (%d)" (f x) n in
       sprintf "total %d median %s min %s max %s"
         total (match !med with None -> "?" | Some x -> show x) (show mi) (show ma)
+  let distrib t =
+    if Hashtbl.length t = 0 then
+      [||]
+    else
+      let a = Array.of_enum (enum t) in
+      let total = Array.fold_left (fun t (_,n) -> t + n) 0 a in
+      let limits = Array.init 10 (fun i -> total * (i + 1) / 10) in
+      let cmp (x,_) (y,_) = compare (x:float) y in
+      Array.sort cmp a;
+      let distrib = limits >> Array.map begin fun limit ->
+        let (v,_) = Array.fold_left begin fun (found,sum) (v,n) ->
+          let sum = sum + n in
+          if found = None && limit <= sum then Some v, sum else (found,sum)
+        end (None,0) a in
+        match v with
+        | None -> nan
+        | Some v -> v
+      end
+      in
+      distrib
+  let show_distrib ?(sep="\n") t =
+    distrib t >> Array.mapi (fun i v -> sprintf "%d%% <= %f" ((i + 1) * 10) v) >> Array.to_list >> String.concat sep
   let report t ?limit ?cmp ?(sep="\n") f =
     let data = show_sorted t ?limit ~sep f in
     let stats = stats t ?cmp f in
