@@ -93,5 +93,15 @@ CAMLprim value caml_malloc_info(value v_unit)
   CAMLreturn(v_s);
 }
 
+// from extunix
+CAMLprim value caml_devkit_setreuid(value v_ruid, value v_euid)
+{
+  CAMLparam2(v_ruid,v_euid);
+  int r = setreuid(Int_val(v_ruid), Int_val(v_euid));
+  if (r < 0)
+    uerror("setreuid", Nothing);
+  CAMLreturn(Val_unit);
+}
+
 #endif
 
