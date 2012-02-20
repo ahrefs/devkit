@@ -61,8 +61,7 @@ let manage_pidfile path =
 
 let restart f x = let rec loop () = try f x with Unix.Unix_error (EINTR,_,_) -> loop () in loop ()
 
-(** Use [with_sig_exit] *)
-let handle_sig_exit_with ?(exit=true) fin =
+let handle_sig_exit_with ~exit fin =
   List.iter
     (fun signal -> Sys.set_signal signal (Sys.Signal_handle 
       (fun n ->
@@ -72,7 +71,6 @@ let handle_sig_exit_with ?(exit=true) fin =
         if exit then Pervasives.exit 0)))
     [Sys.sigint; Sys.sigterm]
 
-(** Use [with_sig_reload] *)
 let handle_sig_reload_with fin =
   List.iter
     (fun signal -> Sys.set_signal signal (Sys.Signal_handle 
@@ -83,6 +81,7 @@ let handle_sig_reload_with fin =
         )))
     [Sys.sighup]
 
+(*
 
 type sig_stack = (unit -> unit) list ref
 
@@ -102,6 +101,7 @@ let () =
     List.iter (fun fin -> try fin () with exn -> Log.self #warn ~exn "sig_exit_funcs") !sig_exit_funcs);
   handle_sig_reload_with (fun () ->
     List.iter (fun fin -> try fin () with exn -> Log.self #warn ~exn "sig_reload_funcs") !sig_reload_funcs)
+*)
 
 let show_addr = function
   | ADDR_UNIX s -> Printf.sprintf "unix:%s" s
