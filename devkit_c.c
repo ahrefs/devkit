@@ -103,5 +103,14 @@ CAMLprim value caml_devkit_setreuid(value v_ruid, value v_euid)
   CAMLreturn(Val_unit);
 }
 
+CAMLprim value caml_devkit_setregid(value v_rgid, value v_egid)
+{
+  CAMLparam2(v_rgid,v_egid);
+  int r = setregid(Int_val(v_rgid), Int_val(v_egid));
+  if (r < 0)
+    uerror("setregid", Nothing);
+  CAMLreturn(Val_unit);
+}
+
 #endif
 

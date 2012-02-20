@@ -277,4 +277,5 @@ external malloc_stats : unit -> unit = "caml_malloc_stats"
 external malloc_info : unit -> string = "caml_malloc_info"
 
 external setreuid : int -> int -> unit = "caml_devkit_setreuid"
+external setregid : int -> int -> unit = "caml_devkit_setregid"
 
