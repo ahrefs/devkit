@@ -172,7 +172,6 @@ module Count : sig
   val report : 'a t -> ?limit:int -> ?cmp:('a -> 'a -> int) -> ?sep:string -> ('a -> string) -> string
   val distrib : float t -> float array
   val show_distrib : ?sep:string -> float t -> string
-  val find : 'a t -> 'a -> int
 end = struct
   open Hashtbl
   type 'a t = ('a,int) Hashtbl.t
@@ -187,7 +186,6 @@ end = struct
   let fold t f acc = fold f t acc
   let count t k = Option.default 0 & Hashtbl.find_option t k
   let size = Hashtbl.length
-  let find = Hashtbl.find
   let show t f = enum t >> 
     Enum.map (fun (x,n) -> sprintf "%S: %u" (f x) n) >>
     Stre.concat " "
