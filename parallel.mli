@@ -37,3 +37,10 @@ module Forks(T:WorkerT) : Workers
   with type task = T.task
    and type result = T.result
 
+module ThreadPool : sig
+type t
+val create : int -> t
+val status : t -> string
+val put : t -> (unit -> unit) -> unit
+end
+

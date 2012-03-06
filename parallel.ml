@@ -209,3 +209,36 @@ let () =
   print_endline "Done"
 *)
 
+let atomic_incr = incr
+let atomic_decr = decr
+let atomic_get x = !x
+
+module ThreadPool = struct
+
+  type t = { q : (unit -> unit) Mtq.t;
+             total : int;
+             free : int ref;
+             }
+
+  let create n =
+    let t = { q = Mtq.create (); total = n; free = ref n; } in
+    let worker _i =
+      while true do
+        let f = Mtq.get t.q in
+        atomic_decr t.free;
+        begin try f () with exn -> log #warn ~exn "ThreadPool" end;
+        atomic_incr t.free;
+      done
+    in
+    for i = 1 to n do
+      let (_:Thread.t) = Action.log_thread worker i in ()
+    done;
+    t
+
+  let status t = Printf.sprintf "queue %d threads %d of %d" 
+                    (Mtq.length t.q) (atomic_get t.free) t.total
+
+  let put t = Mtq.put t.q
+
+end
+
