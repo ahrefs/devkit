@@ -325,6 +325,12 @@ let set_blocking req =
   req.blocking <- Some io;
   io
 
+let set_blocking' req =
+  let ch = Unix.out_channel_of_descr req.fd in
+  let io = IO.output_channel ch in
+  req.blocking <- Some io;
+  ch
+
 let handle_client config status fd conn_info answer =
   let peer = Nix.show_addr (fst conn_info) in
   INC status.total;
