@@ -193,6 +193,7 @@ module Provider = struct
         | Tag (_,l) -> List.assoc "href" l
         | _ -> assert false in
         let h = stream_extract_till (Close "h3") s in
+        let _ = stream_skip_till (Tag ("p",[])) s in
         let t = stream_extract_till (Close "p") s in
         res := (href,make_text h,make_text t) :: !res;
       with exn -> log #debug ~exn "skipped search result" end;
