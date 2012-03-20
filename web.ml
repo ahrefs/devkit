@@ -23,6 +23,11 @@ let url_get_args url =
   with
     _ -> []
 
+let extract_all_digits s =
+  let s = String.replace_chars (function '0'..'9' as c -> String.make 1 c | _ -> "_") s in
+  let s = String.strip ~chars:"_" s in
+  try int_of_string s with _ -> Exn.fail "extract_all_digits %S" s
+
 module T = struct
 
 module Stream = ExtStream
@@ -97,35 +102,6 @@ module Provider = struct
 
   open HtmlStream
 
-  let google_full s =
-    let s = parse & Stream.of_string s in
-    let total = ref 0 in
-    begin try
-      stream_find (tag "div" ~a:["id","resultStats"]) s;
-      match Stream.next s with
-      | Text s ->
-        total := String.explode s >> List.filter (function '0'..'9' -> true | _ -> false) >> String.implode >> int_of_string
-      | _ -> ()
-    with exn -> log #warn ~exn "bad resultStats" end;
-    let acc = ref [] in
-    let rec loop () =
-      stream_find (tag "li" ~a:["class","g"]) s;
-      begin try
-        stream_next (tag "h3" ~a:["class","r"]) s;
-        let href = match stream_get_next (tag "a" ~a:["class","l"]) s with
-        | Tag (_,l) -> List.assoc "href" l
-        | _ -> assert false in
-        let h = stream_extract_till (Close "h3") s in
-        stream_find (tag "div"(* ~a:["class","s"]*)) s;
-        if tag "span" ~a:["class","f"] (Option.get & Stream.peek s) then stream_find (tag "br") s;
-        let t = stream_extract_while (not $ tag "br") s in
-        acc := (href,make_text h,make_text t) :: !acc;
-      with exn -> log #debug ~exn "skipped search result" end;
-      loop ()
-    in
-    begin try loop () with Not_found -> () | exn -> log #warn ~exn "google_full" end;
-    !total, Array.of_list & List.rev !acc, [||]
-
 module Google = struct
 
 let get_results ?(debug=false) ?(parse_url=id) s' =
@@ -133,11 +109,10 @@ let get_results ?(debug=false) ?(parse_url=id) s' =
   let s = parse & Stream.of_string s' in
   let total = ref 0 in
   begin try
-    stream_find (tag "div" ~a:["id","resultStats"]) s;
-    match Stream.next s with
-    | Text s ->
-      total := String.explode s >> List.filter (function '0'..'9' -> true | _ -> false) >> String.implode >> int_of_string
-    | _ -> Exn.fail "no text"
+    stream_find (tag "div" ~a:["id","subform_ctrl"]) s;
+    let h = make_text & stream_extract_till (Tag ("td",[])) s in
+    if debug then log #info "extract total %S" h;
+    total := extract_all_digits h;
   with exn ->
     if String.exists s' "No results found in your selected language" ||
       String.exists s' "did not match any documents"
@@ -154,9 +129,16 @@ let get_results ?(debug=false) ?(parse_url=id) s' =
     begin try
       stream_find (tag "h3" ~a:["class","r"]) s;
       if debug then log #info "h3 found %s" (element s);
-      let href = match stream_get_next (tag "a" ~a:["class","l"]) s with
+      let href = htmldecode & match stream_get_next (tag "a") s with
       | Tag (_,l) -> List.assoc "href" l
       | _ -> assert false in
+      log #info "href %s" href;
+      if String.starts_with href "/images?" then Exn.fail "/images";
+      let href = if String.starts_with href "/url?" then 
+          try List.assoc "q" (url_get_args href) with exn -> Exn.fail "url?q= : %s" (Exn.str exn)
+        else
+          href
+      in
       let href = parse_url href in
       let h = stream_extract_till (Close "h3") s in
       if debug then log #info "/h3 found %s" (element s);
@@ -186,7 +168,7 @@ let get_results ?(debug=false) ?(parse_url=id) s' =
       in
       let t = extract_description () in
       if debug then log #info "extracted description : %s" (element s);
-      acc := (href,make_text h,make_text t) :: !acc;
+      acc := (href,htmldecode & make_text h, htmldecode & make_text t) :: !acc;
     with exn -> log #debug ~exn "skipped search result : %s" (element s) end;
     loop ()
   in
@@ -299,6 +281,7 @@ end (* Google *)
       extract_full = (fun s -> Google.get_results s);
     }
 
+(*
   let google_day =
     let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l" in
     { extract = Stre.enum_extract re;
@@ -307,6 +290,7 @@ end (* Google *)
           (urlencode q) num);
       extract_full = google_full;
     }
+*)
 
   let parse_rss s =
     let xml = Xmlm.make_input ~strip:true (`String (0,s)) in
@@ -352,8 +336,7 @@ end (* Google *)
         let l = List.dropwhile (fun s -> is_digit s.[0]) l in 
         let l = List.dropwhile (fun s -> not (is_digit s.[0])) l in
         let s = htmldecode (List.hd l) in
-        let s = String.replace_chars (function '0'..'9' as c -> String.make 1 c | _ -> "_") s in
-        total := int_of_string s
+        total := extract_all_digits s
       | _ -> Exn.fail "no text in sb_count"
     with exn -> Exn.fail "bad sb_count : %s" (Exn.str exn) end;
     let res = ref [] in
@@ -435,9 +418,9 @@ end (* Google *)
   let by_name ?lang = function
   | "bing" (* -> bing *)
   | "bing_html" -> bing_html lang
+  | "google_day" (* -> google_day *)
   | "google" -> google
   | "google_blogs" -> google_blogs
-  | "google_day" -> google_day
   | "boardreader" -> boardreader
   | s -> Exn.fail "unknown search provider : %s" s
 
