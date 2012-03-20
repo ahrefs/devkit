@@ -270,30 +270,48 @@ let get_ads ?(parse_url=id) s =
 
 let rex_digits = Pcre.regexp "[0-9]"
 
-let make_language = function
-| "com" -> "en", "com"
-| "es"  -> "es", "es"
-| "fr"  -> "fr", "fr"
-| "it"  -> "it", "it"
-| "de"  -> "de", "de"
-| "ru"  -> "ru", "ru"
-| "pt"  -> "pt", "com.br"
-| "gb"  -> "en", "co.uk"
-| "au"  -> "en", "com.au"
-| s -> Exn.fail "bad lang %S" s
+let language_of_tld = function
+| "com" -> "en"
+| "ca" -> "en"
+| "co.uk" -> "en"
+| "com.br" -> "pt"
+| "com.au" -> "en"
+| "com.mx" -> "es"
+| "co.id" -> "id"
+| "sk" -> "sk"
+| "com.ua" -> "ua"
+| "com.cy" -> "en"
+| "cz" -> "cs"
+| "de" -> "de"
+| "dk" -> "da"
+| "ee" -> "et"
+| "es" -> "es"
+| "fi" -> "fi"
+| "fr" -> "fr"
+| "hr" -> "hr"
+| "ie" -> "en"
+| "it" -> "it"
+| "nl" -> "nl"
+| "no" -> "no"
+| "ro" -> "ro"
+| "rs" -> "sr"
+| "ru" -> "ru"
+| "se" -> "sv"
+| "si" -> "sl"
+| s -> Exn.fail "unknown tld %S" s
 
-let query ~q ?(lang="com") num =
-  let (lang,tld) = make_language lang in
+let query ~q ?(tld="com") num =
+  let lang = language_of_tld tld in
   (* disable google calculator *)
   let q = if Pcre.pmatch ~rex:rex_digits q then "+"^q else q in
   sprintf "http://www.google.%s/search?hl=en&pws=0&safe=off&q=%s&num=%d&lr=lang_%s&as_qdr=all" tld (urlencode q) num lang
 
 end (* Google *)
 
-  let google lang =
+  let google tld =
     let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l" in
     { extract = Stre.enum_extract re;
-      request = (fun ?(num=10) q -> Google.query ~q ?lang num);
+      request = (fun ?(num=10) q -> Google.query ~q ?tld num);
       extract_full = (fun s -> Google.get_results s);
     }
 
