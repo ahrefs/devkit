@@ -20,7 +20,7 @@ let test_search p s =
   in
   let (n,res,ads) = p.WP.extract_full html in
   let summary = sprintf "results %d of %d and %d ads" (Array.length res) n (Array.length ads) in
-  let show = Array.iter (fun (l,t,d) -> pr l; pr t; pr d; pr "") in
+  let show = Array.iter (fun (l,_,t,d) -> pr l; pr t; pr d; pr "") in
   pr summary;
   pr "RESULTS :";
   pr "";

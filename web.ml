@@ -86,8 +86,8 @@ include T
 
 module Provider = struct
 
-  (** url, title, snippet *)
-  type entry = string * string * string 
+  (** url, smth, title, snippet *)
+  type entry = string * string option * string * string 
 
   (**  @return total estimate, organic entries and ads
 
@@ -104,7 +104,7 @@ module Provider = struct
 
 module Google = struct
 
-let get_results ?(debug=false) ?(parse_url=id) s' =
+let get_results ?(debug=false) ~parse_url s' =
   let element s = Option.map_default show "EOS!" (Stream.peek s) in
   let s = parse & Stream.of_string s' in
   let total = ref 0 in
@@ -171,7 +171,7 @@ let get_results ?(debug=false) ?(parse_url=id) s' =
       in
       let t = extract_description () in
       if debug then log #info "extracted description : %s" (element s);
-      acc := (href,htmldecode & make_text h, htmldecode & make_text t) :: !acc;
+      acc := (href,None,htmldecode & make_text h, htmldecode & make_text t) :: !acc;
     with exn -> log #debug ~exn "skipped search result : %s" (element s) end;
     loop ()
   in
@@ -263,7 +263,7 @@ let get_ads2 ~parse_url s =
   begin try loop () with Not_found -> () | exn -> log #warn ~exn "Google.get_ads" end;
   Array.of_list & List.rev !acc
 
-let get_ads ?(parse_url=id) s =
+let get_ads ~parse_url s =
   match get_ads1 ~parse_url s with
   | [||] -> get_ads2 ~parse_url s
   | x -> x
@@ -312,7 +312,7 @@ end (* Google *)
     let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l" in
     { extract = Stre.enum_extract re;
       request = (fun ?(num=10) q -> Google.query ~q ?tld num);
-      extract_full = (fun s -> Google.get_results s);
+      extract_full = (fun s -> Google.get_results ~parse_url:id s);
     }
 
 (*
@@ -344,7 +344,7 @@ end (* Google *)
 *)
     match Xmlm.input_tree ~data:(fun s -> `D s) ~el:(fun ((_,name),_) ch ->
       match name,ch with
-      | "item", _ -> let r = (!link, !title, !desc) in link := ""; title := ""; desc := ""; `R r
+      | "item", _ -> let r = (!link, None, !title, !desc) in link := ""; title := ""; desc := ""; `R r
       | "link",[`D s] -> link := s; `U
       | "description", [`D s] -> desc := s; `U
       | "title", [`D s] -> title := s; `U
@@ -384,7 +384,7 @@ end (* Google *)
         let h = stream_extract_till (Close "h3") s in
         let _ = stream_skip_till (Tag ("p",[])) s in
         let t = stream_extract_till (Close "p") s in
-        res := (href,make_text h,make_text t) :: !res;
+        res := (href,None,make_text h,make_text t) :: !res;
       with exn -> log #debug ~exn "skipped search result" end;
       loop ()
     in
@@ -421,7 +421,7 @@ end (* Google *)
           Exn.fail "expected <p> or <cite>"
         in
         let href = String.concat "" ("http://" :: List.map (function HtmlStream.Text s -> String.lowercase s | _ -> "") u) in
-        ads := (href,make_text h,make_text t) :: !ads;
+        ads := (href,None,make_text h,make_text t) :: !ads;
         done
       with exn -> log #debug ~exn "skipped search result" end;
       loop ()
