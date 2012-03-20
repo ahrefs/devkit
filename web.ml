@@ -119,7 +119,10 @@ let get_results ?(debug=false) ?(parse_url=id) s' =
     then
       total := 0
     else
-      Exn.fail "resultStats failed : %s" (Exn.str exn)
+      if String.exists s' "Your client does not have permission to get URL" then
+        Exn.fail "blocked"
+      else
+        Exn.fail "results count failed : %s" (Exn.str exn)
   end;
   let acc = ref [] in
   let rec loop () =
@@ -132,7 +135,7 @@ let get_results ?(debug=false) ?(parse_url=id) s' =
       let href = htmldecode & match stream_get_next (tag "a") s with
       | Tag (_,l) -> List.assoc "href" l
       | _ -> assert false in
-      log #info "href %s" href;
+      if debug then log #info "href %s" href;
       if String.starts_with href "/images?" then Exn.fail "/images";
       let href = if String.starts_with href "/url?" then 
           try List.assoc "q" (url_get_args href) with exn -> Exn.fail "url?q= : %s" (Exn.str exn)

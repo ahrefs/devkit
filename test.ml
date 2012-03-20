@@ -9,10 +9,16 @@ let test_search p s =
   let module WP = Web.Provider in
   let pr = print_endline in
 (*   let url = sprintf "http://www.bing.com/search?q=%s&setmkt=fr-FR&go=&qs=n&sk=&sc=8-4&form=QBRE&filt=all" (Web.urlencode s) in *)
-  let url = p.WP.request s in
-  printfn "url: %s" url;
-(*   let (n,res,ads) = WP.bing_html (Std.input_file "search.html") in *)
-  let (n,res,ads) = p.WP.extract_full & Web.http_get & url in
+  let html = match s with
+  | `Query s ->
+      let url = p.WP.request s in
+      printfn "url: %s" url;
+(*       let (n,res,ads) = WP.bing_html (Std.input_file "search.html") in *)
+      Web.http_get url
+  | `File s ->
+      Std.input_file s
+  in
+  let (n,res,ads) = p.WP.extract_full html in
   let summary = sprintf "results %d of %d and %d ads" (Array.length res) n (Array.length ads) in
   let show = Array.iter (fun (l,t,d) -> pr l; pr t; pr d; pr "") in
   pr summary;
@@ -96,6 +102,7 @@ let tests () =
 
 let () =
   match Array.to_list Sys.argv with
-  | [_;src;query] -> test_search (Web.Provider.by_name src) query
+  | [_;src;"query";query] -> test_search (Web.Provider.by_name src) (`Query query)
+  | [_;src;"file";file] -> test_search (Web.Provider.by_name src) (`File file)
   | _ -> tests ()
 
