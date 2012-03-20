@@ -270,17 +270,30 @@ let get_ads ?(parse_url=id) s =
 
 let rex_digits = Pcre.regexp "[0-9]"
 
-let query ~q num =
+let make_language = function
+| "com" -> "en", "com"
+| "es"  -> "es", "es"
+| "fr"  -> "fr", "fr"
+| "it"  -> "it", "it"
+| "de"  -> "de", "de"
+| "ru"  -> "ru", "ru"
+| "pt"  -> "pt", "com.br"
+| "gb"  -> "en", "co.uk"
+| "au"  -> "en", "com.au"
+| s -> Exn.fail "bad lang %S" s
+
+let query ~q ?(lang="com") num =
+  let (lang,tld) = make_language lang in
   (* disable google calculator *)
   let q = if Pcre.pmatch ~rex:rex_digits q then "+"^q else q in
-  sprintf "http://www.google.com/search?hl=en&pws=0&safe=off&q=%s&num=%d&lr=en&as_qdr=all" (urlencode q) num
+  sprintf "http://www.google.%s/search?hl=en&pws=0&safe=off&q=%s&num=%d&lr=lang_%s&as_qdr=all" tld (urlencode q) num lang
 
 end (* Google *)
 
-  let google =
+  let google lang =
     let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l" in
     { extract = Stre.enum_extract re;
-      request = (fun ?(num=10) q -> Google.query ~q num);
+      request = (fun ?(num=10) q -> Google.query ~q ?lang num);
       extract_full = (fun s -> Google.get_results s);
     }
 
@@ -422,7 +435,7 @@ end (* Google *)
   | "bing" (* -> bing *)
   | "bing_html" -> bing_html lang
   | "google_day" (* -> google_day *)
-  | "google" -> google
+  | "google" -> google lang
   | "google_blogs" -> google_blogs
   | "boardreader" -> boardreader
   | s -> Exn.fail "unknown search provider : %s" s
@@ -435,7 +448,7 @@ module Search(GET : sig val get : string -> string end) = struct
 
   let search p = p.extract $ GET.get $ p.request
 
-  let google = search google
+  let google = search (google None)
   let bing = search bing
 
 end
