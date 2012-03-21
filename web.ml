@@ -136,12 +136,12 @@ let get_results ?(debug=false) ~parse_url s' =
       | Tag (_,l) -> List.assoc "href" l
       | _ -> assert false in
       if debug then log #info "href %s" href;
-      if String.starts_with href "/images?" then Exn.fail "/images";
       let href = if String.starts_with href "/url?" then 
           try List.assoc "q" (url_get_args href) with exn -> Exn.fail "url?q= : %s" (Exn.str exn)
         else
           href
       in
+      if String.starts_with href "/" then Exn.fail "not an absolute url : %s" href;
       let href = parse_url href in
       let h = stream_extract_till (Close "h3") s in
       if debug then log #info "/h3 found %s" (element s);
