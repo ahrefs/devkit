@@ -1,0 +1,25 @@
+Dependencies
+============
+
+Debian packages
+---------------
+
+ocaml-native-compilers
+ocaml-findlib
+camlp4-extra
+libpcre-ocaml-dev
+libextlib-ocaml-dev
+libocamlnet-ocaml-dev
+libzip-ocaml-dev
+libocsigen-xhtml-ocaml-dev
+libounit-ocaml-dev
+
+libevent-dev
+libcurl4-gnutls-dev (with c-ares enabled, from sigpwr repo)
+
+Other
+-----
+
+ocaml-event git://repo.or.cz/ocaml-event.git
+ocurl git://repo.or.cz/ocurl.git branch event
+

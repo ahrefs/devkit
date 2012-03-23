@@ -57,12 +57,11 @@ dispatch begin function
      C.extern "netcgi2" ~cma:"netcgi";
      C.extern "oUnit";
      C.extern "zip";
-     C.extern "json-wheel" ~cma:"jsonwheel";
-     C.extern "sqlite3";
+(*      C.extern "json-wheel" ~cma:"jsonwheel"; *)
+(*      C.extern "sqlite3"; *)
      C.extern "curl";
-     C.extern "fileutils";
-     C.extern "ocsigen.xhtml" ~cma:"xhtml";
-     C.extern "ocsigen_xhtml" ~cma:"xhtml"; (* http://bugs.debian.org/579689 *)
+(*      C.extern "fileutils"; *)
+     C.extern "ocsigen_xhtml" ~cma:"xhtml";
      C.extern "event" ~cma:"liboevent";
 (*
      C.extern "bin_prot";
@@ -82,7 +81,7 @@ dispatch begin function
 
      flag ["ocaml"; "doc"] (S[A"-short-functors"; A"-sort"; A"-m"; A"A"; A"-hide-warnings"]);
 
-     flag ["ocaml"; "pp"; "use_json-static"] (A (Filename.concat (C.lib "json-static") "pa_json_static.cmo"));
+(*      flag ["ocaml"; "pp"; "use_json-static"] (A (Filename.concat (C.lib "json-static") "pa_json_static.cmo")); *)
 
      flag ["ocaml"; "pp"; "use_openin"] (A"pa_openin.cmo");
      flag ["ocaml"; "camlp4of"] (S[A"-I"; A"+camlp4"]);
