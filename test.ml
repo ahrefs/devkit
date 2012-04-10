@@ -96,7 +96,7 @@ let test_lim_cache () =
 let test_split_by_words () =
   let t = let n = ref 0 in fun x -> assert_bool (sprintf "testcase %d" !n) x; incr n in
   let f a l = t (Stre.split Stre.by_words a = l) in
-  f ("a" ^ String.make 10 ' ' ^ "b") ["a"; "b"];
+  f ("a" ^ String.make 10 '_' ^ "b") ["a"; "b"];
   f ("a" ^ String.make 1024 ' ' ^ "b") ["a"; "b"];
   f ("a" ^ String.make 10240 ' ' ^ "b") ["a"; "b"];
   ()
