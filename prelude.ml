@@ -17,5 +17,16 @@ let curry f a b = f (a, b)
 let uncurry f (a,b) = f a b
 
 (** exception for breaking from inner loops, MUST NOT leak outside *)
-exception Break
+(* exception Break *)
 
+module New(T : sig type t end) :
+sig
+  type t
+  val inj : T.t -> t
+  val proj : t -> T.t
+end =
+struct
+  type t = T.t
+  let inj = id
+  let proj = id
+end
