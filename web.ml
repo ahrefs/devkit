@@ -102,6 +102,10 @@ module Provider = struct
 
   open HtmlStream
 
+let decode s = htmldecode (Raw.proj s)
+let make_text l = decode (make_text l)
+let make_url l = String.concat "" ("http://" :: List.map (function HtmlStream.Text s -> decode s | _ -> "") l)
+
 module Google = struct
 
 let get_results ?(debug=false) ~parse_url s' =
@@ -132,7 +136,7 @@ let get_results ?(debug=false) ~parse_url s' =
     begin try
       stream_find (tag "h3" ~a:["class","r"]) s;
       if debug then log #info "h3 found %s" (element s);
-      let href = htmldecode & match stream_get_next (tag "a") s with
+      let href = decode & match stream_get_next (tag "a") s with
       | Tag (_,l) -> List.assoc "href" l
       | _ -> assert false in
       if debug then log #info "href %s" href;
@@ -171,7 +175,7 @@ let get_results ?(debug=false) ~parse_url s' =
       in
       let t = extract_description () in
       if debug then log #info "extracted description : %s" (element s);
-      acc := (href,None,htmldecode & make_text h, htmldecode & make_text t) :: !acc;
+      acc := (href,None,make_text h, make_text t) :: !acc;
     with exn -> log #debug ~exn "skipped search result : %s" (element s) end;
     loop ()
   in
@@ -194,7 +198,7 @@ let get_ads1 ~parse_url s =
     stream_find (tag "li") s;
     begin try
       let () = match stream_get_next (tag "div") s with
-      | Tag (_, ("class",("vsc vsra"|"vsc vsta")) :: _) -> ()
+      | Tag (_, ("class",x) :: _) when x = Raw.inj "vsc vsra" || x = Raw.inj "vsc vsta" -> ()
       | x -> Exn.fail "test #1 : %s" (show x)
       in
       pt "div";
@@ -203,7 +207,7 @@ let get_ads1 ~parse_url s =
       let adurl = match stream_get_next (tag "a") s with
       | Tag (_,l) ->
           List.assoc "href" l >>
-          (fun url -> Stre.qreplace url "&amp;" "&") >>
+          decode >>
           url_get_args >>
           List.assoc "adurl" >>
           parse_url
@@ -211,8 +215,7 @@ let get_ads1 ~parse_url s =
       in
       let h = stream_extract_till (Close "a") s in
       stream_find ~limit:10 (tag "cite") s;
-      let href = stream_extract_till (Close "cite") s in
-      let href = parse_url (String.concat "" ("http://" :: List.map (function HtmlStream.Text s -> s | _ -> "") href)) in
+      let href = parse_url & make_url & stream_extract_till (Close "cite") s in
       stream_find (tag "span" ~a:["class","ac"]) s;
       let t = stream_extract_till (Close "span") s in
       acc := (href,Some adurl,make_text h,make_text t) :: !acc;
@@ -238,7 +241,7 @@ let get_ads2 ~parse_url s =
       let adurl = match stream_get_next (tag "a") s with
       | Tag (_,l) ->
           List.assoc "href" l >>
-          (fun url -> Stre.qreplace url "&amp;" "&") >>
+          decode >>
           url_get_args >>
           List.assoc "adurl" >>
           parse_url
@@ -251,8 +254,7 @@ let get_ads2 ~parse_url s =
       let t = stream_extract_till (Close "span") s in
       pt "span done";
       stream_find ~limit:10 (tag "cite") s;
-      let href = stream_extract_till (Close "cite") s in
-      let href = parse_url (String.concat "" ("http://" :: List.map (function HtmlStream.Text s -> s | _ -> "") href)) in
+      let href = parse_url & make_url & stream_extract_till (Close "cite") s in
       acc := (href,Some adurl,make_text h,make_text t) :: !acc;
     with
 (*     | exn -> log #debug ~exn "skipped ad result : %s" (show & Stream.next s) *)
@@ -366,10 +368,13 @@ end (* Google *)
       stream_find (tag "span" ~a:["class","sb_count"]) s;
       match Stream.next s with
       | Text s ->
-        let l = List.filter (fun s -> s <> "") & Stre.nsplitc s ' ' in
-        let l = List.dropwhile (fun s -> is_digit s.[0]) l in 
-        let l = List.dropwhile (fun s -> not (is_digit s.[0])) l in
-        let s = htmldecode (List.hd l) in
+        let s = 
+        Stre.nsplitc (decode s) ' ' >> 
+        List.filter (fun s -> s <> "") >>
+        List.dropwhile (fun s -> is_digit s.[0]) >>
+        List.dropwhile (fun s -> not (is_digit s.[0])) >>
+        List.hd
+        in
         total := extract_all_digits s
       | _ -> Exn.fail "no text in sb_count"
     with exn -> Exn.fail "bad sb_count : %s" (Exn.str exn) end;
@@ -379,7 +384,7 @@ end (* Google *)
       begin try
         stream_next (tag "h3") s;
         let href = match stream_get_next (tag "a") s with
-        | Tag (_,l) -> List.assoc "href" l
+        | Tag (_,l) -> List.assoc "href" l >> decode
         | _ -> assert false in
         let h = stream_extract_till (Close "h3") s in
         let _ = stream_skip_till (Tag ("p",[])) s in
@@ -420,7 +425,7 @@ end (* Google *)
         else
           Exn.fail "expected <p> or <cite>"
         in
-        let href = String.concat "" ("http://" :: List.map (function HtmlStream.Text s -> String.lowercase s | _ -> "") u) in
+        let href = make_url u in
         ads := (href,None,make_text h,make_text t) :: !ads;
         done
       with exn -> log #debug ~exn "skipped search result" end;
