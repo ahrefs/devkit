@@ -42,5 +42,6 @@ type t
 val create : int -> t
 val status : t -> string
 val put : t -> (unit -> unit) -> unit
+val wait_blocked : ?n:int -> t -> unit
 end
 

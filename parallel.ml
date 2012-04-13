@@ -235,10 +235,11 @@ module ThreadPool = struct
   type t = { q : (unit -> unit) Mtq.t;
              total : int;
              free : int ref;
+             mutable blocked : bool;
              }
 
   let create n =
-    let t = { q = Mtq.create (); total = n; free = ref n; } in
+    let t = { q = Mtq.create (); total = n; free = ref n; blocked = false;} in
     let worker _i =
       while true do
         let f = Mtq.get t.q in
@@ -255,7 +256,19 @@ module ThreadPool = struct
   let status t = Printf.sprintf "queue %d threads %d of %d" 
                     (Mtq.length t.q) (atomic_get t.free) t.total
 
-  let put t = Mtq.put t.q
+  let put t = while t.blocked do Nix.sleep 0.05 done; Mtq.put t.q
+
+  let wait_blocked ?(n=0) t = while t.blocked do Nix.sleep 0.05 done;(* Wait for unblock *)
+    t.blocked <- true;
+    assert(n>=0);
+    let i = ref 1 in
+    while Mtq.length t.q + (t.total - atomic_get t.free)> n do (* Notice that some workers can be launched! *)
+      if !i = 10 || !i mod 100 = 0 then
+        log #info "Thread Pool - waiting block : %s" (status t);
+      Nix.sleep 0.05;
+      incr i
+    done;
+    t.blocked <- false
 
 end
 
