@@ -109,7 +109,7 @@ let make_url l = String.concat "" ("http://" :: List.map (function HtmlStream.Te
 module Google = struct
 
 let get_results ?(debug=false) ~parse_url s' =
-  let element s = Option.map_default show "EOS!" (Stream.peek s) in
+  let element s = Option.map_default show_raw "EOS!" (Stream.peek s) in
   let s = parse & Stream.of_string s' in
   let total = ref 0 in
   begin try
@@ -199,7 +199,7 @@ let get_ads1 ~parse_url s =
     begin try
       let () = match stream_get_next (tag "div") s with
       | Tag (_, ("class",x) :: _) when x = Raw.inj "vsc vsra" || x = Raw.inj "vsc vsta" -> ()
-      | x -> Exn.fail "test #1 : %s" (show x)
+      | x -> Exn.fail "test #1 : %s" (show_raw x)
       in
       pt "div";
       stream_find ~limit:2 (tag "h3") s;

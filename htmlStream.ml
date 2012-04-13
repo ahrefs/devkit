@@ -95,31 +95,31 @@ let parse s = try Parser.parse s with exn -> log #warn ~exn "HtmlStream.parse"; 
 
 (* open Printf *)
 
+(*
 let quote =
   let rex = Pcre.regexp "['\"&]" in
   (fun s -> Pcre.substitute ~rex ~subst:(function "'" -> "&apos;" | "\"" -> "&quot;" | "&" -> "&amp;" | _ -> assert false) s)
+*)
 
-let show c elem =
+let show_raw c elem =
   match elem with
   | Tag (name,attrs) ->
     wrapped_output (IO.output_string ()) begin fun out ->
       IO.printf out "<%s" name;
-      List.iter (fun (k,v) -> IO.printf out " %s=%c%s%c" k c (quote (Raw.proj v)) c) attrs;
+      List.iter (fun (k,v) -> IO.printf out " %s=%c%s%c" k c (Raw.proj v) c) attrs;
       IO.printf out ">"
     end
   | Text t -> Raw.proj t
   | Close name -> sprintf "</%s>" name
 
-let show' = show '\''
-let show = show '"'
+let show_raw' = show_raw '\''
+let show_raw = show_raw '"'
 
 let rec show_stream = parser
   | [< 'c; t >] -> Printf.printf "-> %c\n%!" c; [< 'c; show_stream t >]
   | [< >] -> [< >] 
 
-let dump = Stream.iter (print_endline $ show) $ parse $ 
-(*   show_stream $ *)
-  Stream.of_string
+let dump_debug = Stream.iter (print_endline $ show_raw) $ parse $ Stream.of_string
 
 let tag name ?(a=[]) = function
   | Tag (name',attrs) when name = name' ->

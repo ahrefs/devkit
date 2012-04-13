@@ -36,7 +36,7 @@ let test_htmlstream () =
   let module HS = HtmlStream in
   let (==>) s s' = 
   try
-    let s'' = Control.wrapped_output (IO.output_string ()) (fun io -> ExtStream.iter (IO.nwrite io $ HS.show') (HS.parse (ExtStream.of_string s))) in
+    let s'' = Control.wrapped_output (IO.output_string ()) (fun io -> ExtStream.iter (IO.nwrite io $ HS.show_raw') (HS.parse (ExtStream.of_string s))) in
     if s' = s'' then () else
       failwith (sprintf "%s ==> %s (got %s)" s s' s'')
   with 
@@ -49,13 +49,15 @@ let test_htmlstream () =
   "<q>" ==> "<q>";
   "<q><b>dsad</b></Q><Br/><a a a>" ==> "<q><b>dsad</b></q><br><a a='' a=''>";
   "<q x= a=2><q x a=2><q a=2/><q AAaa=2 />" ==> "<q x='a'><q x='' a='2'><q a='2'><q aaaa='2'>";
-  "dAs<b a=\"d'dd\" b='q&q\"qq'></q a=2></><a'a>" ==> "dAs<b a='d&apos;dd' b='q&amp;q&quot;qq'></q></><a>";
+  "dAs<b a=\"d'dd\" b='q&q\"qq'></q a=2></><a'a>" ==> "dAs<b a='d'dd' b='q&q\"qq'></q></><a>";
   "dsad<v" ==> "dsad<v>";
   "dsa" ==> "dsa";
   "" ==> "";
   "<" ==> "<>";
   "<a q=>" ==> "<a q=''>";
   "<a q='>" ==> "<a q='>'>";
+  "<a b='&amp;'>&amp;</a>" ==> "<a b='&amp;'>&amp;</a>";
+  "<a b='&'>&</a>" ==> "<a b='&'>&</a>";
   ()
 
 let test_iequal () =
