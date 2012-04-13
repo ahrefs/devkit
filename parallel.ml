@@ -73,15 +73,17 @@ let worker (execute : task -> result) =
       let input = Unix.in_channel_of_descr child_read in
       begin try
       while true do
-(*         print_endline "read"; *)
+(*         log #info "wait"; *)
         let (r,_,e) = Nix.restart (fun () -> Unix.select [child_read] [] [child_read] (-1.)) () in
         assert (e=[]);
         assert (r<>[]);
-(*         print_endline "will read"; *)
+(*         log #info "wait done, read"; *)
         let v = (Marshal.from_channel input : task) in
-(*         print_endline "read done"; *)
+(*         log #info "read done, execute"; *)
         let r = execute v in
-        Marshal.to_channel output (r : result) []; flush output
+(*         log #info "execute done, write"; *)
+        Marshal.to_channel output (r : result) []; flush output;
+(*         log #info "write done" *)
       done
       with e -> log #error "Paraller.worker exception %s\n%s" (Exn.str e) (Printexc.get_backtrace ())
       end;
@@ -94,9 +96,9 @@ let worker (execute : task -> result) =
       let input = Unix.in_channel_of_descr main_read in
       input,output,pid
 
-type t = (in_channel * out_channel * int) list * (task -> result) * bool ref
+type t = (in_channel * out_channel * int) list ref * (task -> result) * bool ref
 
-let create f n = let l = ref [] in for i = 1 to n do l := worker f :: !l done; !l, f, ref true
+let create f n = let l = ref [] in for i = 1 to n do l := worker f :: !l done; l, f, ref true
 
 open Unix
 
@@ -123,50 +125,65 @@ let stop ?wait (l,_,alive) =
     | Some 0, l -> log #info "Timeouted, killing with SIGKILL"; hard_kill l
     | _, l -> Nix.sleep 1.; reap_loop (Option.map pred timeout) l
   in
-  log #info "Stopping %d workers" (List.length l);
+  log #info "Stopping %d workers" (List.length !l);
   alive := false;
   let l = List.map (fun (cin,cout,pid) ->
     close_in_noerr cin;
     close_out_noerr cout;
     begin try kill pid Sys.sigterm with exn -> log #warn ~exn "Worker PID %d lost (SIGTERM)" pid end;
-    pid) l
+    pid) !l
   in
   reap_loop wait l
 
 let perform (l,execute,alive) e f =
-    match l with
+    match !l with
     | [] -> Enum.iter (fun x -> f (execute x)) e (* no workers *)
-    | l ->
+    | _ ->
       let workers = ref 0 in
       List.iter (fun (i,o,p) ->
         match Enum.get e with
         | None -> ()
-        | Some x -> incr workers; Marshal.to_channel o ( x : task) []; flush o) l;
+        | Some x -> incr workers; Marshal.to_channel o ( x : task) []; flush o) !l;
 (*       Printf.printf "workers %u\n%!" !workers; *)
-      let loop () =
       while !workers > 0 && !alive do
-        let fdl = List.map (fun (i,_,_) -> Unix.descr_of_in_channel i) l in
-        let (r,_,err) = Unix.select fdl [] fdl (-1.) in
-(*         print_endline "select done"; *)
+        let fdl = List.map (fun (i,_,_) -> Unix.descr_of_in_channel i) !l in
+(*         log #info "wait"; *)
+        let (r,_,err) = Nix.restart (fun () -> Unix.select fdl [] fdl (-1.)) () in
         assert (err = []);
-        let channels = List.map (fun fd -> let (i,o,_) = List.find (fun (i,_,_) -> Unix.descr_of_in_channel i = fd) l in i,o) r in
+(*         log #info "wait done"; *)
+        let channels = List.map (fun fd -> let (i,o,_) = List.find (fun (i,_,_) -> Unix.descr_of_in_channel i = fd) !l in i,o) r in
+(*         log #info "channels done"; *)
         let answers = List.filter_map (fun (r,w) ->
           let task = Enum.get e in
           try 
-            let answer = (Marshal.from_channel r : result) in
+(*             log #info "read"; *)
+            match try Some (Marshal.from_channel r : result) with End_of_file -> None with
+            | None ->
+              log #warn "child gone, what now?";
+              decr workers;
+              let fd = Unix.descr_of_in_channel r in
+              (* close and forget pipes of a dead child, do not reap zombie so that premature exit is visible in process list *)
+              l := List.filter (fun (i,o,_) -> 
+                if Unix.descr_of_in_channel i = fd
+                then begin close_in_noerr i; close_out_noerr o; false end
+                else true) !l;
+              None
+            | Some answer ->
+(*             log #info "read done"; *)
             begin match task with
             | None -> decr workers
-            | Some x -> Marshal.to_channel w (x : task) []; flush w
+            | Some x ->
+(*               log #info "write"; *)
+              Marshal.to_channel w (x : task) []; flush w;
+(*               log #info "write done"; *)
             end;
             Some answer
           with 
-          | exn -> log #warn ~exn "perform"; decr workers; None) 
+          | exn -> log #warn ~exn "perform"; decr workers; None)
         channels 
         in
-        List.iter f answers
+        List.iter f answers;
       done
-      in
-      Nix.restart loop ()
 
 end
 
