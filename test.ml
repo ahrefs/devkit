@@ -103,12 +103,25 @@ let test_split_by_words () =
   f ("a" ^ String.make 10240 ' ' ^ "b") ["a"; "b"];
   ()
 
+let test_threadpool () =
+  let module TP = Parallel.ThreadPool in
+  let pool = TP.create 3 in
+  let i = ref 0 in
+  for j = 1 to 100 do
+    let worker _k () = incr i; Nix.sleep 0.2 in
+    TP.put pool (worker j);
+  done;
+  TP.wait_blocked pool;
+  assert_equal !i 100;
+  ()
+
 let tests () = 
   run_test_tt ("devkit" >::: [
     "HtmlStream" >:: test_htmlstream;
     "Stre.ieuqual" >:: test_iequal;
     "Cache.SizeLimited" >:: test_lim_cache;
     "split by words" >:: test_split_by_words;
+    "ThreadPool test" >:: test_threadpool;
   ]) >> ignore
 
 let () =
