@@ -106,13 +106,14 @@ let test_split_by_words () =
 let test_threadpool () =
   let module TP = Parallel.ThreadPool in
   let pool = TP.create 3 in
+  TP.wait_blocked pool;
   let i = ref 0 in
-  for j = 1 to 100 do
+  for j = 1 to 10 do
     let worker _k () = incr i; Nix.sleep 0.2 in
     TP.put pool (worker j);
   done;
   TP.wait_blocked pool;
-  assert_equal !i 100;
+  assert_equal !i 10;
   ()
 
 let tests () = 
