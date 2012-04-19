@@ -272,7 +272,7 @@ module ThreadPool = struct
       assert(n>=0);
       let i = ref 1 in
       while Mtq.length t.q + (t.total - atomic_get t.free)> n do (* Notice that some workers can be launched! *)
-        if !i = 10 || !i mod 100 = 0 then
+        if !i = 100 || !i mod 1000 = 0 then
           log #info "Thread Pool - waiting block : %s" (status t);
         Nix.sleep 0.05;
         incr i
