@@ -1,18 +1,14 @@
-true: annot, debug, thread
-<*.ml{,i}>: use_extLib
-"web.ml": use_pcre, use_netstring, use_netsys, use_curl, camlp4o
-"exn.ml": use_curl, use_pcre
-"htmlStream.ml": use_pcre, camlp4o
-"nix.ml": use_netsys
-"netcgi_ext.ml": use_netcgi, use_netstring
-<gzip_*.ml>: use_zip
-"varz_html.ml" or "netcgi_ext.ml": use_xhtml
-"stre.ml": camlp4o, use_pcre
-"httpev.ml": use_liboevent, camlp4o, pa_macro, use_pcre, use_netstring, use_xhtml
-"async.ml" or "nix.ml": use_liboevent
-<*.{top,byte,native}>: use_extLib, use_pcre, use_netstring, use_netcgi, use_xhtml, use_netsys, use_zip, use_unix, use_liboevent, use_curl, use_devkit
-#use_core, use_sexplib, use_bigarray, use_nums, use_bin_prot
-<test.*>: use_oUnit
-<netstring_pcre.ml*>: use_pcre
-"php_serialize.ml": camlp4o
-"pa_openin.ml": camlp4of
+true: annot, debug, thread, package(threads)
+<*.ml{,i}>: package(extlib), package(pcre)
+"web.ml": package(netstring), package(curl)
+"exn.ml": package(curl)
+"htmlStream.ml" or "stre.ml" or "php_serialize.ml" or "web.ml": camlp4o
+"nix.ml" or "files.ml" or "daemon.ml": package(extunix)
+"netcgi_ext.ml": package(netcgi2)
+<gzip_*.ml>: package(zip)
+"varz_html.ml" or "netcgi_ext.ml" or "httpev.ml": package(ocsigen_xhtml)
+"httpev.ml": package(event), package(netstring), camlp4o, pa_macro
+"async.ml" or "nix.ml": package(event)
+<*.{top,byte,native}>: package(extlib), package(pcre), package(zip), package(event), package(curl), package(netstring),\
+  package(extunix), package(netcgi2), package(ocsigen_xhtml)
+<test.*>: package(oUnit)

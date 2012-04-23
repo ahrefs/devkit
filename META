@@ -1,13 +1,6 @@
 name="devkit"
 version="svn"
 description="devkit"
-requires="extlib,pcre,netstring,netsys,netcgi2,zip,ocsigen_xhtml,unix,threads,event,curl"
+requires="extlib,pcre,netstring,netsys,netcgi2,zip,ocsigen_xhtml,unix,threads,event,curl,extunix"
 archive(mt,byte)="devkit.cma"
 archive(mt,native)="devkit.cmxa"
-
-package "openin" (
-  requires = "camlp4"
-  description = "Syntax extension: pa_openin"
-  archive(syntax, preprocessor) = "pa_openin.cmo"
-  archive(syntax, toploop) = "pa_openin.cmo"
-)

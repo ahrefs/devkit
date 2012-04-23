@@ -140,7 +140,7 @@ let open_proc cmd input output toclose =
   |  0 -> if input <> stdin then begin dup2 input stdin; close input end;
           if output <> stdout then begin dup2 output stdout; close output end;
           if not cloexec then List.iter close toclose;
-          Netsys.setpgid 0 0; (* separate process group *)
+          ExtUnix.Specific.setpgid 0 0; (* separate process group *)
           begin try execv "/bin/sh" [| "/bin/sh"; "-c"; cmd |]
           with _ -> exit 127
           end
@@ -246,8 +246,6 @@ let find_mount path =
   assert (bound !mount <> "");
   !mount
 
-let fsync = Files.fsync
-
 module Mallinfo = struct
 
 type t = {
@@ -269,13 +267,5 @@ let to_string v =
 
 end
 
-external mallinfo : unit -> Mallinfo.t = "caml_devkit_mallinfo"
-
 let sleep = restart Thread.delay
-
-external malloc_stats : unit -> unit = "caml_malloc_stats"
-external malloc_info : unit -> string = "caml_malloc_info"
-
-external setreuid : int -> int -> unit = "caml_devkit_setreuid"
-external setregid : int -> int -> unit = "caml_devkit_setregid"
 

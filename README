@@ -22,4 +22,5 @@ Other
 
 ocaml-event git://repo.or.cz/ocaml-event.git
 ocurl git://repo.or.cz/ocurl.git branch event
+extunix http://git.ocamlcore.org/extunix/extunix.git
 

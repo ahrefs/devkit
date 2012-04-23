@@ -1,4 +1,6 @@
 
+module U = ExtUnix.Specific
+
 let log = Log.from "daemon"
 
 let logfile = ref None
@@ -22,13 +24,13 @@ let manage () =
   | None -> ()
   | Some pw ->
     let uid = pw.Unix.pw_uid and gid = pw.Unix.pw_gid in
-    Nix.setreuid uid uid;
-    Nix.setregid gid gid;
+    U.setreuid uid uid;
+    U.setregid gid gid;
   end;
   Log.reopen !logfile; (* immediately after fork *)
   Option.may Nix.manage_pidfile !pidfile; (* after fork! *)
   log #info "GC settings: %s" (Action.gc_settings ());
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
   Sys.set_signal Sys.sigusr1 (Sys.Signal_handle (fun _ -> Log.reopen !logfile));
-  Sys.set_signal Sys.sigusr2 (Sys.Signal_handle (fun _ -> Nix.malloc_stats (); Action.gc_show "compact" Gc.compact ()));
+  Sys.set_signal Sys.sigusr2 (Sys.Signal_handle (fun _ -> U.malloc_stats (); Action.gc_show "compact" Gc.compact ()));
 

@@ -5,7 +5,7 @@ INSTALL_FILES=$(filter-out \
   $(wildcard _build/myocamlbuild*), \
   $(wildcard _build/*.cmx _build/*.cmi _build/*.mli _build/*.cma _build/*.cmxa _build/pa_openin.cmo \
 						 _build/*.lib _build/*.a _build/*.dll _build/*.so))
-OCAMLBUILD=ocamlbuild -no-links -j 0
+OCAMLBUILD=ocamlbuild -use-ocamlfind -no-links -j 0
 
 build:
 		$(OCAMLBUILD) devkit.otarget

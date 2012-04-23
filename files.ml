@@ -59,8 +59,6 @@ let () =
   iter_files "/etc" (fun s _ -> print_endline s)
 *)
 
-external fsync : Unix.file_descr -> unit = "caml_devkit_fsync"
-
 (** FIXME windows *)
 let save_as name ?(mode=0o644) f =
   (* not using make_temp_file cause same dir is needed for atomic rename *)
@@ -71,7 +69,7 @@ let save_as name ?(mode=0o644) f =
 (*       Unix.fchmod fd mode; *)
       f ch;
       flush ch;
-      fsync fd;
+      ExtUnix.Specific.fsync fd;
       Unix.rename temp name
     with
       exn -> Exn.suppress Unix.unlink temp; raise exn
