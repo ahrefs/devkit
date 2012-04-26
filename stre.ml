@@ -49,6 +49,8 @@ let iequal s1 s2 =
   done; true
   with Not_found -> false
 
+let equal (s1:string) s2 = s1 = s2
+
 (** sequence of matches *)
 let enum_matches rex s =
   try
