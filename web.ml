@@ -368,16 +368,22 @@ end (* Google *)
       stream_find (tag "span" ~a:["class","sb_count"]) s;
       match Stream.next s with
       | Text s ->
-        let s = 
-        Stre.nsplitc (decode s) ' ' >> 
+        let l = (* either "N results" or "K of N results" *)
+        Stre.nsplitc (decode s) ' ' >>
+        List.map String.strip >>
         List.filter (fun s -> s <> "") >>
-        List.dropwhile (fun s -> is_digit s.[0]) >>
-        List.dropwhile (fun s -> not (is_digit s.[0])) >>
-        List.hd
+        List.rev >>
+        List.dropwhile (fun s -> not (is_digit s.[0]))
         in
-        total := extract_all_digits s
+        begin match l with
+        | [] -> Exn.fail "no digits"
+        | s::_ -> total := extract_all_digits s
+        end
       | _ -> Exn.fail "no text in sb_count"
-    with exn -> Exn.fail "bad sb_count : %s" (Exn.str exn) end;
+    with exn ->
+      let msg = match exn with Failure s -> s | exn -> Exn.str exn in
+      Exn.fail "bad sb_count : %s" msg
+    end;
     let res = ref [] in
     let rec loop () =
       stream_find (tag "div" ~a:["class","sb_tlst"]) s;
