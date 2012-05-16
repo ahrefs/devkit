@@ -66,3 +66,9 @@ let arg_str name ?desc var =
   sprintf "%s (default: %s)" (describe "string" name desc) !var
 *)
 
+let two_strings k =
+  (let old = ref "" in
+    Arg.Tuple [
+       Arg.String (fun x -> old := x);
+       Arg.String (fun s -> k !old s)
+      ])
