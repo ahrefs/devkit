@@ -39,17 +39,30 @@ let extract rex str =
   with
     _ -> None
 
-(** ascii case-insensitive equality *)
-let iequal s1 s2 =
-  if String.length s1 <> String.length s2 then false else
+let istarts_with s ?(pos=0) prefix =
+  if pos < 0 || pos > String.length s then invalid_arg "Stre.istarts_with";
+  if String.length s < pos + String.length prefix then false else
   try
-  for i = 0 to String.length s1 - 1 do
-    let c1 = s1.[i] and c2 = s2.[i] in
+  for i = 0 to String.length prefix - 1 do
+    let c1 = s.[pos + i] and c2 = prefix.[i] in
     if c1 <> c2 && Char.lowercase c1 <> Char.lowercase c2 then raise Not_found
   done; true
   with Not_found -> false
 
+(** ascii case-insensitive equality *)
+let iequal s1 s2 = String.length s1 = String.length s2 && istarts_with s1 s2
+
 let equal (s1:string) s2 = s1 = s2
+
+(** ascii case-insensitive substring *)
+let iexists s sub =
+  if String.length s < String.length sub then false else
+  if sub = "" then true else
+  try
+  for i = 0 to String.length s - String.length sub do
+    if istarts_with s ~pos:i sub then raise Exit;
+  done; false
+  with Exit -> true
 
 (** sequence of matches *)
 let enum_matches rex s =

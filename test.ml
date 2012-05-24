@@ -73,6 +73,32 @@ let test_iequal () =
   fail (Stre.iequal "hello1" "hello!");
   ()
 
+let test_iexists () =
+  let f = Stre.iexists in
+  let t = let n = ref 0 in fun x -> assert_bool (sprintf "testcase %d" !n) x; incr n in
+  let fail = t $ not in
+  t (f "xxxxdSaDAS" "dsadas");
+  t (f "dSaDASxxxx" "dsadas");
+  t (f "dSaDAS" "dsadas");
+  t (f "xxxxdSaDASxxxx" "dsadas");
+  t (f "xxxxdSaDAS" "DsAdAs");
+  t (f "dSaDAS" "DsAdAs");
+  t (f "xxxxdSaDASxxxx" "DsAdAs");
+  t (f "dSaDASxxxx" "DsAdAs");
+  t (f "xxxxdSaDAS" "");
+  t (f "" "");
+  t (f "12;dsaпривет" "привет");
+  t (f "12;dsaпривет__324" "привет");
+  fail (f "" "DsAdAs");
+  fail (f "hello" "hellu");
+  fail (f "hello" "hello!");
+  fail (f "xxxxhello" "hello!");
+  fail (f "helloxxx" "hello!");
+  fail (f "hellox!helloXxx" "hello!");
+  fail (f "" "x");
+  fail (f "xyXZZx!x_" "xx");
+  ()
+
 let test_lim_cache () =
   let module T = Cache.SizeLimited in
   let c = T.create 100 in
@@ -120,6 +146,7 @@ let tests () =
   run_test_tt ("devkit" >::: [
     "HtmlStream" >:: test_htmlstream;
     "Stre.ieuqual" >:: test_iequal;
+    "Stre.iexists" >:: test_iexists;
     "Cache.SizeLimited" >:: test_lim_cache;
     "split by words" >:: test_split_by_words;
     "ThreadPool test" >:: test_threadpool;
