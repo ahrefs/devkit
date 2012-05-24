@@ -142,6 +142,44 @@ let test_threadpool () =
   assert_equal !i 10;
   ()
 
+let test_parse_ipv4 () =
+  let t ip s =
+    assert_equal ~printer:Int32.to_string ip (Network.ipv4_of_string_null s);
+    assert_equal ~printer:id (Network.string_of_ipv4 ip) s
+  in
+  t 0l "0.0.0.0";
+  t 1l "0.0.0.1";
+  t 16777216l "1.0.0.0";
+  t 2130706433l "127.0.0.1";
+  t 16777343l "1.0.0.127";
+  t 0xFFFFFFFFl "255.255.255.255";
+  t 257l "0.0.1.1"
+
+let test_match_ipv4 () =
+  let t ip mask ok =
+    try
+      assert_equal ok (Network.ipv4_matches (Network.ipv4_of_string_null ip) (Network.cidr_of_string_exn mask))
+    with
+      _ -> assert_failure (Printf.sprintf "%s %s %B" ip mask ok)
+  in
+  t "127.0.0.1" "127.0.0.0/8" true;
+  t "127.0.1.1" "127.0.0.0/8" true;
+  t "128.0.0.1" "127.0.0.0/8" false;
+  t "192.168.0.1" "192.168.0.0/16" true;
+  t "192.168.1.0" "192.168.0.0/16" true;
+  t "192.169.0.1" "192.168.0.0/16" false;
+  t "0.0.0.0" "0.0.0.0/8" true;
+  t "0.123.45.67" "0.0.0.0/8" true;
+  t "10.0.0.1" "0.0.0.0/8" false;
+  t "172.16.0.1" "172.16.0.0/12" true;
+  t "172.20.10.1" "172.16.0.0/12" true;
+  t "172.30.0.1" "172.16.0.0/12" true;
+  t "172.32.0.1" "172.16.0.0/12" false;
+  t "172.15.0.1" "172.16.0.0/12" false;
+  t "172.1.0.1" "172.16.0.0/12" false;
+  t "255.255.255.255" "255.255.255.255/32" true;
+  t "255.255.255.254" "255.255.255.255/32" false
+
 let tests () = 
   run_test_tt ("devkit" >::: [
     "HtmlStream" >:: test_htmlstream;
@@ -150,6 +188,8 @@ let tests () =
     "Cache.SizeLimited" >:: test_lim_cache;
     "split by words" >:: test_split_by_words;
     "ThreadPool test" >:: test_threadpool;
+    "parse ipv4" >:: test_parse_ipv4;
+    "match ipv4" >:: test_match_ipv4;
   ]) >> ignore
 
 let () =

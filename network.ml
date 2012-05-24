@@ -1,5 +1,10 @@
 open Prelude
 
+type ipv4 = int32
+type ipv4_cidr = int32 * int32
+
+let ipv4_null = 0l
+
 let bytes_of_ipv4 addr =
   let a = Int32.to_int & Int32.shift_right_logical (Int32.logand 0xFF000000l addr) 24 in
   let b = Int32.to_int & Int32.shift_right_logical (Int32.logand 0x00FF0000l addr) 16 in
@@ -11,26 +16,13 @@ let string_of_ipv4 addr =
   let (a,b,c,d) = bytes_of_ipv4 addr in
   Printf.sprintf "%u.%u.%u.%u" a b c d
 
-let make_ip =
-  let byte cout s =
-    let x = int_of_string s in
-    if x >= 0 && x < 256 then 
-      IO.write_byte cout x 
-    else 
-      Exn.fail "ipv4_of_string: bad octet in %s" s
-  in
-  fun a b c d ->
-    let (cin,cout) = IO.pipe () in
-    byte cout d;
-    byte cout c;
-    byte cout b;
-    byte cout a;
-    IO.close_out cout;
-    let ip = IO.read_real_i32 cin in
-    IO.close_in cin;
-    ip
-
-let ipv4_of_string_exn s = Scanf.sscanf s "%3[0-9].%3[0-9].%3[0-9].%3[0-9]%!" make_ip
+(*
+1_500_000
+   scanf : allocated     73.0GB, heap         0B, collection 0 979 37360, elapsed 43 secs, 23056.45/sec : ok
+ocamllex : allocated     11.2GB, heap         0B, collection 0 33 5718, elapsed 17 secs, 57447.94/sec : ok
+   ragel : allocated      6.5GB, heap         0B, collection 0 0 3319, elapsed 8.07 secs, 123908.12/sec : ok
+*)
+let ipv4_of_string_exn = Devkit_ragel.parse_ipv4
 
 let cidr_of_string_exn s =
   Scanf.sscanf s "%s@/%u%!" (fun ip len ->
@@ -42,6 +34,23 @@ let ipv4_matches ip (prefix, mask) = Int32.logand ip mask = prefix
 
 let ipv4_of_string_null s = try ipv4_of_string_exn s with _ -> 0l
 
-let is_ipv4 s = 0l <> ipv4_of_string_null s
+let is_ipv4 = Devkit_ragel.is_ipv4
 
+let special_cidr = List.map cidr_of_string_exn [
+  "0.0.0.0/8"; (*	Current network (only valid as source address)	RFC 1700 *)
+  "10.0.0.0/8"; (* Private network	RFC 1918 *)
+  "127.0.0.0/8"; (* Loopback	RFC 5735 *)
+  "169.254.0.0/16"; (* Link-Local	RFC 3927 *)
+  "172.16.0.0/12"; (* Private network	RFC 1918 *)
+  "192.0.0.0/24"; (* Reserved (IANA)	RFC 5735 *)
+  "192.0.2.0/24"; (* TEST-NET-1, Documentation and example code	RFC 5735 *)
+  "192.88.99.0/24"; (* IPv6 to IPv4 relay	RFC 3068 *)
+  "192.168.0.0/16"; (* Private network	RFC 1918 *)
+  "198.18.0.0/15"; (* Network benchmark tests	RFC 2544 *)
+  "198.51.100.0/24"; (* TEST-NET-2, Documentation and examples	RFC 5737 *)
+  "203.0.113.0/24"; (* TEST-NET-3, Documentation and examples	RFC 5737 *)
+  "224.0.0.0/4"; (* Multicasts (former Class D network)	RFC 3171 *)
+  "240.0.0.0/4"; (* Reserved (former Class E network)	RFC 1700 *)
+  "255.255.255.255/32"; (* Broadcast	RFC 919 *)
+]
 

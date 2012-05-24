@@ -29,3 +29,4 @@ Php_serialize
 Daemon
 MVar
 Network
+Devkit_ragel
