@@ -11,14 +11,12 @@ let split rex str = match Pcre.split ~rex str with ""::l -> l | l -> l
 let nsplitc str sep =
 	if str = "" then []
 	else (
-		let rec nsplit p =
-			try
-        let p2 = String.index_from str p sep in
-				String.sub str p (p2 - p) :: nsplit (p2 + 1)
-			with
-				Not_found -> [String.sub str p (String.length str - p)]
+		let rec nsplit acc p =
+      match try Some (String.index_from str p sep) with Not_found -> None with
+      | Some p2 -> nsplit (String.sub str p (p2 - p) :: acc) (p2 + 1)
+      | None -> List.rev (String.sub str p (String.length str - p) :: acc)
 		in
-		nsplit 0
+		nsplit [] 0
 	)
 
 (** remove prefix from string if present *)
