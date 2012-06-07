@@ -9,14 +9,6 @@ let default def f x = try f x with _ -> def
 let suppress f x = try f x with _ -> ()
 let map f x = try `Ok (f x) with exn -> `Exn exn
 
-let fail fmt = ksprintf failwith fmt
-
-(*
-let set_printer, to_string = 
-  let printer = ref Printexc.to_string in
-  (fun f -> printer := f), (fun e -> !printer e)
-*)
-
 let to_string = function
   | Unix.Unix_error (e,f,s) -> sprintf "Unix_error %s(%s) %s" f s (Unix.error_message e)
   | Xmlm.Error ((p1,p2),e) -> sprintf "Xmlm.Error((%u,%u),%s)" p1 p2 (Xmlm.error_message e)
@@ -36,12 +28,7 @@ let to_string = function
 
 let str = to_string
 
-(*
-(** [log_try f x] logs and reraises any exception raised by [f x] *)
-let log_try ?name f x = 
-  try f x with e -> log_s e (Option.default "Exn.log_try" name); raise e
-(** Apply [f x], exception (if any) is logged and suppressed. *)
-let log_catch ?name f x =
-  try f x with e -> log_s e (Option.default "Exn.log_catch" name)
-*)
+let fail ?exn fmt =
+  let fails s = match exn with None -> failwith s | Some exn -> failwith (s ^ " : " ^ to_string exn) in
+  ksprintf fails fmt
 

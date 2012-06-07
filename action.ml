@@ -55,6 +55,9 @@ let config_lines_exn file =
     Enum.filter (fun s -> s <> "" && s.[0] <> '#') >> List.of_enum
   end
 
+let file_lines_exn file = try file_lines_exn file with exn -> Exn.fail ~exn "file_lines %s" file
+let config_lines_exn file = try config_lines_exn file with exn -> Exn.fail ~exn "config_lines %s" file
+
 let file_lines file = try file_lines_exn file with _ -> []
 let config_lines file = try config_lines_exn file with _ -> []
 

@@ -7,6 +7,8 @@ INSTALL_FILES=$(filter-out \
 						 _build/*.lib _build/*.a _build/*.dll _build/*.so))
 OCAMLBUILD=ocamlbuild -use-ocamlfind -no-links -j 0
 
+target: build
+
 gen: devkit_ragel.ml
 
 %.ml: %.ml.rl

@@ -126,7 +126,7 @@ let get_results ?(debug=false) ~parse_url s' =
       if String.exists s' "Your client does not have permission to get URL" then
         Exn.fail "blocked"
       else
-        Exn.fail "results count failed : %s" (Exn.str exn)
+        Exn.fail ~exn "results count failed"
   end;
   let acc = ref [] in
   let rec loop () =
@@ -141,7 +141,7 @@ let get_results ?(debug=false) ~parse_url s' =
       | _ -> assert false in
       if debug then log #info "href %s" href;
       let href = if String.starts_with href "/url?" then 
-          try List.assoc "q" (url_get_args href) with exn -> Exn.fail "url?q= : %s" (Exn.str exn)
+          try List.assoc "q" (url_get_args href) with exn -> Exn.fail ~exn "url?q="
         else
           href
       in
