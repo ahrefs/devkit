@@ -48,10 +48,18 @@ let file_lines_exn file =
     Std.input_lines ch >> List.of_enum
   end
 
-let hashtbl_find h f k =
-  try Hashtbl.find h k with Not_found -> let v = f () in Hashtbl.replace h k v; v
+(** read lines from file skipping empty lines and comments (lines starting with '#') *)
+let config_lines_exn file =
+  Control.with_open_in_txt file begin fun ch ->
+    Std.input_lines ch >> Enum.map String.strip >>
+    Enum.filter (fun s -> s <> "" && s.[0] <> '#') >> List.of_enum
+  end
 
 let file_lines file = try file_lines_exn file with _ -> []
+let config_lines file = try config_lines_exn file with _ -> []
+
+let hashtbl_find h f k =
+  try Hashtbl.find h k with Not_found -> let v = f () in Hashtbl.replace h k v; v
 
 (** array must be sorted *)
 let binary_search arr cmp x =
