@@ -57,6 +57,13 @@ let read_available ~limit fd =
   in
   loop ()
 
+let show_error = function
+| `Timeout -> "timeout"
+| `EofImm -> "eof (immediate)"
+| `Eof -> "eof (async)"
+| `Exn exn -> Printf.sprintf "exn %s (async)" (Exn.str exn)
+| `ExnImm exn -> Printf.sprintf "exn %s (immediate)" (Exn.str exn)
+
 (** [read_buf buf fd err k] - asynchronously fill [buf] with data from [fd] and call [k buf] when done (buffer is full).
   [fd] should be nonblocking. Call [err] on error (EOF). *)
 let read_buf base ?timeout buf fd err k =
@@ -65,19 +72,19 @@ let read_buf base ?timeout buf fd err k =
     let cur = ref cur in
     setup_simple_event base ?timeout fd [Ev.READ] (fun ev fd flags ->
       match flags with
-      | Ev.TIMEOUT -> Ev.del ev; err ()
+      | Ev.TIMEOUT -> Ev.del ev; err `Timeout !cur
       | Ev.WRITE | Ev.SIGNAL -> assert false
       | Ev.READ ->
       match read_some fd buf !cur (len - !cur) with
-      | End -> Ev.del ev; err ()
-      | Exn exn -> Ev.del ev; err ()
+      | End -> Ev.del ev; err `Eof !cur
+      | Exn exn -> Ev.del ev; err (`Exn exn) !cur
       | Data n -> cur := !cur + n; if !cur = len then begin Ev.del ev; k buf end
       | Block -> assert false
     )
   in
   match read_some fd buf 0 len with
-  | End -> err ()
-  | Exn exn -> err ()
+  | End -> err `EofImm 0
+  | Exn exn -> err (`ExnImm exn) 0
   | Data n when n = len -> k buf
   | Block -> later 0
   | Data n -> later n
