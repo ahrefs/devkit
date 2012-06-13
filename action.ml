@@ -156,18 +156,22 @@ end
 
 let speed n t = float n /. (max t epsilon_float)
 
-let log ?name f x =
+let perform ?name f x =
   let t = new timer in
   try
     Option.may (Log.self #info "Action %S started") name;
     let () = f x in
-    Option.may (fun name -> Log.self #info "Action %S finished (elapsed %s)" name t#get_str) name
+    Option.may (fun name -> Log.self #info "Action %S finished (elapsed %s)" name t#get_str) name;
+    true
   with
     e ->
       let name = Option.map_default (Printf.sprintf " %S") "" name in
       Log.self #error "Action%s aborted with uncaught exception : %s (elapsed %s)" name (Exn.str e) t#get_str;
       let trace = Printexc.get_backtrace () in
-      if trace <> "" then Log.self #error "%s" trace
+      if trace <> "" then Log.self #error "%s" trace;
+      false
+
+let log ?name f x = let (_:bool) = perform ?name f x in ()
 
 let log_thread ?name f x =
   Thread.create (fun () -> log ?name f x) ()
