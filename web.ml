@@ -163,8 +163,8 @@ let get_results ?(debug=false) ~parse_url s' =
         end
         else if tag "div" ~a:["class","s"] x then
           match Stream.peek s with
-          | Some (Text _) -> stream_extract_while (not $ tag "br") s
-          | _ -> []
+          | Some Close _ | None -> []
+          | _ -> stream_extract_while (not $ tag "div") s
         else if tag "span" x then
         begin
           stream_skip (not $ close "span") s;
@@ -265,9 +265,45 @@ let get_ads2 ~parse_url s =
   begin try loop () with Not_found -> () | exn -> log #warn ~exn "Google.get_ads" end;
   Array.of_list & List.rev !acc
 
+let get_ads3 ~parse_url s =
+  let s = parse & Stream.of_string s in
+  let acc = ref [] in
+(*   let pt name = log #info "%s : %s" name (Option.map_default show "END" & Stream.peek s) in *)
+  let rec loop () =
+    stream_find (tag "li" ~a:["class","taf"]) s;
+    begin try
+      stream_find (tag "h3") s;
+      let href = decode & match stream_get_next (tag "a") s with
+      | Tag (_,l) -> List.assoc "href" l
+      | _ -> assert false in
+      let href = if String.starts_with href "/aclk?" then 
+          try List.assoc "adurl" (url_get_args href) with exn -> Exn.fail ~exn "aclk?adurl="
+        else
+          href
+      in
+      if String.starts_with href "/" then Exn.fail "not an absolute url : %s" href;
+      let href = parse_url href in
+      let h = stream_extract_till (Close "h3") s in
+(*
+      stream_find (tag "span" ~a:["class","st"]) s;
+      log #info "class=st found %s" (Option.map_default show "END" & Stream.peek s);
+      let t = stream_extract_till (Close "span") s in
+*)
+      let extract_description () = stream_extract_while (not $ tag "br") s in
+      let t = extract_description () in
+      acc := (href,None,make_text h, make_text t) :: !acc;
+    with exn -> log #debug ~exn "skipped ad" end;
+    loop ()
+  in
+  begin try loop () with Not_found -> () | exn -> log #warn ~exn "Google.get_ads3" end;
+  Array.of_list & List.rev !acc
+
 let get_ads ~parse_url s =
   match get_ads1 ~parse_url s with
-  | [||] -> get_ads2 ~parse_url s
+  | [||] -> (match get_ads2 ~parse_url s with
+             | [||] -> get_ads3 ~parse_url s
+             | x -> x
+            )
   | x -> x
 
 let rex_digits = Pcre.regexp "[0-9]"
