@@ -37,7 +37,7 @@ module Stream = ExtStream
   @return matching element
   @raise Not_found on stream end *)
 let rec stream_get ?(limit=max_int) f = parser
-  | [< 'x when f x; t >] -> x
+  | [< 'x when f x >] -> x
   | [< 'x; t >] -> if limit = 0 then raise Not_found else stream_get ~limit:(limit-1) f t
   | [< >] -> raise Not_found
 
@@ -113,8 +113,17 @@ let get_results ?(debug=false) ~parse_url s' =
   let s = parse & Stream.of_string s' in
   let total = ref 0 in
   begin try
-    stream_find (tag "div" ~a:["id","subform_ctrl"]) s;
-    let h = make_text & stream_extract_till (Tag ("td",[])) s in
+    let rec search = parser
+    | [< 'x when tag "td" x; t >] -> 
+      begin match Stream.peek t with
+      | Some x when tag "div" ~a:["id","subform_ctrl"] x -> Stream.junk t; make_text & stream_extract_till (Tag ("td",[])) t
+      | _ -> search t
+      end
+    | [< 'x when tag "div" ~a:["id","resultStats"] x; t >] -> make_text & stream_extract_till (Close "div") t
+    | [< 'x; t >] -> search t
+    | [< >] -> raise Not_found
+    in
+    let h = search s in
     if debug then log #info "extract total %S" h;
     total := extract_all_digits h;
   with exn ->
