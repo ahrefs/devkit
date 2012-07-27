@@ -317,6 +317,7 @@ let get_ads ~parse_url s =
 
 let rex_digits = Pcre.regexp "[0-9]"
 
+(*
 let language_of_tld = function
 | "com" -> "en"
 | "ca" -> "en"
@@ -346,19 +347,21 @@ let language_of_tld = function
 | "se" -> "sv"
 | "si" -> "sl"
 | s -> Exn.fail "unknown tld %S" s
+*)
 
-let query ~q ?(tld="com") num =
-  let lang = language_of_tld tld in
+type params = { tld:string; lang:string; hl:string; gl:string; }
+
+let query p num q =
   (* disable google calculator *)
   let q = if Pcre.pmatch ~rex:rex_digits q then "+"^q else q in
-  sprintf "http://www.google.%s/search?hl=en&pws=0&safe=off&q=%s&num=%d&lr=lang_%s&as_qdr=all" tld (urlencode q) num lang
+  sprintf "http://www.google.%s/search?hl=%s&gl=%s&pws=0&safe=off&q=%s&num=%d&lr=lang_%s&as_qdr=all&oe=utf-8" p.tld p.hl p.gl (urlencode q) num p.lang
 
 end (* Google *)
 
-  let google tld =
+  let google p =
     let re = Pcre.regexp ~flags:[`CASELESS] "<h3 class=r><a href=\"([^\"]+)\" class=l" in
     { extract = Stre.enum_extract re;
-      request = (fun ?(num=10) q -> Google.query ~q ?tld num);
+      request = (fun ?(num=10) q -> Google.query p num q);
       extract_full = (fun s -> Google.get_results ~parse_url:id s);
     }
 
@@ -505,6 +508,7 @@ end (* Google *)
   let google_blogs = rss_source ~default:50 "http://blogsearch.google.com/blogsearch_feeds?q=%s&num=%u&hl=en&safe=off&output=rss"
   let boardreader = rss_source ~default:50 "http://boardreader.com/rss/%s?extended_search=1&s=time_desc&p=%u&format=RSS2.0"
 
+(*
   let by_name ?lang = function
   | "bing" (* -> bing *)
   | "bing_html" -> bing_html lang
@@ -513,9 +517,11 @@ end (* Google *)
   | "google_blogs" -> google_blogs
   | "boardreader" -> boardreader
   | s -> Exn.fail "unknown search provider : %s" s
+*)
 
 end
 
+(*
 module Search(GET : sig val get : string -> string end) = struct
 
   open Provider
@@ -526,6 +532,7 @@ module Search(GET : sig val get : string -> string end) = struct
   let bing = search bing
 
 end
+*)
 
 let () = Curl.global_init Curl.CURLINIT_GLOBALALL
 

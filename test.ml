@@ -193,8 +193,9 @@ let tests () =
   ]) >> ignore
 
 let () =
+  let google = Web.Provider.(google {Google.hl="en"; gl="US"; tld="com"; lang="en";}) in
   match Array.to_list Sys.argv with
-  | [_;src;"query";query] -> test_search (Web.Provider.by_name src) (`Query query)
-  | [_;src;"file";file] -> test_search (Web.Provider.by_name src) (`File file)
+  | [_;"query";query] -> test_search google (`Query query)
+  | [_;"file";file] -> test_search google (`File file)
   | _ -> tests ()
 
