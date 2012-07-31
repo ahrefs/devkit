@@ -116,7 +116,7 @@ let get_results ?(debug=false) ~parse_url s' =
     let rec search = parser
     | [< 'x when tag "td" x; t >] -> 
       begin match Stream.peek t with
-      | Some x when tag "div" ~a:["id","subform_ctrl"] x -> Stream.junk t; make_text & stream_extract_till (Tag ("td",[])) t
+      | Some x when tag "div" ~a:["id","subform_ctrl"] x -> Stream.junk t; make_text & stream_extract_till (Close "td") t
       | _ -> search t
       end
     | [< 'x when tag "div" ~a:["id","resultStats"] x; t >] -> make_text & stream_extract_till (Close "div") t
