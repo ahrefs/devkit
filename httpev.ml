@@ -88,7 +88,7 @@ let failed reason s =
   | RequestLine -> "RequestLine" | Split -> "split" | Header -> "header" | Length -> "length"
   in
   let lim = 1024 in
-  let s = if String.length s > lim then sprintf "%s [%d bytes more]" (String.slice ~last:lim s) (String.length s - lim) else s in
+  let s = if String.length s > lim then sprintf "%S [%d bytes more]" (String.slice ~last:lim s) (String.length s - lim) else sprintf "%S" s in
   raise (Parse (reason, sprintf "%s : %s" name s))
 
 let parse_http_req req_id data fd (addr,conn) =
@@ -331,6 +331,13 @@ let set_blocking' req =
   req.blocking <- Some io;
   ch
 
+let show_socket_error fd =
+  try 
+    match Unix.getsockopt_int fd Unix.SO_ERROR with
+    | 0 -> ""
+    | n -> sprintf ", socket error %d" n
+  with _ -> ""
+
 let handle_client config status fd conn_info answer =
   let peer = Nix.show_addr (fst conn_info) in
   INC status.total;
@@ -412,6 +419,11 @@ let handle_client config status fd conn_info answer =
     (* FIXME may not read whole request *)
     | `Done data | `Part data ->
       log #debug "read_all: %d bytes from %s" (String.length data) peer;
+      match data with
+      | "" -> (* special case for better error message *)
+        log #warn "parse_http_req from %s (0 bytes%s) : client disconnected" peer (show_socket_error fd);
+        finish status fd None
+      | _ ->
       match parse_http_req req_id data fd conn_info with
       | `Error (Parse (what,msg)) ->
         let error = match what with
@@ -419,10 +431,10 @@ let handle_client config status fd conn_info answer =
         | Method -> `Not_implemented
         | Length -> `Length_required
         in
-        log #warn "parse_http_req from %s : %s" peer msg;
+        log #warn "parse_http_req from %s (%d bytes%s) : %s" peer (String.length data) (show_socket_error fd) msg;
         send_reply None (error,[],"")
       | `Error exn -> 
-        log #warn ~exn "parse_http_req from %s" peer;
+        log #warn ~exn "parse_http_req from %s (%d bytes%s)" peer (String.length data) (show_socket_error fd);
         send_reply None (`Bad_request,[],"")
       | `Ok req ->
         try
