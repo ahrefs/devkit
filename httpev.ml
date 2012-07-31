@@ -340,6 +340,9 @@ let show_socket_error fd =
 
 let handle_client config status fd conn_info answer =
   let peer = Nix.show_addr (fst conn_info) in
+  let show_peer () =
+    sprintf "%s (%s%s)" peer (Time.duration_str (Time.now () -. snd conn_info)) (show_socket_error fd)
+  in
   INC status.total;
   let req_id = status.total in
   INC status.active;
@@ -348,7 +351,7 @@ let handle_client config status fd conn_info answer =
     (*Exn.suppress Ev.del ev;*)
     INC status.errs;
     finish status fd req;
-    log #warn ~exn "handle_client %s %s" msg peer
+    log #warn ~exn "handle_client %s %s" msg (show_peer ())
   in 
   let send_reply req (code,hdrs,body) =
     try
@@ -362,7 +365,7 @@ let handle_client config status fd conn_info answer =
     (* do not transfer body for HEAD requests *)
     let body = match req with Some x when x.meth = `HEAD -> "" | _ -> body in
     log #debug "will answer to %s with %d+%d bytes" 
-      peer
+      (show_peer ())
       (Buffer.length b) 
       (String.length body);
 (*     Buffer.add_string b body; *)
@@ -408,20 +411,20 @@ let handle_client config status fd conn_info answer =
     Ev.del ev; 
     match Async.read_available ~limit:(256*1024) fd with
     | `Limit _ -> 
-      log #info "read_all: request too large from %s" peer;
+      log #info "read_all: request too large from %s" (show_peer ());
       send_reply None (`Request_too_large,[],"request entity too large")
 (*
     | `Part s ->
       log #info "%s" s;
-      log #warn "read_all: received partial request from %s" peer;
+      log #warn "read_all: received partial request from %s" (show_peer ());
       None, `Now (`Bad_request,[],"")
 *)
     (* FIXME may not read whole request *)
     | `Done data | `Part data ->
-      log #debug "read_all: %d bytes from %s" (String.length data) peer;
+      log #debug "read_all: %d bytes from %s" (String.length data) (show_peer ());
       match data with
       | "" -> (* special case for better error message *)
-        log #warn "parse_http_req from %s (0 bytes%s) : client disconnected" peer (show_socket_error fd);
+        log #warn "parse_http_req from %s : client disconnected without sending anything" (show_peer ());
         finish status fd None
       | _ ->
       match parse_http_req req_id data fd conn_info with
@@ -431,10 +434,10 @@ let handle_client config status fd conn_info answer =
         | Method -> `Not_implemented
         | Length -> `Length_required
         in
-        log #warn "parse_http_req from %s (%d bytes%s) : %s" peer (String.length data) (show_socket_error fd) msg;
+        log #warn "parse_http_req from %s, got %d bytes : %s" (show_peer ()) (String.length data) msg;
         send_reply None (error,[],"")
       | `Error exn -> 
-        log #warn ~exn "parse_http_req from %s (%d bytes%s)" peer (String.length data) (show_socket_error fd);
+        log #warn ~exn "parse_http_req from %s, got %d bytes" (show_peer ()) (String.length data);
         send_reply None (`Bad_request,[],"")
       | `Ok req ->
         try
