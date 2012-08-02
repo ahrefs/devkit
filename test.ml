@@ -180,6 +180,20 @@ let test_match_ipv4 () =
   t "255.255.255.255" "255.255.255.255/32" true;
   t "255.255.255.254" "255.255.255.255/32" false
 
+let test_extract_first_number () =
+  let t n s =
+    assert_equal ~printer:string_of_int n (Web.extract_first_number s);
+  in
+  t 10 "10";
+  t 10 "00 10";
+  t 10 "0010";
+  t 10 "dsad10dsa";
+  t 10 "10dsadsa";
+  t 10 "10dadasd22";
+  t 12345 "got 12,345 with 20 something";
+  t 12345 "a1,2,3,4,5,,6,7,8dasd";
+  ()
+
 let tests () = 
   run_test_tt ("devkit" >::: [
     "HtmlStream" >:: test_htmlstream;
@@ -190,6 +204,7 @@ let tests () =
     "ThreadPool test" >:: test_threadpool;
     "parse ipv4" >:: test_parse_ipv4;
     "match ipv4" >:: test_match_ipv4;
+    "extract_first_number" >:: test_extract_first_number;
   ]) >> ignore
 
 let () =

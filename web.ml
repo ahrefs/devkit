@@ -23,10 +23,21 @@ let url_get_args url =
   with
     _ -> []
 
-let extract_all_digits s =
-  let s = String.replace_chars (function '0'..'9' as c -> String.make 1 c | _ -> "_") s in
-  let s = String.strip ~chars:"_" s in
-  try int_of_string s with _ -> Exn.fail "extract_all_digits %S" s
+let extract_first_number =
+  let rec start = parser
+  | [< ''0'..'9' as c; t >] -> number [c] t
+  | [< 'x; t >] -> start t
+  | [< >] -> Exn.fail "no digits"
+  and number acc = parser
+  | [< ''0'..'9' as c; t >] -> number (c::acc) t
+  | [< 'x; t >] -> unsure acc t
+  | [< >] -> fin acc
+  and unsure acc = parser
+  | [< ''0'..'9' as c; t >] -> number (c::acc) t
+  | [< >] -> fin acc
+  and fin acc = int_of_string & String.implode & List.rev acc
+  in
+  fun s -> start (Stream.of_string s)
 
 module T = struct
 
@@ -125,7 +136,7 @@ let get_results ?(debug=false) ~parse_url s' =
     in
     let h = search s in
     if debug then log #info "extract total %S" h;
-    total := extract_all_digits h;
+    total := extract_first_number h;
   with exn ->
     if String.exists s' "No results found in your selected language" ||
       String.exists s' "did not match any documents"
@@ -425,7 +436,7 @@ end (* Google *)
         in
         begin match l with
         | [] -> Exn.fail "no digits"
-        | s::_ -> total := extract_all_digits s
+        | s::_ -> total := extract_first_number s
         end
       | _ -> Exn.fail "no text in sb_count"
     with exn ->
