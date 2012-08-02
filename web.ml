@@ -24,16 +24,18 @@ let url_get_args url =
     _ -> []
 
 let extract_first_number =
+  let threshold = 2 in
   let rec start = parser
   | [< ''0'..'9' as c; t >] -> number [c] t
   | [< 'x; t >] -> start t
   | [< >] -> Exn.fail "no digits"
   and number acc = parser
   | [< ''0'..'9' as c; t >] -> number (c::acc) t
-  | [< 'x; t >] -> unsure acc t
+  | [< 'x; t >] -> unsure 1 acc t
   | [< >] -> fin acc
-  and unsure acc = parser
+  and unsure depth acc = parser
   | [< ''0'..'9' as c; t >] -> number (c::acc) t
+  | [< 'x; t >] -> if depth >= threshold then fin acc else unsure (depth+1) acc t
   | [< >] -> fin acc
   and fin acc = int_of_string & String.implode & List.rev acc
   in

@@ -191,7 +191,9 @@ let test_extract_first_number () =
   t 10 "10dsadsa";
   t 10 "10dadasd22";
   t 12345 "got 12,345 with 20 something";
-  t 12345 "a1,2,3,4,5,,6,7,8dasd";
+  t 12345 "a1,2,3,4,5,,,6,7,8dasd";
+  t 12345678 "a1,2,3,4,5,,6,7,8dasd";
+  t 12345 "a,1,,2,,3,,4,,5,,,6,7,8dasd";
   ()
 
 let tests () = 
