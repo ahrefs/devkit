@@ -227,3 +227,4 @@ let delay events timeout f x =
   end;
   Ev.add timer (Some timeout)
 
+let poll events = Ev.loop events Ev.NONBLOCK
