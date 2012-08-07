@@ -56,7 +56,7 @@ module State = struct
     | Some name -> Logger.set_filter (facility name) level
 
   let output_ch ch = 
-    fun str -> output_string ch str; flush ch
+    fun str -> try output_string ch str; flush ch with _ -> () (* logging never fails, most probably ENOSPC *)
 
   let format_simple level facil msg =
     sprintf "[%s] %06u:%04u [%s:%s] %s\n" 
