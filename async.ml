@@ -92,17 +92,24 @@ let read_buf base ?timeout buf fd err k =
 let read_n base ?timeout n fd err k = read_buf base ?timeout (String.create n) fd err k
 
 (** Call [f] with [delay]-second pauses between invocations *)
-let periodic_timer events delay ?(name="") f =
+let periodic_timer_0 events first_delay delay ?(name="") f =
   let timer = Ev.create () in
   Ev.set_timer events timer ~persist:false begin fun () ->
     begin try f timer with exn -> log #warn ~exn "periodic_timer %s" name end;
     Ev.add timer (Some delay);
   end;
-  Ev.add timer (Some 0.);
+  Ev.add timer (Some first_delay);
   timer
 
-let setup_periodic_timer events delay ?name f =
-  let (_:Ev.event) = periodic_timer events delay ?name f in
+let periodic_timer_now events delay ?name f = periodic_timer_0 events 0. delay ?name f
+let periodic_timer_wait events delay ?name f = periodic_timer_0 events delay delay ?name f
+
+let setup_periodic_timer_now events delay ?name f =
+  let (_:Ev.event) = periodic_timer_now events delay ?name f in
+  ()
+
+let setup_periodic_timer_wait events delay ?name f =
+  let (_:Ev.event) = periodic_timer_wait events delay ?name f in
   ()
 
 let periodic_timer_stop stop events delay ?(name="") f =
