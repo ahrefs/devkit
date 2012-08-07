@@ -183,9 +183,14 @@ let get_results ?(debug=false) ~parse_url s' =
           stream_find (tag "br") s;
           stream_extract_while (not $ tag "br") s
         end
+        else if tag "span" ~a:["class", "st"] x then
+        begin
+          stream_extract_while (not $ close "span") s
+        end
         else if tag "div" ~a:["class","s"] x then
           match Stream.peek s with
           | Some Close _ | None -> []
+          | Some x when tag "div" x -> extract_description ()
           | _ -> stream_extract_while (not $ tag "div") s
         else if tag "span" x then
         begin
