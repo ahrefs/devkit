@@ -185,6 +185,10 @@ let get_results ?(debug=false) ~parse_url s' =
         end
         else if tag "span" ~a:["class", "st"] x then
         begin
+          begin match Stream.peek s with (* skip date or x days ago messages *)
+          | Some x when tag "span" x -> stream_skip (not $ close "span") s; ExtStream.junk s
+          | Some _ | None -> ()
+          end;
           stream_extract_while (not $ close "span") s
         end
         else if tag "div" ~a:["class","s"] x then
