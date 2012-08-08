@@ -178,12 +178,13 @@ let get_results ?(debug=false) ~parse_url s' =
 *)
       let rec extract_description () =
         let x = ExtStream.next s in
-        if tag "span" ~a:["class","f"] x then
+(*        if tag "span" ~a:["class","f"] x then
         begin
           stream_find (tag "br") s;
           stream_extract_while (not $ tag "br") s
         end
-        else if tag "span" ~a:["class", "st"] x then
+        else *) (* temporary disable *)
+        if tag "span" ~a:["class", "st"] x then
         begin
           let nr_span = ref 0 in
           let rec skip () =
