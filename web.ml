@@ -345,45 +345,13 @@ let get_ads ~parse_url s =
             )
   | x -> x
 
-let rex_digits = Pcre.regexp "[0-9]"
-
-(*
-let language_of_tld = function
-| "com" -> "en"
-| "ca" -> "en"
-| "co.uk" -> "en"
-| "com.br" -> "pt"
-| "com.au" -> "en"
-| "com.mx" -> "es"
-| "co.id" -> "id"
-| "sk" -> "sk"
-| "com.ua" -> "ua"
-| "com.cy" -> "en"
-| "cz" -> "cs"
-| "de" -> "de"
-| "dk" -> "da"
-| "ee" -> "et"
-| "es" -> "es"
-| "fi" -> "fi"
-| "fr" -> "fr"
-| "hr" -> "hr"
-| "ie" -> "en"
-| "it" -> "it"
-| "nl" -> "nl"
-| "no" -> "no"
-| "ro" -> "ro"
-| "rs" -> "sr"
-| "ru" -> "ru"
-| "se" -> "sv"
-| "si" -> "sl"
-| s -> Exn.fail "unknown tld %S" s
-*)
-
 type params = { tld:string; lang:string; hl:string; gl:string; }
 
 let query p num q =
+(* wrong criteria, better parse it around
   (* disable google calculator *)
   let q = if Pcre.pmatch ~rex:rex_digits q then "+"^q else q in
+*)
   sprintf "http://www.google.%s/search?hl=%s&gl=%s&pws=0&safe=off&q=%s&num=%d&lr=lang_%s&as_qdr=all&oe=utf-8" p.tld p.hl p.gl (urlencode q) num p.lang
 
 end (* Google *)
