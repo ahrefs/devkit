@@ -115,6 +115,9 @@ module Provider = struct
 
   open HtmlStream
 
+let any_text = function Text _ -> true | _ -> false
+let any_tag = function Tag _ -> true | _ -> false
+
 let decode s = htmldecode (Raw.proj s)
 let make_text l = decode (make_text l)
 let make_url l = String.concat "" ("http://" :: List.map (function HtmlStream.Text s -> decode s | _ -> "") l)
@@ -129,10 +132,10 @@ let get_results ?(debug=false) ~parse_url s' =
     let rec search = parser
     | [< 'x when tag "td" x; t >] -> 
       begin match Stream.peek t with
-      | Some x when tag "div" ~a:["id","subform_ctrl"] x -> Stream.junk t; make_text & stream_extract_till (Close "td") t
+      | Some x when tag "div" ~a:["id","subform_ctrl"] x -> Stream.junk t; stream_skip any_tag t; make_text & stream_extract_while any_text t
       | _ -> search t
       end
-    | [< 'x when tag "div" ~a:["id","resultStats"] x; t >] -> make_text & stream_extract_till (Close "div") t
+    | [< 'x when tag "div" ~a:["id","resultStats"] x; t >] -> stream_skip any_tag t; make_text & stream_extract_while any_text t
     | [< 'x; t >] -> search t
     | [< >] -> raise Not_found
     in
