@@ -45,6 +45,21 @@ let duration_str t =
   List.dropwhile (fun (_,x) -> x = 0) >>
   List.map (fun (n,x) -> sprintf "%u %s" x n) >> String.concat " "
 
+(* 1m10s *)
+let compact_duration t =
+  let factors = [60; 60; 24; 30; ] in
+  let names = ["s"; "m"; "h"; "d"; ] in
+  let rec loop t acc = function
+  | [] -> List.rev acc
+  | n::tl -> loop (t/n) (t mod n :: acc) tl
+  in
+  if t < 1. then sprintf "%.2fs" t
+  else if t < 10. then sprintf "%.1fs" t
+  else 
+  loop (int_of_float t) [] factors >> List.combine names >> List.rev >> 
+  List.dropwhile (fun (_,x) -> x = 0) >>
+  List.map (fun (n,x) -> sprintf "%u%s" x n) >> String.concat ""
+
 let minutes x = float & 60 * x
 let hours x = minutes & 60 * x
 let days x = hours & 24 * x
