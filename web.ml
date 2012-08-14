@@ -23,7 +23,7 @@ let url_get_args url =
   with
     _ -> []
 
-let extract_first_number =
+let extract_n_number =
   let threshold = 2 in
   let rec start = parser
   | [< ''0'..'9' as c; t >] -> number [c] t
@@ -39,7 +39,15 @@ let extract_first_number =
   | [< >] -> fin acc
   and fin acc = int_of_string & String.implode & List.rev acc
   in
-  fun s -> start (Stream.of_string s)
+  fun n s ->
+    let s = Stream.of_string s in
+    for i = 1 to n-1 do
+      let _ = start s in ()
+    done;
+    start s
+
+let extract_first_number = extract_n_number 1
+let extract_third_number = extract_n_number 3
 
 module T = struct
 
