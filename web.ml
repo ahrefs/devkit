@@ -101,6 +101,24 @@ let stream_extract_while f s =
 (** equivalent to [stream_extract_while ((<>) x)] *)
 let stream_extract_till x = stream_extract_while ((<>) x)
 
+(** match multiple conditions in arbitrary order
+  a = [|cond_1, h_1; cond_2, h_2; ... |]
+  find all elements matching [cond_i] (for all [i]) in arbitrary order
+  and execute matching [h_i] on the stream at that point
+  @return results returned by [h_i] *)
+let stream_find_all ~limit a s =
+  let result = Array.map (fun _ -> None) a in
+  let rec loop () =
+    stream_find ~limit (fun x ->
+      try
+      for i = 0 to Array.length a - 1 do
+        let (cond,h) = a.(i) in
+        if result.(i) = None && (cond x:bool) then (result.(i) <- Some (h s); raise Exit)
+      done; false with Exit -> true) s;
+    if Array.exists Option.is_none result then loop () else Array.map (function None -> assert false | Some x -> x) result
+  in
+  loop ()
+
 end (* T *)
 
 include T
@@ -240,11 +258,10 @@ let get_results ?debug s =
 
 exception Next
 
-let get_ads1 ~parse_url s =
+let get_ads1 ~debug ~parse_url s =
   let s = parse & Stream.of_string s in
   let acc = ref [] in
-(*   let pt name = log #info "%s : %s" name (Option.map_default show "END" & Stream.peek s) in *)
-  let pt _ = () in
+  let pt name = if debug then log #info "get_ads1 : %s : %s" name (Option.map_default show_raw "END" & Stream.peek s) in
   let one () =
     stream_find (tag "li") s;
     begin try
@@ -271,19 +288,18 @@ let get_ads1 ~parse_url s =
       let t = stream_extract_till (Close "span") s in
       acc := (href,Some adurl,make_text h,make_text t) :: !acc;
     with
-(*     | exn -> log #debug ~exn "skipped ad result : %s" (show & Stream.next s) *)
-    | _ -> ()
+    | exn -> if debug then log #info ~exn "get_ads1 : skipped ad result : %s" (Option.map_default show_raw "END" & Stream.peek s)
     end
   in
   let rec loop () = one (); loop () in
   begin try loop () with Not_found -> () | exn -> log #warn ~exn "Google.get_ads" end;
   Array.of_list & List.rev !acc
 
-let get_ads2 ~parse_url s =
+let get_ads2 ~debug ~parse_url s =
   let s = parse & Stream.of_string s in
   let acc = ref [] in
-  let pt _ = () in
-(*   let pt name = log #info "%s : %s" name (Option.map_default show "END" & Stream.peek s) in *)
+(*   let pt _ = () in *)
+  let pt name = if debug then log #info "get_ads2 : %s : %s" name (Option.map_default show_raw "END" & Stream.peek s) in
   let one () =
     stream_find (tag "li") s;
     begin try
@@ -301,60 +317,27 @@ let get_ads2 ~parse_url s =
       pt "adurl";
       let h = stream_extract_till (Close "a") s in
       pt "a";
-      stream_find ~limit:20 (tag "span" ~a:["class","ac"]) s;
-      let t = stream_extract_till (Close "span") s in
-      pt "span done";
-      stream_find ~limit:10 (tag "cite") s;
-      let href = parse_url & make_url & stream_extract_till (Close "cite") s in
-      acc := (href,Some adurl,make_text h,make_text t) :: !acc;
+      match stream_find_all ~limit:20
+        [| tag "cite" ~a:[], make_url $ stream_extract_till (Close "cite");
+           tag "span" ~a:["class","ac"], make_text $ stream_extract_till (Close "span"); |]
+        s
+      with
+      | [| href; t |] -> 
+        pt "found";
+        acc := (parse_url href,Some adurl,make_text h,t) :: !acc;
+        pt "got ad";
+      | _ -> assert false
     with
-(*     | exn -> log #debug ~exn "skipped ad result : %s" (show & Stream.next s) *)
-    | _ -> ()
+    | exn -> if debug then log #info ~exn "get_ads2 failed : %s" (Option.map_default show_raw "END" & Stream.peek s)
     end
   in
   let rec loop () = one (); loop () in
   begin try loop () with Not_found -> () | exn -> log #warn ~exn "Google.get_ads" end;
   Array.of_list & List.rev !acc
 
-let get_ads3 ~parse_url s =
-  let s = parse & Stream.of_string s in
-  let acc = ref [] in
-(*   let pt name = log #info "%s : %s" name (Option.map_default show "END" & Stream.peek s) in *)
-  let rec loop () =
-    stream_find (tag "li" ~a:["class","taf"]) s;
-    begin try
-      stream_find (tag "h3") s;
-      let href = decode & match stream_get_next (tag "a") s with
-      | Tag (_,l) -> List.assoc "href" l
-      | _ -> assert false in
-      let href = if String.starts_with href "/aclk?" then 
-          try List.assoc "adurl" (url_get_args href) with exn -> Exn.fail ~exn "aclk?adurl="
-        else
-          href
-      in
-      if String.starts_with href "/" then Exn.fail "not an absolute url : %s" href;
-      let href = parse_url href in
-      let h = stream_extract_till (Close "h3") s in
-(*
-      stream_find (tag "span" ~a:["class","st"]) s;
-      log #info "class=st found %s" (Option.map_default show "END" & Stream.peek s);
-      let t = stream_extract_till (Close "span") s in
-*)
-      let extract_description () = stream_extract_while (not $ tag "br") s in
-      let t = extract_description () in
-      acc := (href,None,make_text h, make_text t) :: !acc;
-    with exn -> log #debug ~exn "skipped ad" end;
-    loop ()
-  in
-  begin try loop () with Not_found -> () | exn -> log #warn ~exn "Google.get_ads3" end;
-  Array.of_list & List.rev !acc
-
-let get_ads ~parse_url s =
-  match get_ads1 ~parse_url s with
-  | [||] -> (match get_ads2 ~parse_url s with
-             | [||] -> get_ads3 ~parse_url s
-             | x -> x
-            )
+let get_ads ?(debug=false) ~parse_url s =
+  match get_ads1 ~debug ~parse_url s with
+  | [||] -> get_ads2 ~debug ~parse_url s
   | x -> x
 
 type params = { tld:string; lang:string; hl:string; gl:string; }
