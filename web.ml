@@ -47,7 +47,6 @@ let extract_n_number =
     start s
 
 let extract_first_number = extract_n_number 1
-let extract_third_number = extract_n_number 3
 
 module T = struct
 
