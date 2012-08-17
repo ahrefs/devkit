@@ -335,9 +335,7 @@ let get_ads2 ~debug ~parse_url s =
   Array.of_list & List.rev !acc
 
 let get_ads ?(debug=false) ~parse_url s =
-  match get_ads1 ~debug ~parse_url s with
-  | [||] -> get_ads2 ~debug ~parse_url s
-  | x -> x
+  Array.append (get_ads1 ~debug ~parse_url s) (get_ads2 ~debug ~parse_url s)
 
 type params = { tld:string; lang:string; hl:string; gl:string; }
 
