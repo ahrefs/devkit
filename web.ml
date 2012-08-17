@@ -344,7 +344,7 @@ let query p num q =
   (* disable google calculator *)
   let q = if Pcre.pmatch ~rex:rex_digits q then "+"^q else q in
 *)
-  sprintf "http://www.google.%s/search?nomo=1&hl=%s&gl=%s&pws=0&safe=off&q=%s&num=%d&lr=lang_%s&as_qdr=all&oe=utf-8" p.tld p.hl p.gl (urlencode q) num p.lang
+  sprintf "http://www.google.%s/search?nomo=1&hl=%s&gl=%s&pws=0&safe=off&q=%s&num=%d&as_qdr=all&oe=utf-8" p.tld p.hl p.gl (urlencode q) num
 
 end (* Google *)
 
