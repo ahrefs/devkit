@@ -286,6 +286,7 @@ let get_ads1 ~debug ~parse_url s =
       stream_find (tag "span" ~a:["class","ac"]) s;
       let t = stream_extract_till (Close "span") s in
       acc := (href,Some adurl,make_text h,make_text t) :: !acc;
+      pt "found";
     with
     | exn -> if debug then log #info ~exn "get_ads1 : skipped ad result : %s" (Option.map_default show_raw "END" & Stream.peek s)
     end
@@ -302,7 +303,8 @@ let get_ads2 ~debug ~parse_url s =
   let one () =
     stream_find (tag "li") s;
     begin try
-      stream_next (tag "h3") s;
+      let _ = stream_extract_till (Tag ("h3",[])) s in
+      stream_skip (tag "h3") s;
       pt "h3";
       let adurl = match stream_get_next (tag "a") s with
       | Tag (_,l) ->
@@ -316,15 +318,34 @@ let get_ads2 ~debug ~parse_url s =
       pt "adurl";
       let h = stream_extract_till (Close "a") s in
       pt "a";
-      match stream_find_all ~limit:20
-        [| tag "cite" ~a:[], make_url $ stream_extract_till (Close "cite");
-           tag "span" ~a:["class","ac"], make_text $ stream_extract_till (Close "span"); |]
-        s
-      with
-      | [| href; t |] -> 
-        pt "found";
-        acc := (parse_url href,Some adurl,make_text h,t) :: !acc;
-        pt "got ad";
+      stream_skip (fun x -> not (tag "cite" ~a:[] x || tag "span" ~a:["class","ac"] x || tag "span" ~a:["class","a"] x)) s;
+      match Stream.peek s with
+      | Some x when tag "cite" ~a:[] x || tag "span" ~a:["class","ac"] x  ->
+      begin
+        match stream_find_all ~limit:20
+          [| tag "cite" ~a:[], make_url $ stream_extract_till (Close "cite");
+             tag "span" ~a:["class","ac"], make_text $ stream_extract_till (Close "span");
+          |]
+          s
+        with
+        | [| href; t |] -> 
+          pt "found";
+          acc := (parse_url href,Some adurl,make_text h,t) :: !acc;
+          pt "got ad";
+        | _ -> assert false
+      end
+      | Some Tag ("span",_) ->
+      begin
+        match stream_find_all ~limit:20
+          [| tag "span" ~a:["class","a"], make_text $ stream_extract_till (Close "span"); |]
+          s
+        with
+        | [| t |] ->
+          pt "found";
+          acc := (adurl, Some adurl, make_text h, t) :: !acc;
+          pt "got add";
+        | _ -> assert false
+      end
       | _ -> assert false
     with
     | exn -> if debug then log #info ~exn "get_ads2 failed : %s" (Option.map_default show_raw "END" & Stream.peek s)
@@ -335,7 +356,7 @@ let get_ads2 ~debug ~parse_url s =
   Array.of_list & List.rev !acc
 
 let get_ads ?(debug=false) ~parse_url s =
-  Array.append (get_ads1 ~debug ~parse_url s) (get_ads2 ~debug ~parse_url s)
+  (*Array.append (get_ads1 ~debug ~parse_url s)*) (get_ads2 ~debug ~parse_url s)
 
 type params = { tld:string; lang:string; hl:string; gl:string; }
 
