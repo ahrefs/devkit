@@ -8,16 +8,17 @@ let by_space = Pcre.regexp "\\s+"
 let by_lines = Pcre.regexp "\\r?\\n"
 let split rex str = match Pcre.split ~rex str with ""::l -> l | l -> l
 
-let nsplitc str sep =
+let nsplitc_rev str sep =
 	if str = "" then []
-	else (
+	else
 		let rec nsplit acc p =
       match try Some (String.index_from str p sep) with Not_found -> None with
       | Some p2 -> nsplit (String.sub str p (p2 - p) :: acc) (p2 + 1)
-      | None -> List.rev (String.sub str p (String.length str - p) :: acc)
+      | None -> String.sub str p (String.length str - p) :: acc
 		in
 		nsplit [] 0
-	)
+
+let nsplitc str sep = List.rev (nsplitc_rev str sep)
 
 (** remove prefix from string if present *)
 let drop_prefix s pre = if String.starts_with s pre then String.slice s ~first:(String.length pre) else s
