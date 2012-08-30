@@ -7,11 +7,13 @@ let logfile = ref None
 let pidfile = ref None
 let runas = ref None
 let foreground = ref false
+let logrotation = ref None
 
 let args =
   [
     ExtArg.may_str "logfile" logfile "<file> Log file";
     ExtArg.may_str "pidfile" pidfile "<file> PID file";
+    ExtArg.may_str "logrotation" logrotation "d<days>|s<size MB> log rotation options";
     "-runas",
       Arg.String (fun name -> try runas := Some (Unix.getpwnam name) with exn -> Exn.fail "runas: unknown user %s" name),
       "<user> run as specified user"; 
@@ -19,6 +21,15 @@ let args =
   ]
 
 let manage () =
+  (* check logrotation param before daemonize *)
+  let lrot = ref Log.No_rotation in
+  begin match !logfile, !logrotation with
+  | None, Some _ -> Exn.fail "log rotation cannot be used without specified logfile"
+  | _, None -> ()
+  | Some _, Some s when s.[0] = 'd' -> lrot := Log.Days_rotation (int_of_string (String.sub s 1 (String.length s - 1)))
+  | Some _, Some s when s.[0] = 's' -> lrot := Log.Size_rotation (int_of_string (String.sub s 1 (String.length s - 1)))
+  | _, Some s -> Exn.fail "bad log rotation format %s, use d<days> or s<size MB>" s
+  end;
   if not !foreground then Nix.daemonize ();
   begin match !runas with
   | None -> ()
@@ -28,6 +39,7 @@ let manage () =
     U.setregid gid gid;
   end;
   Log.reopen !logfile; (* immediately after fork *)
+  Log.set_rotation !lrot;
   Option.may Nix.manage_pidfile !pidfile; (* after fork! *)
   log #info "GC settings: %s" (Action.gc_settings ());
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;

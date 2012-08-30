@@ -69,6 +69,8 @@ module State = struct
 
   let log_ch = ref stderr
   let output = ref (output_ch stderr)
+  let base_name = ref ""
+  let need_rotation = ref (fun _ -> false)
 
   module Put = Logger.PutSimple(
   struct
@@ -80,15 +82,39 @@ module State = struct
 
   let self = "lib"
 
-  let reopen_log_ch file =
+  let reopen_log_ch ?(self_call=false) file =
     try
+      if self_call = false then base_name := file;
       let ch = Files.open_out_append_text file in
       output := output_ch ch;
-      Unix.dup2 (Unix.descr_of_out_channel ch)  Unix.stderr;
+      Unix.dup2 (Unix.descr_of_out_channel ch) Unix.stderr;
 (*       if !log_ch <> stderr then close_out_noerr !log_ch; *)
       log_ch := ch
     with
       e -> M.warn (facility self) "reopen_log_ch(%s) failed : %s" file (Printexc.to_string e)
+
+  let find_possible_rotation () =
+    let i = ref 0 in
+    while Sys.file_exists (sprintf "%s.%d" !base_name !i) do incr i done;
+    sprintf "%s.%d" !base_name !i
+
+  let do_rotation () =
+    if !base_name <> "" then
+    begin
+      Sys.rename !base_name (find_possible_rotation ());
+      reopen_log_ch ~self_call:true !base_name
+    end
+
+  let check_rotation () =
+    if !base_name <> "" then
+    begin
+      let stats = Unix.fstat (Unix.descr_of_out_channel !log_ch) in
+      (!need_rotation stats) && (stats.Unix.st_kind = Unix.S_REG)
+    end else false (* no rotaiton with empty basename*)
+
+  let rotate () = if check_rotation () then do_rotation ()
+
+  let set_rotation f = need_rotation := f
 
 end
 
@@ -101,7 +127,9 @@ type 'a pr = ?exn:exn -> ('a, unit, string, unit) format4 -> 'a
 
 class logger facil =
 let perform f =
-  fun ?exn fmt -> match exn with
+  fun ?exn fmt ->
+    State.rotate ();
+    match exn with
     | Some exn -> ksprintf (fun s -> f facil (s ^ " : exn " ^ Exn.str exn)) fmt
     | None -> ksprintf (f facil) fmt
 in
@@ -128,3 +156,13 @@ let reopen = function
 | None -> ()
 | Some name -> State.reopen_log_ch name
 
+(** set log rotation **)
+type rotation =
+| No_rotation
+| Days_rotation of int
+| Size_rotation of int
+
+let set_rotation = function
+| No_rotation -> ()
+| Days_rotation d -> State.set_rotation (fun _ -> false) (*TODO at 19-00*)
+| Size_rotation s -> State.set_rotation (fun stats -> stats.Unix.st_size > s * 1024 * 1024)
