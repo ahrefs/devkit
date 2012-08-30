@@ -28,7 +28,7 @@ let manage () =
   | _, None -> ()
   | Some _, Some s when s.[0] = 'd' -> lrot := Log.Days_rotation (int_of_string (String.sub s 1 (String.length s - 1)))
   | Some _, Some s when s.[0] = 's' -> lrot := Log.Size_rotation (int_of_string (String.sub s 1 (String.length s - 1)))
-  | _, Some s -> Exn.fail "bad log rotation format %s, use d<days> or s<size MB>" s
+  | _, Some s -> Exn.fail "bad log rotation format %s, use d<days> or s<size MB> (days disabled)" s
   end;
   if not !foreground then Nix.daemonize ();
   begin match !runas with
