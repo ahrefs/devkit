@@ -112,7 +112,9 @@ module State = struct
       (!need_rotation stats) && (stats.Unix.st_kind = Unix.S_REG)
     end else false (* no rotaiton with empty basename*)
 
-  let rotate () = if check_rotation () then do_rotation ()
+  let rotation_i = ref 0
+
+  let rotate () = incr rotation_i; if !rotation_i > 500 then begin rotation_i:=0; if check_rotation () then do_rotation () end
 
   let set_rotation f = need_rotation := f
 
@@ -165,6 +167,7 @@ type rotation =
 | OnceAday_rotation
 
 let log_start = ref (Time.now())
+let cur_size = ref 0
 
 let set_rotation = function
 | No_rotation -> ()
