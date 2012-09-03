@@ -26,6 +26,7 @@ let manage () =
   begin match !logfile, !logrotation with
   | None, Some _ -> Exn.fail "log rotation cannot be used without specified logfile"
   | _, None -> ()
+  | _, Some s when String.length s = 0 -> Exn.fail "No rotationg format specified, use manual for more info"
   | Some _, Some s when s.[0] = 't' -> lrot := Log.Days_rotation (int_of_string (String.sub s 1 (String.length s - 1)))
   | Some _, Some s when s.[0] = 's' -> lrot := Log.Size_rotation (int_of_string (String.sub s 1 (String.length s - 1)))
   | Some _, Some "onceaday" -> lrot := Log.OnceAday_rotation
