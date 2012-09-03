@@ -13,7 +13,7 @@ let args =
   [
     ExtArg.may_str "logfile" logfile "<file> Log file";
     ExtArg.may_str "pidfile" pidfile "<file> PID file";
-    ExtArg.may_str "logrotation" logrotation "t<time hours>|s<size MB|onceaday> log rotation options";
+    ExtArg.may_str "logrotation" logrotation "t<time_hours>|s<size_MB|onceaday> log rotation options";
     "-runas",
       Arg.String (fun name -> try runas := Some (Unix.getpwnam name) with exn -> Exn.fail "runas: unknown user %s" name),
       "<user> run as specified user"; 
