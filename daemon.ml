@@ -13,7 +13,7 @@ let args =
   [
     ExtArg.may_str "logfile" logfile "<file> Log file";
     ExtArg.may_str "pidfile" pidfile "<file> PID file";
-    ExtArg.may_str "logrotation" logrotation "d<days>|s<size MB> log rotation options";
+    ExtArg.may_str "logrotation" logrotation "t<time hours>|s<size MB> log rotation options";
     "-runas",
       Arg.String (fun name -> try runas := Some (Unix.getpwnam name) with exn -> Exn.fail "runas: unknown user %s" name),
       "<user> run as specified user"; 
@@ -26,9 +26,9 @@ let manage () =
   begin match !logfile, !logrotation with
   | None, Some _ -> Exn.fail "log rotation cannot be used without specified logfile"
   | _, None -> ()
-  | Some _, Some s when s.[0] = 'd' -> lrot := Log.Days_rotation (int_of_string (String.sub s 1 (String.length s - 1)))
+  | Some _, Some s when s.[0] = 't' -> lrot := Log.Days_rotation (int_of_string (String.sub s 1 (String.length s - 1)))
   | Some _, Some s when s.[0] = 's' -> lrot := Log.Size_rotation (int_of_string (String.sub s 1 (String.length s - 1)))
-  | _, Some s -> Exn.fail "bad log rotation format %s, use d<days> or s<size MB> (days disabled)" s
+  | _, Some s -> Exn.fail "bad log rotation format %s, use d<days> or s<size MB>" s
   end;
   if not !foreground then Nix.daemonize ();
   begin match !runas with

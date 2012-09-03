@@ -162,7 +162,9 @@ type rotation =
 | Days_rotation of int
 | Size_rotation of int
 
+let global_time_start = Time.now()
+
 let set_rotation = function
 | No_rotation -> ()
-| Days_rotation d -> State.set_rotation (fun _ -> false) (*TODO at 19-00*)
+| Days_rotation d -> State.set_rotation (fun _ -> let cur_time = Time.now() in cur_time -. global_time_start > (float d) *. 60. *. 60.)
 | Size_rotation s -> State.set_rotation (fun stats -> stats.Unix.st_size > s * 1024 * 1024)
