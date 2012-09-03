@@ -32,6 +32,3 @@ struct
 end
 
 let (+=) a b = a := !a + b
-let (-=) a b = a := !a - b
-let ( *=) a b = a := !a * b
-let (/=) a b = a := !a / b
