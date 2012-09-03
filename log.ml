@@ -96,12 +96,21 @@ module State = struct
   let find_possible_rotation () =
     let i = ref 0 in
     while Sys.file_exists (sprintf "%s.%d" !base_name !i) do incr i done;
-    sprintf "%s.%d" !base_name !i
+    !i
+
+  let rollback () =
+    for i = 2 to 10 do
+      try Unix.rename (sprintf "%s.%d" !base_name i) (sprintf "%s.%d" !base_name (i - 1)) with _ -> ()
+    done;
+    ()
 
   let do_rotation () =
     if !base_name <> "" then
     begin
-      Sys.rename !base_name (find_possible_rotation ());
+      let i = find_possible_rotation () in
+      if i > 10 then rollback ();
+      let i = min i 10 in
+      Sys.rename !base_name (sprintf "%s.%d" !base_name i);
       reopen_log_ch ~self_call:true !base_name
     end
 
@@ -110,7 +119,7 @@ module State = struct
     begin
       let stats = Unix.fstat (Unix.descr_of_out_channel !log_ch) in
       (!need_rotation stats) && (stats.Unix.st_kind = Unix.S_REG)
-    end else false (* no rotaiton with empty basename*)
+    end else false (* no rotation with empty basename*)
 
   let rotation_i = ref 0
 
