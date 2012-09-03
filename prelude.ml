@@ -30,3 +30,8 @@ struct
   let inj = id
   let proj = id
 end
+
+let (+=) a b = a := !a + b
+let (-=) a b = a := !a - b
+let ( *=) a b = a := !a * b
+let (/=) a b = a := !a / b
