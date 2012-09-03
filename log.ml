@@ -128,10 +128,11 @@ type 'a pr = ?exn:exn -> ('a, unit, string, unit) format4 -> 'a
 class logger facil =
 let perform f =
   fun ?exn fmt ->
-    State.rotate ();
+    try State.rotate ();
     match exn with
     | Some exn -> ksprintf (fun s -> f facil (s ^ " : exn " ^ Exn.str exn)) fmt
     | None -> ksprintf (f facil) fmt
+    with exn -> ksprintf (fun s -> f facil (sprintf "Failed : %s with message %s" (Exn.str exn) s)) fmt
 in
 object
 method debug : 'a. 'a pr = perform debug_s
@@ -161,10 +162,12 @@ type rotation =
 | No_rotation
 | Days_rotation of int
 | Size_rotation of int
+| OnceAday_rotation
 
-let global_time_start = Time.now()
+let log_start = ref (Time.now())
 
 let set_rotation = function
 | No_rotation -> ()
-| Days_rotation d -> State.set_rotation (fun _ -> let cur_time = Time.now() in cur_time -. global_time_start > (float d) *. 60. *. 60.)
+| Days_rotation d -> State.set_rotation (fun _ -> let cur_time = Time.now() in if cur_time -. !log_start > (float d) *. 60. *. 60. then (log_start := Time.now();true) else false)
 | Size_rotation s -> State.set_rotation (fun stats -> stats.Unix.st_size > s * 1024 * 1024)
+| OnceAday_rotation -> State.set_rotation (fun _ -> let get_day s = (Unix.gmtime s).Unix.tm_yday in if get_day (Time.now()) <> get_day (!log_start) then (log_start := Time.now(); true) else false)
