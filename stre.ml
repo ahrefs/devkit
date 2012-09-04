@@ -110,3 +110,5 @@ let is_digit = function
 let is_alnum c = is_alpha c || is_digit c
 end
 
+let unescaped s = 
+  try Scanf.sscanf ("\""^s^"\"") "%S%!" (fun a -> a)  with  _ -> (Exn.fail "Wry input %s" s)
