@@ -185,17 +185,35 @@ let get_results ?(debug=false) ~parse_url s' =
     if debug then log #info "li found %s" (element s);
     begin try
       stream_find (tag "h3" ~a:["class","r"]) s;
-      if debug then log #info "h3 found %s" (element s);
-      let href = decode & match stream_get_next (tag "a") s with
-      | Tag (_,l) -> List.assoc "href" l
-      | _ -> assert false in
-      if debug then log #info "href %s" href;
-      let href = if String.starts_with href "/url?" then 
-          try List.assoc "q" (url_get_args href) with exn -> Exn.fail ~exn "url?q="
-        else
-          href
+      let get_h3_href () =
+        if debug then log #info "h3 found %s" (element s);
+        let href = decode & match stream_get_next (tag "a") s with
+        | Tag (_,l) -> List.assoc "href" l
+        | _ -> assert false in
+        if debug then log #info "href %s" href;
+        let href = if String.starts_with href "/url?" then 
+            try List.assoc "q" (url_get_args href) with exn -> Exn.fail ~exn "url?q="
+          else
+            href
+        in
+        href
       in
-      if String.starts_with href "/" then Exn.fail "not an absolute url : %s" href;
+      let href = get_h3_href () in
+      let href = (*trying to find another <h3 class="r"> but not farther then </li>*)
+      if String.starts_with href "/" then
+      begin
+        let rec miniloop () =
+          match ExtStream.next s with
+          | Close "li" -> Exn.fail "not an absolute url : %s" href;
+          | x when tag "h3" ~a:["class","r"] x ->
+             let href_candidate = get_h3_href () in
+             if String.starts_with href_candidate "/" then miniloop () else href_candidate
+          | _ -> miniloop ()
+        in
+        miniloop ()
+      end
+      else href
+      in
       let href = parse_url href in
       let h = stream_extract_till (Close "h3") s in
       if debug then log #info "/h3 found %s" (element s);
