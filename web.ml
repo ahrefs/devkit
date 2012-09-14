@@ -303,7 +303,7 @@ let get_ads2 ~debug ~parse_url s =
   let one () =
     stream_find (tag "li") s;
     begin try
-      let _ = stream_extract_till (Tag ("h3",[])) s in
+      let () = stream_skip (not $ tag "h3") s in
       stream_skip (tag "h3") s;
       pt "h3";
       let adurl = match stream_get_next (tag "a") s with
