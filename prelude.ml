@@ -32,5 +32,3 @@ struct
 end
 
 let (+=) a b = a := !a + b
-
-let todo s = fun _ -> failwith ("TODO " ^ s)
