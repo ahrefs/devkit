@@ -24,6 +24,8 @@ ocamllex : allocated     11.2GB, heap         0B, collection 0 33 5718, elapsed 
 *)
 let ipv4_of_string_exn = Devkit_ragel.parse_ipv4
 
+let make_broadcast addr netmask = Int32.logor addr (Int32.lognot netmask)
+
 let cidr_of_string_exn s =
   Scanf.sscanf s "%s@/%u%!" (fun ip len ->
     if len < 0 || len > 32 then Exn.fail "bad cidr %s" s;
