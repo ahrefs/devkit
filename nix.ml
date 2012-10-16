@@ -271,5 +271,6 @@ let to_string v =
 
 end
 
+(* in seconds *)
 let sleep = restart Thread.delay
 
