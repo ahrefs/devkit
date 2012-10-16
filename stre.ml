@@ -112,3 +112,9 @@ end
 
 let unescaped s = 
   try Scanf.sscanf ("\""^s^"\"") "%S%!" (fun a -> a)  with  _ -> (Exn.fail "Stre.unescaped : Wry input %s" s)
+
+(* deletes sub from the start and the end of s e.g. subssub -> s ; subs -> s; s -> s*)
+let strip_s sub s =
+  let without_start = if String.starts_with s sub then String.slice ~first:(String.length sub) s else s in
+  let without_start_end = if String.ends_with without_start sub then String.slice ~last:(String.length without_start - String.length sub) without_start else without_start in
+  without_start_end
