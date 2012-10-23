@@ -60,6 +60,9 @@ let compact_duration t =
   List.dropwhile (fun (_,x) -> x = 0) >>
   List.map (fun (n,x) -> sprintf "%u%s" x n) >> String.concat ""
 
+(** parse compact_duration representation (except for fractional seconds) *)
+let of_compact_duration s = float (Devkit_ragel.parse_compact_duration s)
+
 let minutes x = float & 60 * x
 let hours x = minutes & 60 * x
 let days x = hours & 24 * x

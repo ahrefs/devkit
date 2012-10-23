@@ -278,3 +278,216 @@ and do_test_eof () =
   !cs >= ipv4_first_final
   with Not_found -> false
 
+
+# 283 "devkit_ragel.ml"
+let _compact_duration_trans_keys : int array = [|
+	0; 0; 48; 115; 48; 115; 48; 115; 48; 115; 48; 57; 48; 57; 48; 57; 
+	48; 57; 0; 0; 0
+|]
+
+let _compact_duration_key_spans : int array = [|
+	0; 68; 68; 68; 68; 10; 10; 10; 
+	10; 0
+|]
+
+let _compact_duration_index_offsets : int array = [|
+	0; 0; 69; 138; 207; 276; 287; 298; 
+	309; 320
+|]
+
+let _compact_duration_indicies : int array = [|
+	0; 0; 0; 0; 0; 0; 0; 
+	0; 0; 0; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 2; 1; 1; 
+	1; 3; 1; 1; 1; 1; 4; 1; 
+	1; 1; 1; 1; 5; 1; 6; 6; 
+	6; 6; 6; 6; 6; 6; 6; 6; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 3; 1; 
+	1; 1; 1; 4; 1; 1; 1; 1; 
+	1; 5; 1; 7; 7; 7; 7; 7; 
+	7; 7; 7; 7; 7; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	4; 1; 1; 1; 1; 1; 5; 1; 
+	8; 8; 8; 8; 8; 8; 8; 8; 
+	8; 8; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 1; 1; 1; 1; 1; 
+	1; 1; 1; 5; 1; 9; 9; 9; 
+	9; 9; 9; 9; 9; 9; 9; 1; 
+	10; 10; 10; 10; 10; 10; 10; 10; 
+	10; 10; 1; 11; 11; 11; 11; 11; 
+	11; 11; 11; 11; 11; 1; 12; 12; 
+	12; 12; 12; 12; 12; 12; 12; 12; 
+	1; 1; 0
+|]
+
+let _compact_duration_trans_targs : int array = [|
+	1; 0; 6; 7; 8; 9; 2; 3; 
+	4; 1; 2; 3; 4
+|]
+
+let _compact_duration_trans_actions : int array = [|
+	1; 0; 0; 0; 0; 0; 1; 1; 
+	1; 2; 4; 6; 8
+|]
+
+let _compact_duration_eof_actions : int array = [|
+	0; 0; 0; 0; 0; 0; 3; 5; 
+	7; 9
+|]
+
+let compact_duration_start : int = 5
+let compact_duration_first_final : int = 5
+let compact_duration_error : int = 0
+
+let compact_duration_en_main : int = 5
+
+type _compact_duration_state = { mutable keys : int; mutable trans : int; }
+exception Goto_match
+exception Goto_again
+exception Goto_eof_trans
+
+# 39 "devkit_ragel.ml.rl"
+
+
+let parse_compact_duration data =
+  if data = "" then invalid_arg "parse_compact_duration: empty";
+  let cs = ref 0 and p = ref 0 and pe = ref (String.length data) and eof = ref (String.length data) in
+  let n = ref 0 in
+  let t = ref 0 in
+  
+# 378 "devkit_ragel.ml"
+	begin
+	cs.contents <- compact_duration_start;
+	end;
+
+# 47 "devkit_ragel.ml.rl"
+  
+# 385 "devkit_ragel.ml"
+	begin
+	let state = { keys = 0; trans = 0; } in
+	let rec do_start () =
+	if p.contents = pe.contents then
+		do_test_eof ()
+	else
+	if cs.contents = 0 then
+		do_out ()
+	else
+	do_resume ()
+and do_resume () =
+	begin try
+	let keys = cs.contents lsl 1 in
+	let inds = _compact_duration_index_offsets.(cs.contents) in
+
+	let slen = _compact_duration_key_spans.(cs.contents) in
+	state.trans <- _compact_duration_indicies.(inds + (
+		if slen > 0 && _compact_duration_trans_keys.(keys) <= Char.code data.[p.contents] &&
+		Char.code data.[p.contents] <= _compact_duration_trans_keys.(keys+1) then
+		Char.code data.[p.contents] - _compact_duration_trans_keys.(keys) else slen));
+
+	with Goto_match -> () end;
+	do_eof_trans ()
+and do_eof_trans () =
+	cs.contents <- _compact_duration_trans_targs.(state.trans);
+
+	begin try if _compact_duration_trans_actions.(state.trans) = 0 then
+		raise Goto_again;
+
+	match _compact_duration_trans_actions.(state.trans) with
+	| 1 ->
+# 33 "devkit_ragel.ml.rl"
+		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
+	()
+	| 2 ->
+# 33 "devkit_ragel.ml.rl"
+		begin  n := 0;  end;
+# 33 "devkit_ragel.ml.rl"
+		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
+	()
+	| 4 ->
+# 34 "devkit_ragel.ml.rl"
+		begin  t := !t + !n*24*60*60;  end;
+# 33 "devkit_ragel.ml.rl"
+		begin  n := 0;  end;
+# 33 "devkit_ragel.ml.rl"
+		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
+	()
+	| 6 ->
+# 35 "devkit_ragel.ml.rl"
+		begin  t := !t + !n*60*60;  end;
+# 33 "devkit_ragel.ml.rl"
+		begin  n := 0;  end;
+# 33 "devkit_ragel.ml.rl"
+		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
+	()
+	| 8 ->
+# 36 "devkit_ragel.ml.rl"
+		begin  t := !t + !n*60;  end;
+# 33 "devkit_ragel.ml.rl"
+		begin  n := 0;  end;
+# 33 "devkit_ragel.ml.rl"
+		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
+	()
+# 450 "devkit_ragel.ml"
+		| _ -> ()
+	with Goto_again -> () end;
+
+	do_again ()
+	and do_again () =
+	match cs.contents with
+	| 0 -> do_out ()
+	| _ ->
+	p.contents <- p.contents + 1;
+	if p.contents <> pe.contents then
+		do_resume ()
+	else do_test_eof ()
+and do_test_eof () =
+	if p.contents = eof.contents then
+	begin try
+	begin match _compact_duration_eof_actions.(cs.contents) with
+	| 3 ->
+# 34 "devkit_ragel.ml.rl"
+		begin  t := !t + !n*24*60*60;  end;
+	()
+	| 5 ->
+# 35 "devkit_ragel.ml.rl"
+		begin  t := !t + !n*60*60;  end;
+	()
+	| 7 ->
+# 36 "devkit_ragel.ml.rl"
+		begin  t := !t + !n*60;  end;
+	()
+	| 9 ->
+# 37 "devkit_ragel.ml.rl"
+		begin  t := !t + !n;  end;
+	()
+# 483 "devkit_ragel.ml"
+		| _ -> ()
+	end
+	with Goto_again -> do_again ()
+	| Goto_eof_trans -> do_eof_trans () end
+
+	and do_out () = ()
+	in do_start ()
+	end;
+
+# 48 "devkit_ragel.ml.rl"
+  if !cs >= compact_duration_first_final then !t else invalid_arg "parse_compact_duration"

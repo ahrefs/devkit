@@ -196,6 +196,24 @@ let test_extract_first_number () =
   t 12345 "a,1,,2,,3,,4,,5,,,6,7,8dasd";
   ()
 
+let test_compact_duration () =
+  let t n s =
+    assert_equal ~printer:string_of_int n (Devkit_ragel.parse_compact_duration s);
+  in
+  t 10 "10s";
+  t 70 "70s";
+  t 70 "1m10s";
+  t 7200 "2h";
+  t 7200 "2h0s";
+  t 7200 "1h60m";
+  t 7200 "1h60m0s";
+  t 7200 "7200s";
+  t 7200 "1h3600s";
+  t 7200 "1h0m3600s";
+  t 7200 "1h30m1800s";
+  t 7201 "90m1801s";
+  ()
+
 let tests () = 
   run_test_tt ("devkit" >::: [
     "HtmlStream" >:: test_htmlstream;
@@ -207,6 +225,7 @@ let tests () =
     "parse ipv4" >:: test_parse_ipv4;
     "match ipv4" >:: test_match_ipv4;
     "extract_first_number" >:: test_extract_first_number;
+    "compact_duration" >:: test_compact_duration;
   ]) >> ignore
 
 let () =
