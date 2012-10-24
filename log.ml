@@ -67,29 +67,33 @@ module State = struct
       (Logger.string_level level)
       msg
 
-  let log_ch = ref stderr
-  let output = ref (output_ch stderr)
+  let log_ch = stderr
+  let () = assert (Unix.descr_of_out_channel stderr = Unix.stderr)
   let base_name = ref ""
   let need_rotation = ref (fun _ -> false)
 
   module Put = Logger.PutSimple(
   struct
     let format = format_simple
-    let output = fun s -> !output s
+    let output = fun s -> output_ch log_ch s
   end)
 
   module M = Logger.Make(Put)
 
   let self = "lib"
 
+  (*
+    we open the new fd, then dup it to stderr and close afterwards
+    so we are always logging to stderr
+  *)
   let reopen_log_ch ?(self_call=false) file =
     try
       if self_call = false then base_name := file;
       let ch = Files.open_out_append_text file in
-      output := output_ch ch;
-      Unix.dup2 (Unix.descr_of_out_channel ch) Unix.stderr;
-(*       if !log_ch <> stderr then close_out_noerr !log_ch; *)
-      log_ch := ch
+      Std.finally
+        (fun () -> close_out_noerr ch)
+        (fun () -> Unix.dup2 (Unix.descr_of_out_channel ch) Unix.stderr)
+        ()
     with
       e -> M.warn (facility self) "reopen_log_ch(%s) failed : %s" file (Printexc.to_string e)
 
@@ -117,7 +121,7 @@ module State = struct
   let check_rotation () =
     if !base_name <> "" then
     begin
-      let stats = Unix.fstat (Unix.descr_of_out_channel !log_ch) in
+      let stats = Unix.fstat (Unix.descr_of_out_channel log_ch) in
       (!need_rotation stats) && (stats.Unix.st_kind = Unix.S_REG)
     end else false (* no rotation with empty basename*)
 
