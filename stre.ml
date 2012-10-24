@@ -22,6 +22,7 @@ let nsplitc str sep = List.rev (nsplitc_rev str sep)
 
 (** remove prefix from string if present *)
 let drop_prefix s pre = if String.starts_with s pre then String.slice s ~first:(String.length pre) else s
+let drop_suffix s suf = if String.ends_with s suf then String.slice ~last:(String.length s - String.length suf) s else s
 
 (*
 let replace_all ~str ~sub ~by =
@@ -112,9 +113,3 @@ end
 
 let unescaped s = 
   try Scanf.sscanf ("\""^s^"\"") "%S%!" (fun a -> a)  with  _ -> (Exn.fail "Stre.unescaped : Wry input %s" s)
-
-(* deletes sub from the start and the end of s e.g. subssub -> s ; subs -> s; s -> s*)
-let strip_s sub s =
-  let without_start = if String.starts_with s sub then String.slice ~first:(String.length sub) s else s in
-  let without_start_end = if String.ends_with without_start sub then String.slice ~last:(String.length without_start - String.length sub) without_start else without_start in
-  without_start_end
