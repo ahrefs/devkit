@@ -32,6 +32,8 @@ let cidr_of_string_exn s =
     let mask = Int32.lognot (if len = 0 then (-1l) else Int32.pred (Int32.shift_left 1l (32 - len))) in
     ipv4_of_string_exn ip, mask)
 
+let range_of_cidr (cidr,mask) = cidr, make_broadcast cidr mask
+
 let ipv4_matches ip (prefix, mask) = Int32.logand ip mask = prefix
 
 let ipv4_of_string_null s = try ipv4_of_string_exn s with _ -> 0l
