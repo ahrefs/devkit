@@ -28,6 +28,12 @@ method kind = "string"
 method show v = !v
 end
 
+let duration = object
+method store v = Arg.String (fun s -> v := Time.of_compact_duration s)
+method kind = "duration"
+method show v = Time.compact_duration !v
+end
+
 let int_option = object
 method store v = Arg.Int (fun x -> v := Some x)
 method kind = "int"
@@ -42,6 +48,7 @@ end
 
 let int = make_arg int
 let str = make_arg string
+let duration = make_arg duration
 let may_int = make_arg int_option
 let may_str = make_arg str_option
 
