@@ -56,7 +56,9 @@ let compact_duration t =
   if t < 1. then sprintf "%.2fs" t
   else if t < 10. then sprintf "%.1fs" t
   else 
-  loop (int_of_float t) [] factors >> List.combine names >> List.rev >> 
+  loop (int_of_float t) [] factors >> List.combine names >>
+  List.dropwhile (fun (_,x) -> x = 0) >>
+  List.rev >>
   List.dropwhile (fun (_,x) -> x = 0) >>
   List.map (fun (n,x) -> sprintf "%u%s" x n) >> String.concat ""
 
