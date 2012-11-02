@@ -57,11 +57,10 @@ let show_method = function
 
 let client_addr c =
   try
-    List.assoc "x-real-ip" c.headers
+    let real = List.assoc "x-real-ip" c.headers in
+    sprintf "%s(x:%s)" (Nix.show_addr c.addr) real
   with Not_found ->
-  match c.addr with
-  | Unix.ADDR_UNIX s -> s
-  | Unix.ADDR_INET (addr,_) -> Unix.string_of_inet_addr addr
+    Nix.show_addr c.addr
 
 let show_request c =
   sprintf "#%d %s time %.4f (recv %.4f) %s %s%s"
