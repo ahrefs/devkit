@@ -55,17 +55,19 @@ let show_method = function
   | `POST -> "POST"
   | `HEAD -> "HEAD"
 
-let client_addr c =
+let show_client_addr c =
   try
     let real = List.assoc "x-real-ip" c.headers in
     sprintf "%s(x:%s)" (Nix.show_addr c.addr) real
   with Not_found ->
     Nix.show_addr c.addr
 
+let client_addr c = match c.addr with Unix.ADDR_INET (addr,port) -> addr, port | _ -> assert false
+
 let show_request c =
   sprintf "#%d %s time %.4f (recv %.4f) %s %s%s"
     c.id
-    (client_addr c)
+    (show_client_addr c)
     (Time.get () -. c.conn)
     (c.recv -. c.conn)
     (show_method c.meth)
