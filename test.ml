@@ -198,20 +198,25 @@ let test_extract_first_number () =
 
 let test_compact_duration () =
   let t n s =
-    assert_equal ~printer:string_of_int n (Devkit_ragel.parse_compact_duration s);
+    (* FIXME epsilon compare *)
+    assert_equal ~printer:string_of_float n (Devkit_ragel.parse_compact_duration s);
   in
-  t 10 "10s";
-  t 70 "70s";
-  t 70 "1m10s";
-  t 7200 "2h";
-  t 7200 "2h0s";
-  t 7200 "1h60m";
-  t 7200 "1h60m0s";
-  t 7200 "7200s";
-  t 7200 "1h3600s";
-  t 7200 "1h0m3600s";
-  t 7200 "1h30m1800s";
-  t 7201 "90m1801s";
+  t 10. "10s";
+  t 70. "70s";
+  t 70. "1m10s";
+  t 7200. "2h";
+  t 7200. "2h0s";
+  t 7200. "1h60m";
+  t 7200. "1h60m0s";
+  t 7200. "7200s";
+  t 7200. "1h3600s";
+  t 7200. "1h0m3600s";
+  t 7200. "1h30m1800s";
+  t 7201. "90m1801s";
+  t 7201.01 "90m1801.01s";
+  t 7201.1 "90m1801.1s";
+  t 7200.1 "2h0.1s";
+  t 0.8 "0.8s";
   ()
 
 let tests () = 
