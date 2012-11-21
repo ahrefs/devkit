@@ -75,3 +75,8 @@ let save_as name ?(mode=0o644) f =
       exn -> Exn.suppress Unix.unlink temp; raise exn
   end
 
+let unlink_symlink_exn  = Unix.unlink $ Unix.readlink
+let unlink_with_symlink file =
+  match (Unix.lstat file).Unix.st_kind with
+  | Unix.S_LNK -> unlink_symlink_exn file; Unix.unlink file; true
+  | _ -> Unix.unlink file; false
