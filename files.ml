@@ -74,17 +74,3 @@ let save_as name ?(mode=0o644) f =
     with
       exn -> Exn.suppress Unix.unlink temp; raise exn
   end
-
-let unlink_symlink_exn  = Unix.unlink $ Unix.readlink
-let unlink_with_symlink file =
-  match (Unix.lstat file).Unix.st_kind with
-  | Unix.S_LNK -> unlink_symlink_exn file; Unix.unlink file; true
-  | _ -> Unix.unlink file; false
-
-module U = ExtUnix.Specific
-
-let unlinkat_symlink_exn fd name flags = U.unlinkat fd (U.readlinkat fd name) flags
-let unlinkat_with_symlink fd file flags =
-  match (U.fstatat fd file [ U.AT_SYMLINK_NOFOLLOW ]).Unix.st_kind with
-  | Unix.S_LNK -> unlinkat_symlink_exn fd file flags; U.unlinkat fd file flags; true
-  | _ -> U.unlinkat fd file flags; false
