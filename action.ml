@@ -25,6 +25,9 @@ let list_random = function
   | [] -> None
   | l -> list_random_exn l >> some
 
+let array_random_exn a = a.(Random.int (Array.length a))
+let array_random = function [||] -> None | a -> Some (array_random_exn a)
+
 (** [shuffle a] shuffles an array, giving a uniform random distribution *)
  let shuffle a =
    for i = pred (Array.length a) downto 1 do
