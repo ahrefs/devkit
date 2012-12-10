@@ -35,7 +35,7 @@ let is_ipv4 data =
  main := (num 'd' %{ t := !t + !n*24*60*60; } )?
          (num 'h' %{ t := !t + !n*60*60; } )?
          (num 'm' %{ t := !t + !n*60; } )?
-         (num frac? 's' %{ t := !t + !n; } )? ;
+         (num frac? 's'? %{ t := !t + !n; } )? ;
  write data;
 }%%
 
