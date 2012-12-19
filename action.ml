@@ -10,6 +10,7 @@ let period n f =
   (fun () -> incr count; if !count mod n = 0 then f !count)
 
 let strl f l = sprintf "[%s]" (String.concat ";" (List.map f l))
+let catmap f l = String.concat "" (List.map f l)
 
 let uniq p e =
   let h = Hashtbl.create 16 in
