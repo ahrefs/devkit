@@ -32,9 +32,12 @@ let manage () =
   | Some _, Some "onceaday" -> lrot := Log.OnceAday_rotation
   | _, Some s -> Exn.fail "bad log rotation format %s, use d<days> or s<size MB>" s
   end;
+(*
+  this will fail if files don't exists :(
   (* fail before fork if something is wrong *)
   Option.may (fun path -> Unix.(access path [R_OK;W_OK])) !logfile;
   Option.may (fun path -> Unix.(access path [R_OK;W_OK])) !pidfile;
+*)
   if not !foreground then Nix.daemonize ();
   begin match !runas with
   | None -> ()
