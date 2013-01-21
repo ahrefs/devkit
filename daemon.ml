@@ -32,6 +32,9 @@ let manage () =
   | Some _, Some "onceaday" -> lrot := Log.OnceAday_rotation
   | _, Some s -> Exn.fail "bad log rotation format %s, use d<days> or s<size MB>" s
   end;
+  (* fail before fork if something is wrong *)
+  Option.may (fun path -> Unix.(access path [R_OK;W_OK])) !logfile;
+  Option.may (fun path -> Unix.(access path [R_OK;W_OK])) !pidfile;
   if not !foreground then Nix.daemonize ();
   begin match !runas with
   | None -> ()
@@ -47,4 +50,3 @@ let manage () =
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
   Sys.set_signal Sys.sigusr1 (Sys.Signal_handle (fun _ -> Log.reopen !logfile));
   Sys.set_signal Sys.sigusr2 (Sys.Signal_handle (fun _ -> U.malloc_stats (); Action.gc_show "compact" Gc.compact ()));
-
