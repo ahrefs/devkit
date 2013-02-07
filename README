@@ -24,3 +24,37 @@ ocaml-event git://repo.or.cz/ocaml-event.git
 ocurl git://repo.or.cz/ocurl.git branch event
 extunix http://git.ocamlcore.org/extunix/extunix.git
 
+
+What should be installed on Debian:
+------
+
+aptitude install ocaml-native-compilers
+aptitude install ocaml-findlib
+aptitude install camlp4-extra
+aptitude install libpcre-ocaml-dev
+aptitude install libextlib-ocaml-dev
+aptitude install libocamlnet-ocaml-dev
+aptitude install libzip-ocaml-dev
+aptitude install libocsigen-xhtml-ocaml-dev
+aptitude install libounit-ocaml-dev
+aptitude install libevent-dev
+aptitude install libcurl4-gnutls-dev #(with c-ares enabled, from sigpwr repo)
+aptitude install xfslibs-dev
+aptitude install liblzo2-dev
+aptitude install libsnappy-dev
+aptitude install libgoogle-perftools-dev
+aptitude install libboost-thread-dev
+aptitude install libboost-iostreams-dev
+aptitude install libfileutils-ocaml-dev
+aptitude install libjson-wheel-ocaml-dev
+aptitude install libjson-static-camlp4-dev
+aptitude install libodn-ocaml
+aptitude install libodn-ocaml-dev
+aptitude install ocamlmod
+aptitude install ocamlify
+aptitude install libcurl-ocaml
+aptitude install libcurl-ocaml-dev
+aptitude install subversion
+aptitude install apt-file
+apt-file update 
+
