@@ -8,6 +8,7 @@ let find_peek f e =
     while true do
       if not & f & Option.get & Enum.peek e then Enum.junk e else raise Exit
     done;
+    assert false (* unreachable *)
   with
   | Exit -> Option.get & Enum.peek e
   | Option.No_value -> raise Not_found
