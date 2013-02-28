@@ -120,7 +120,8 @@ let bytes_string_f f = (* oh ugly *)
   if a < 1024. then sprintf "%dB" (int_of_float f) else
   if a < 1024. *. 1024. then sprintf "%dKB" (int_of_float (f /. 1024.)) else
   if a < 1024. *. 1024. *. 1024. then sprintf "%.1fMB" (f /. 1024. /. 1024.) else
-  sprintf "%.1fGB" (f /. 1024. /. 1024. /. 1024.)
+  if a < 1024. *. 1024. *. 1024. *. 1024. then sprintf "%.1fGB" (f /. 1024. /. 1024. /. 1024.) else
+  sprintf "%.1fTB" (f /. 1024. /. 1024. /. 1024. /. 1024.)
 
 let bytes_string = bytes_string_f $ float_of_int
 let bytes_string_i64 = bytes_string_f $ Int64.to_float
