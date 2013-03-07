@@ -154,6 +154,7 @@ method debug : 'a. 'a pr = perform debug_s
 method warn : 'a. 'a pr = perform warn_s
 method info : 'a. 'a pr = perform info_s
 method error : 'a. 'a pr = perform error_s
+method put : 'a. Logger.level -> 'a pr = fun level -> perform (put_s level)
 method allow (level:Logger.level) = Logger.set_filter facil level
 method level : Logger.level = Logger.get_level facil
 method name = facil.Logger.name

@@ -82,6 +82,7 @@ module Make(T : Put) = struct
   let info_s = T.put `Info
   let warn_s = T.put `Warn
   let error_s = T.put `Error
+  let put_s = T.put
 
   let debug f fmt = ksprintf (debug_s f) fmt
   let info f fmt = ksprintf (info_s f) fmt
