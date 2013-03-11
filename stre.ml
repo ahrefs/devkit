@@ -118,5 +118,6 @@ let revert = String.implode $ List.rev $ String.explode
 
 let find_prefix s1 s2 =
   let i = ref 0 in
-  while s1.[!i] = s2.[!i] do incr i done;
+  let min_len = min (String.length s1) (String.length s2) in
+  while !i < min_len && s1.[!i] = s2.[!i] do incr i done;
   !i
