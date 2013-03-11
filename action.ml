@@ -287,3 +287,22 @@ let bench f =
 let print_bench name f =
   printf "%s : %s\n%!" name (bench f)
 
+(* sorting DynArray *)
+
+let rec quick_sort d left right cmp =
+  let i = ref left and j = ref right in
+  let pivot = DynArray.unsafe_get d ((left + right) / 2) in
+  while !i <= !j do
+    while cmp (DynArray.unsafe_get d !i) pivot  = -1 do incr i done;
+    while cmp pivot (DynArray.unsafe_get d !j)  = -1 do decr j done;
+    if !i <= !j then begin
+      let tmp = DynArray.unsafe_get d !i in
+      DynArray.unsafe_set d !i (DynArray.unsafe_get d !j);
+      DynArray.unsafe_set d !j tmp;
+      incr i; decr j
+    end;
+  done;
+  if left < !j then quick_sort d left !j cmp;
+  if !i < right then quick_sort d !i right cmp
+
+let quick_sort d cmp = quick_sort d 0 (DynArray.length d - 1) cmp
