@@ -115,3 +115,8 @@ let unescaped s =
   try Scanf.sscanf ("\""^s^"\"") "%S%!" (fun a -> a)  with  _ -> (Exn.fail "Stre.unescaped : Wry input %s" s)
 
 let revert = String.implode $ List.rev $ String.explode
+
+let find_prefix s1 s2 =
+  let i = ref 0 in
+  while s1.[!i] = s2.[!i] do incr i done;
+  !i
