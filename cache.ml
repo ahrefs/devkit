@@ -167,7 +167,7 @@ module Count : sig
   val count : 'a t -> 'a -> int
   val size : 'a t -> int
   val show : 'a t -> ('a -> string) -> string
-  val show_sorted : 'a t -> ?limit:int -> ?sep:string -> ('a -> string) -> string
+  val show_sorted : 'a t -> ?cmp:('a * int -> 'a * int -> int) -> ?limit:int -> ?sep:string -> ('a -> string) -> string
   val stats : 'a t -> ?cmp:('a -> 'a -> int) -> ('a -> string) -> string
   val report : 'a t -> ?limit:int -> ?cmp:('a -> 'a -> int) -> ?sep:string -> ('a -> string) -> string
   val distrib : float t -> float array
@@ -189,8 +189,8 @@ end = struct
   let show t f = enum t >> 
     Enum.map (fun (x,n) -> sprintf "%S: %u" (f x) n) >>
     Stre.concat " "
-  let show_sorted t ?limit ?(sep="\n") f = enum t >>
-    List.of_enum >> List.sort ~cmp:(flip & Action.compare_by snd) >>
+  let show_sorted t ?(cmp=flip & Action.compare_by snd) ?limit ?(sep="\n") f = enum t >>
+    List.of_enum >> List.sort ~cmp >>
     (match limit with None -> id | Some n -> List.take n) >>
     List.map (fun (x,n) -> sprintf "%6d : %S" n (f x)) >>
     String.concat sep
