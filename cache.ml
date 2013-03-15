@@ -166,8 +166,8 @@ module Count : sig
   val fold : 'a t -> ('a -> int -> 'b -> 'b) -> 'b -> 'b
   val count : 'a t -> 'a -> int
   val size : 'a t -> int
-  val show : 'a t -> ('a -> string) -> string
-  val show_sorted : 'a t -> ?cmp:('a * int -> 'a * int -> int) -> ?limit:int -> ?sep:string -> ('a -> string) -> string
+  val show : 'a t -> ?sep:string -> ('a -> string) -> string
+  val show_sorted : 'a t -> ?limit:int -> ?sep:string -> ('a -> string) -> string
   val stats : 'a t -> ?cmp:('a -> 'a -> int) -> ('a -> string) -> string
   val report : 'a t -> ?limit:int -> ?cmp:('a -> 'a -> int) -> ?sep:string -> ('a -> string) -> string
   val distrib : float t -> float array
@@ -186,11 +186,12 @@ end = struct
   let fold t f acc = fold f t acc
   let count t k = Option.default 0 & Hashtbl.find_option t k
   let size = Hashtbl.length
-  let show t f = enum t >> 
-    Enum.map (fun (x,n) -> sprintf "%S: %u" (f x) n) >>
-    Stre.concat " "
-  let show_sorted t ?(cmp=flip & Action.compare_by snd) ?limit ?(sep="\n") f = enum t >>
-    List.of_enum >> List.sort ~cmp >>
+  let show t ?(sep=" ") f = enum t >> 
+    List.of_enum >> List.sort ~cmp:(Action.compare_by fst) >>
+    List.map (fun (x,n) -> sprintf "%S: %u" (f x) n) >>
+    String.concat sep
+  let show_sorted t ?limit ?(sep="\n") f = enum t >>
+    List.of_enum >> List.sort ~cmp:(flip & Action.compare_by snd) >>
     (match limit with None -> id | Some n -> List.take n) >>
     List.map (fun (x,n) -> sprintf "%6d : %S" n (f x)) >>
     String.concat sep
