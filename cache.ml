@@ -186,7 +186,7 @@ end = struct
   let fold t f acc = fold f t acc
   let count t k = Option.default 0 & Hashtbl.find_option t k
   let size = Hashtbl.length
-  let show t ?(sep=" ") f = enum t >> 
+  let show t ?(sep=" ") f = enum t >>
     List.of_enum >> List.sort ~cmp:(Action.compare_by fst) >>
     List.map (fun (x,n) -> sprintf "%S: %u" (f x) n) >>
     String.concat sep
