@@ -308,9 +308,9 @@ let rec quick_sort d left right cmp =
 let quick_sort d cmp = quick_sort d 0 (DynArray.length d - 1) cmp
 
 (**
-  list_min - find the minimum element in the list. Raises Empty_list.
-  @param cmp - compare function, default compare if not specified
-  @param list - list
+  find the minimum element in the list
+  @param cmp compare function, default [Pervasives.compare]
+  @raise Empty_list when list is emtpty
 *)
 let list_min ?(cmp=compare) l =
   List.fold_left (fun x y -> if cmp x y < 0 then x else y) (List.hd l) l
