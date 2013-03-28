@@ -13,6 +13,8 @@ open M
 DEFINE INC(x) = x <- x + 1
 DEFINE DEC(x) = x <- x - 1
 
+let client_max_request_size = 8 * 1024
+
 (** {2 Server} *)
 
 (** server configuration *)
@@ -34,18 +36,7 @@ let default =
     events = Ev.Global.base;
   }
 
-(* TODO put into request *)
-type parsed_header =
-{
-  h_url : string;
-  h_line : string;
-  h_meth : [`GET | `POST | `HEAD ];
-  h_headers : (string * string) list;
-  h_version : int * int;
-  h_start_body : int;
-}
-
-type request = { addr : Unix.sockaddr ;
+type request = { addr : Unix.sockaddr;
                  url : string; (* path and arguments *)
                  path : string;
                  args : (string * string) list;
@@ -56,126 +47,117 @@ type request = { addr : Unix.sockaddr ;
                  body : string;
                  version : int * int; (* client HTTP version *)
                  id : int; (* request id *)
-                 fd : Unix.file_descr;
+                 socket : Unix.file_descr;
                  line : string; (** request line *)
-                 packets : int; (* socket read number *)
                  mutable blocking : unit IO.output option; (* hack for forked childs *)
                  }
+
+(** server state *)
+type server = {
+  mutable total : int;
+  mutable active : int;
+  mutable errors : int;
+  reqs : (int,request) Hashtbl.t;
+  config : config;
+}
+
+type partial_body = {
+  line1 : string;
+  content_length : int option;
+  parsed_headers : (string * string) list;
+  buf : Buffer.t;
+}
+
+type request_state = Headers of Buffer.t | Body of partial_body | Ready of request
+
+(** client state *)
+type client = {
+  fd : Unix.file_descr;
+  req_id : int;
+  time_conn : Time.t; (** time when client connected *)
+  sockaddr : Unix.sockaddr;
+  mutable req : request_state;
+  server : server;
+}
 
 let show_method = function
   | `GET -> "GET"
   | `POST -> "POST"
   | `HEAD -> "HEAD"
 
-let show_client_addr c =
+let show_client_addr req =
   try
-    match c.addr with
+    match req.addr with
     | Unix.ADDR_INET (addr,_) when addr = Unix.inet_addr_loopback ->
-      let real = List.assoc "x-real-ip" c.headers in
-      sprintf "%s(via:%s)" real (Nix.show_addr c.addr)
+      let real = List.assoc "x-real-ip" req.headers in
+      sprintf "%s(via:%s)" real (Nix.show_addr req.addr)
     | _ -> raise Not_found
   with Not_found ->
-    Nix.show_addr c.addr
+    Nix.show_addr req.addr
 
-let client_addr c = match c.addr with Unix.ADDR_INET (addr,port) -> addr, port | _ -> assert false
+let client_addr req = match req.addr with Unix.ADDR_INET (addr,port) -> addr, port | _ -> assert false
 
-let show_request c =
+let show_request req =
   sprintf "#%d %s time %.4f (recv %.4f) %s %s%s"
-    c.id
-    (show_client_addr c)
-    (Time.get () -. c.conn)
-    (c.recv -. c.conn)
-    (show_method c.meth)
-    (Exn.default "" (List.assoc "host") c.headers)
-    c.url
+    req.id
+    (show_client_addr req)
+    (Time.get () -. req.conn)
+    (req.recv -. req.conn)
+    (show_method req.meth)
+    (Exn.default "" (List.assoc "host") req.headers)
+    req.url
 
-type status = { mutable total : int; mutable active : int; mutable errs : int; reqs : (int,request) Hashtbl.t; }
+let show_socket_error fd =
+  try 
+    match Unix.getsockopt_int fd Unix.SO_ERROR with
+    | 0 -> ""
+    | n -> sprintf ", socket error %d" n
+  with _ -> ""
+
+let show_peer c =
+  sprintf "%s (%s%s)"
+    (Nix.show_addr c.sockaddr)
+    (Time.duration_str (Time.now () -. c.time_conn))
+    (show_socket_error c.fd)
+
+let show_client c =
+  match c.req with
+  | Headers b -> sprintf "%s headers %s" (show_peer c) (Action.bytes_string & Buffer.length b)
+  | Body b -> sprintf "%s body %s" (show_peer c) (Action.bytes_string & Buffer.length b.buf)
+  | Ready req -> show_request req
 
 type ('a,'b) result = [ `Ok of 'a | `Error of 'b ]
 
 let space = Pcre.regexp "[ \t]+"
 
-module ReqCache = struct
-type t = (int ref) * Buffer.t * ((parsed_header option) ref)
-let create () = (ref 0, Buffer.create 1024, ref None)
-let add (i,b,_) s = incr i; Buffer.add_string b s
-let count (i,_,_) = !i
-let contents (_,b,_) = Buffer.contents b
-let set_header (_,_,k) h = k := Some h
-let get_header (_,_,h) = !h
-end
-
-type reason = Url | Version | Method | Header | RequestLine | Split | Length
+type reason = Url | Version | Method | Header | RequestLine | Split | Extra
 exception Parse of reason * string
 let failed reason s =
   let name =
   match reason with
   | Url -> "url" | Version -> "version" | Method -> "method"
-  | RequestLine -> "RequestLine" | Split -> "split" | Header -> "header" | Length -> "length"
+  | RequestLine -> "RequestLine" | Split -> "split" | Header -> "header"
+  | Extra -> "Extra"
   in
   let lim = 1024 in
-  let s = if String.length s > lim then sprintf "%S [%d bytes more]" (String.slice ~last:lim s) (String.length s - lim) else sprintf "%S" s in
+  let s =
+    if String.length s > lim then
+      sprintf "%S [%d bytes more]" (String.slice ~last:lim s) (String.length s - lim)
+    else
+      sprintf "%S" s
+  in
   raise (Parse (reason, sprintf "%s : %s" name s))
 
 let get_content_length headers =
   match Exn.catch (List.assoc "content-length") headers with
-  | None -> 0
-  | Some s -> try int_of_string s with _ -> failed Header (sprintf "content-length %S" s)
- 
-let parse_http_req req_id fd (addr,conn,buf) h =
-  try
-  let data = ReqCache.contents buf in
-  let length = get_content_length h.h_headers in
-  let body = try String.slice data ~first:h.h_start_body with _ -> failed Split data in
-  let body_len = String.length body in
-  let body = match body_len - length with
-  | 0 -> body
-  (* workaround MSIE 6 *)
-  | 2 when h.h_meth = `POST && body.[body_len - 2] = '\r' && body.[body_len - 1] = '\n' -> String.slice ~last:(-2) body
-  | _ -> Exn.fail "wrong content-length : %d <> %d" length body_len
-  in
-  let (path,args) = try String.split h.h_url "?" with _ -> h.h_url,"" in
-  let decode_args s =
-    try Netencoding.Url.dest_url_encoded_parameters s with _ -> log #debug "failed to parse args : %s" s; []
-  in
-  let args = match h.h_meth with
-  | `POST -> decode_args body (* TODO check content-type *)
-  | `GET | `HEAD -> decode_args args
-  in
-  `Ok {
-    id = req_id;
-    addr = addr;
-    url = h.h_url;
-    path = path;
-    args = args;
-    conn = conn;
-    recv = Time.get ();
-    headers = h.h_headers;
-    body = body;
-    meth = h.h_meth;
-    version = h.h_version;
-    blocking = None;
-    line = h.h_line;
-    fd = fd;
-    packets = ReqCache.count buf;
-  }
-  with exn -> `Error exn
+  | None -> None
+  | Some s -> try Some (int_of_string s) with _ -> failed Header (sprintf "content-length %S" s)
 
-let parse_headers_exn data =
-  let next s = try String.split s "\r\n" with _ -> failed Split data in
-  let get_headers s =
-    let rec loop acc s =
-      match next s with
-      | "",body ->
-        List.rev_map (fun (n,v) -> String.(lowercase & strip n, strip v)) acc, body
-      | line,s ->
-        let header = try String.split line ":" with _ -> failed Header line in
-        loop (header :: acc) s
-    in
-    loop [] s
-  in
-  let (line,extra) = next data in
-  match Pcre.split ~rex:space line with
+let decode_args s =
+  try Netencoding.Url.dest_url_encoded_parameters s with _ -> log #debug "failed to parse args : %s" s; []
+ 
+let make_request c { line1; parsed_headers=headers; content_length; buf; } =
+  match Pcre.split ~rex:space line1 with
   | [meth;url;version] ->
     if url.[0] <> '/' then (* abs_path *)
       failed Url url;
@@ -183,7 +165,7 @@ let parse_headers_exn data =
       try
         Scanf.sscanf version "HTTP/%u.%u" (fun ma mi -> ma,mi)
       with
-        _ -> failed Version version;
+        _ -> failed Version version
     in
     let meth = match meth with
     | "GET" -> `GET
@@ -191,37 +173,51 @@ let parse_headers_exn data =
     | "HEAD" -> `HEAD
     | _ -> failed Method meth
     in
-    let (headers,_body) = get_headers extra in
+    let (path,args) = try String.split url "?" with _ -> url,"" in
+    let body = Buffer.contents buf in
     if version = (1,1) && not (List.mem_assoc "host" headers) then failed Header "Host is required for HTTP/1.1";
+    let args = match meth with
+    | `POST -> decode_args body (* TODO check content-type *)
+    | `GET | `HEAD -> decode_args args
+    in
     {
-      h_url = url;
-      h_line = line;
-      h_meth = meth;
-      h_headers = headers;
-      h_version = version;
-      h_start_body = try String.find data "\r\n\r\n" + 4 with _ -> String.length data;
+      url; path; args; headers; body; meth;
+      id = c.req_id;
+      addr = c.sockaddr;
+      conn = c.time_conn;
+      recv = Time.get ();
+      version;
+      blocking = None;
+      line = line1;
+      socket = c.fd;
     }
-  | _ -> failed RequestLine line
+  | _ -> failed RequestLine line1
 
-let manage_request_end_exn cache c =
-  match c with
-  | `Done _ ->
-    if Option.is_none & ReqCache.get_header cache then
-      ReqCache.set_header cache (parse_headers_exn (ReqCache.contents cache));
-    true
-  | `Part _ ->
-    (* the first time header download finished, parse it! *)
-    if (Option.is_none & ReqCache.get_header cache) && String.exists (ReqCache.contents cache) "\r\n\r\n" then
-      ReqCache.set_header cache (parse_headers_exn (ReqCache.contents cache));
-    (* check if we have the header, if we need body *)
-    begin match ReqCache.get_header cache with
-    | None -> false (* continue download header *)
-    | Some h ->
-      if h.h_meth <> `POST then true else begin
-        let length = get_content_length h.h_headers in
-        (String.length & ReqCache.contents cache) - h.h_start_body >= length
-      end
-    end
+let extract_headers data =
+  let open String in
+  match nsplit data "\r\n" with
+  | [] -> failed Split data
+  | line1::xs -> 
+    let headers = List.map (fun s ->
+      try let (n,v) = split s ":" in lowercase (strip n), strip v with _ -> failed Header s) xs
+    in
+    line1, headers
+
+let is_body_ready { line1; content_length; parsed_headers=_; buf; } final =
+  match content_length, Buffer.contents buf with
+  | None, "" -> true
+  | None, body -> failed Extra body
+  | Some length, body ->
+    let body_len = String.length body in
+    match body_len - length with
+    | 0 -> true
+    (* workaround MSIE 6 *)
+    | 2 when String.starts_with line1 "POST" && body.[body_len - 2] = '\r' && body.[body_len - 1] = '\n' ->
+      Buffer.clear buf;
+      Buffer.add_string buf (String.slice ~last:(-2) body);
+      true
+    | n when final || n > 0 -> Exn.fail "wrong content-length : %d <> %d" length body_len
+    | _ -> false
 
 (* let int_of_fd : Unix.file_descr -> int = Obj.magic *)
 
@@ -230,17 +226,17 @@ let teardown fd =
   Exn.suppress (Unix.shutdown fd) Unix.SHUTDOWN_ALL;
   Unix.close fd
 
-let finish status fd req =
-  DEC status.active;
-  teardown fd;
-  match req with
-  | None -> ()
-  | Some req ->
-    Hashtbl.remove status.reqs req.id;
+let finish c =
+  DEC c.server.active;
+  teardown c.fd;
+  match c.req with
+  | Headers _ | Body _ -> ()
+  | Ready req ->
+    Hashtbl.remove c.server.reqs req.id;
     log #debug "finished %s" (show_request req)
 
-let write_f config status req (data,ack) ev fd _flags =
-  let finish () = finish status fd req; Ev.del ev in
+let write_f c (data,ack) ev fd _flags =
+  let finish () = finish c; Ev.del ev in
   let rec loop l ack =
     match l with
     | [] -> finish (); ([],0)
@@ -262,11 +258,11 @@ let write_f config status req (data,ack) ev fd _flags =
     ack := a
   with
   exn -> 
-    INC status.errs;
+    INC c.server.errors;
     finish ();
-    match config.log_epipe, exn with
+    match c.server.config.log_epipe, exn with
     | false, Unix.Unix_error (Unix.EPIPE,_,_) -> ()
-    | _ -> log #warn ~exn "write_f %s" & Option.map_default show_request "" req
+    | _ -> log #warn ~exn "write_f %s" (show_client c)
 
 type reply_status = 
   [ `Ok
@@ -350,57 +346,44 @@ let write_some fd s =
   with
   | Unix.Unix_error (Unix.EAGAIN,_,_) -> `Some 0
 
-let write_reply config fd status req l =
+(** close transport connection, count as error *)
+let abort c exn msg =
+  INC c.server.errors;
+  finish c;
+  match c.server.config.log_epipe, exn with
+  | false, Unix.Unix_error (Unix.EPIPE,_,_) -> ()
+  | _ ->
+    log #warn ~exn "abort %s %s" msg (show_client c)
+
+let write_reply c l =
   let rec loop l =
     match l with
-    | [] -> finish status fd req
+    | [] -> finish c
     | s::tl ->
-      match write_some fd s with
-      | `Some n -> Async.setup_simple_event config.events fd [Ev.WRITE] (write_f config status req (ref l,ref n))
+      match write_some c.fd s with
+      | `Some n -> Async.setup_simple_event c.server.config.events c.fd [Ev.WRITE] (write_f c (ref l,ref n))
       | `Done -> loop tl
   in
-  try
-    loop l
-  with
-  | exn ->
-    INC status.errs;
-    finish status fd req;
-    match config.log_epipe, exn with
-    | false, Unix.Unix_error (Unix.EPIPE,_,_) -> ()
-    | _ -> log #warn ~exn "write_reply %s" & Option.map_default show_request "" req
+  try loop l with exn -> abort c exn "write_reply"
 
-let write_reply_blocking_exn config fd status req s =
+let write_reply_blocking c s =
   try
-    let n = Unix.write fd s 0 (String.length s) in
+    let n = Unix.write c.fd s 0 (String.length s) in
     assert (n = String.length s)
   with
-  | exn ->
-    INC status.errs;
-    finish status fd req;
-    begin match config.log_epipe, exn with
-    | false, Unix.Unix_error (Unix.EPIPE,_,_) -> ()
-    | _ -> log #warn ~exn "write_reply_blocking %s" & Option.map_default show_request "" req
-    end;
-    raise exn
+    exn -> abort c exn "write_reply_blocking"
 
 let set_blocking req =
-  let ch = Unix.out_channel_of_descr req.fd in
+  let ch = Unix.out_channel_of_descr req.socket in
   let io = IO.output_channel ch in
   req.blocking <- Some io;
   io
 
 let set_blocking' req =
-  let ch = Unix.out_channel_of_descr req.fd in
+  let ch = Unix.out_channel_of_descr req.socket in
   let io = IO.output_channel ch in
   req.blocking <- Some io;
   ch
-
-let show_socket_error fd =
-  try 
-    match Unix.getsockopt_int fd Unix.SO_ERROR with
-    | 0 -> ""
-    | n -> sprintf ", socket error %d" n
-  with _ -> ""
 
 let make_request_headers_exn code hdrs =
   let b = Buffer.create 1024 in
@@ -411,108 +394,109 @@ let make_request_headers_exn code hdrs =
   put "";
   Buffer.contents b
 
-let handle_client config status fd ((peer,req_start,cache) as conn_info) answer =
-  let peer = Nix.show_addr peer in
-  let show_peer () =
-    sprintf "%s (%s%s)" peer (Time.duration_str (Time.now () -. req_start)) (show_socket_error fd)
-  in
-  let abort req exn msg =
-    (*Exn.suppress Ev.del ev;*)
-    INC status.errs;
-    finish status fd req;
-    log #warn ~exn "handle_client %s %s" msg (show_peer ())
-  in 
-  let send_reply req (code,hdrs,body) =
-    try
-      let hdrs = ("Content-length", string_of_int (String.length body)) :: hdrs in
-      let headers = make_request_headers_exn code hdrs in
-      (* do not transfer body for HEAD requests *)
-      let body = match req with Some x when x.meth = `HEAD -> "" | _ -> body in
-      log #debug "will answer to %s with %d+%d bytes"
-        (show_peer ())
-        (String.length headers)
-        (String.length body);
-      write_reply config fd status req [headers;body]
-    with
-    | No_reply -> finish status fd req
-    | exn -> abort req exn "send_reply"
-  in
-  let send_reply_blocking req (code,hdrs) =
-    try
-      let content = make_request_headers_exn code hdrs in
-      write_reply_blocking_exn config fd status req content
-    with
-    | No_reply -> finish status fd req
-    | exn -> abort req exn "send_reply"; raise exn
-  in
-  let send_reply_user req (code,hdrs,body) =
-    match match req with Some x -> x.blocking | None -> None with
-    | Some io ->
-      Unix.clear_nonblock fd;
-      send_reply_blocking req (code,hdrs);
-    | None ->
-      send_reply req (code,hdrs,body)
-  in
-  let send_error exn =
-    let (http_error,msg) = match exn with
-    | Parse (what,msg) ->
-      let error = match what with
-      | Url | RequestLine | Header | Split | Version -> `Bad_request
-      | Method -> `Not_implemented
-      | Length -> `Length_required
-      in
-      error, msg
-    | exn ->
-      `Bad_request, Exn.str exn
-    in
-    log #warn "parse_http_req from %s, got %d bytes : %s" (show_peer ()) (String.length & ReqCache.contents cache) msg;
-    send_reply None (http_error,[],"")
-  in
+let send_reply c (code,hdrs,body) =
+  try
+    let hdrs = ("Content-length", string_of_int (String.length body)) :: hdrs in
+    let headers = make_request_headers_exn code hdrs in
+    (* do not transfer body for HEAD requests *)
+    let body = match c.req with Ready { meth = `HEAD; _ } -> "" | _ -> body in
+    log #debug "will answer to %s with %d+%d bytes"
+      (show_peer c)
+      (String.length headers)
+      (String.length body);
+    write_reply c [headers;body]
+  with
+  | No_reply -> finish c
+  | exn -> abort c exn "send_reply"
 
-  INC status.total;
-  let req_id = status.total in
-  INC status.active;
-  Unix.set_nonblock fd;
-  log #debug "accepted %s" peer;
-  Async.setup_simple_event config.events fd [Ev.READ] begin fun ev fd _ ->
+let send_reply_blocking c (code,hdrs) =
+  try
+    write_reply_blocking c (make_request_headers_exn code hdrs)
+  with
+  | No_reply -> finish c
+  | exn -> abort c exn "send_reply_blocking"; raise exn
+
+let send_reply_user c (code,hdrs,body) =
+  match match c.req with Ready x -> x.blocking | _ -> None with
+  | Some io ->
+    Unix.clear_nonblock c.fd;
+    send_reply_blocking c (code,hdrs);
+  | None ->
+    send_reply c (code,hdrs,body)
+
+let send_error c exn =
+  let (http_error,msg) = match exn with
+  | Parse (what,msg) ->
+    let error = match what with
+    | Url | RequestLine | Header | Split | Version | Extra -> `Bad_request
+    | Method -> `Not_implemented
+    in
+    error, msg
+  | Failure s -> `Bad_request, s
+  | exn -> `Bad_request, Exn.str exn
+  in
+  log #warn "error for %s : %s" (show_client c) msg;
+  send_reply c (http_error,[],"")
+
+let send_reply_limit c =
+  log #info "request too large from %s" (show_client c);
+  send_reply c (`Request_too_large,[],"request entity too large")
+
+let handle_request c body answer =
+  let req = make_request c body in
+  Hashtbl.replace c.server.reqs req.id req;
+  c.req <- Ready req;
+  try
+    match req.version with
+    | (1,_) -> answer c.server req (send_reply_user c)
+    | _ ->
+      log #info "version %u.%u not supported from %s" (fst req.version) (snd req.version) (show_request req);
+      send_reply c (`Version_not_supported, [], "HTTP/1.0 is supported")
+  with exn ->
+    log #error ~exn "answer %s" & show_request req;
+    match req.blocking with
+    | None -> send_reply c (`Not_found,[],"Not found")
+    | Some _ -> Exn.suppress teardown c.fd
+
+let rec process_chunk c ev answer data final =
+  match c.req with
+  | Headers buf | Body { buf; _ } when String.length data + Buffer.length buf > client_max_request_size ->
+    Ev.del ev;
+    send_reply_limit c
+  | Headers buf ->
+    Buffer.add_string  buf data;
+    let input = Buffer.contents buf in
+    begin match try Some (String.split input "\r\n\r\n") with _ -> None with
+    | None -> if final then failed Split input (* continue reading headers *)
+    | Some (headers,part) ->
+      let (line1,headers) = extract_headers headers in
+      let content_length = get_content_length headers in
+      (** TODO transfer-encoding *)
+      if List.mem_assoc "transfer-encoding" headers then Exn.fail "Transfer-Encoding not supported";
+      Buffer.clear buf;
+      let body = { line1; parsed_headers=headers; content_length; buf; } in
+      c.req <- Body body;
+      process_chunk c ev answer part final
+    end
+  | Body body ->
+    Buffer.add_string body.buf data;
+    if is_body_ready body final then
+      (Ev.del ev; handle_request c body answer)
+    else if final then
+      failed Split (Buffer.contents body.buf)
+  | Ready req ->
+    if data = "" && final = true then
+      (log #warn "STRANGE %s %B" (show_request req) final; failed Split "")
+    else
+      failed Extra data
+
+let handle_client c answer =
+  Async.setup_simple_event c.server.config.events c.fd [Ev.READ] begin fun ev fd _ ->
     try
-    match Async.read_available ~limit:(256*1024) fd with
-    | `Limit _ -> 
-      Ev.del ev;
-      log #info "read_all: request too large from %s" (show_peer ());
-      send_reply None (`Request_too_large,[],"request entity too large")
-    | `Done data | `Part data as c -> 
-      ReqCache.add cache data;
-      try
-        match data with
-        | "" -> (* special case for better error message *)
-          Ev.del ev;
-          log #warn "parse_http_req from %s : client disconnected without sending anything" (show_peer ());
-          finish status fd None
-        | _ when manage_request_end_exn cache c ->
-        Ev.del ev;
-        log #debug "done %d queries, cache length is %d" (ReqCache.count cache) (String.length & ReqCache.contents cache);
-        begin
-        match parse_http_req req_id fd conn_info (Option.get & ReqCache.get_header cache) with
-        | `Error exn -> send_error exn
-        | `Ok req ->
-          try
-            Hashtbl.replace status.reqs req.id req;
-            match req.version with
-            | (1,_) -> answer status req (send_reply_user (Some req))
-            | _ ->
-              log #info "version %u.%u not supported from %s" (fst req.version) (snd req.version) (show_request req);
-              send_reply (Some req) (`Version_not_supported, [], "HTTP/1.0 is supported")
-          with exn ->
-            log #error ~exn "answer %s" & show_request req;
-            match req.blocking with
-            | None -> send_reply (Some req) (`Not_found,[],"Not found")
-            | Some _ -> Exn.suppress teardown fd
-        end
-        | _ -> () (* continute reading to buffer *)
-        with exn -> Ev.del ev; send_error exn
-    with
-    exn -> abort None exn "send"
+      match Async.read_available ~limit:client_max_request_size fd with
+      | `Limit _ -> Ev.del ev; send_reply_limit c
+      | `Chunk (data,final) -> process_chunk c ev answer data final
+    with exn -> Ev.del ev; send_error c exn
   end
 
 module Tcp = struct
@@ -530,11 +514,11 @@ let listen ~name ?(backlog=100) addr port =
     fd
   with exn -> log #warn ~exn "%s listen TCP %s failed" name (Nix.show_addr addr); close fd; raise exn
 
-let handle events fd k =
+let handle config fd k =
   set_nonblock fd;
-  let status = { total = 0; active = 0; errs = 0; reqs = Hashtbl.create 10; } in
+  let status = { total = 0; active = 0; errors = 0; reqs = Hashtbl.create 10; config; } in
   let rec setup () =
-  Async.setup_simple_event events fd [Ev.READ] begin fun ev fd _ ->
+  Async.setup_simple_event config.events fd [Ev.READ] begin fun ev fd _ ->
     try
       while true do (* accept as much as possible, socket is nonblocking *)
         let peer = accept fd in
@@ -554,7 +538,7 @@ let handle events fd k =
         log #error "disable listening socket for %s " (Time.duration_str tm);
         Ev.del ev; 
         let timer = Ev.create () in
-        Ev.set_timer events timer ~persist:false (fun () ->
+        Ev.set_timer config.events timer ~persist:false (fun () ->
           Ev.del timer; log #info "reenabling listening socket"; setup ());
         Ev.add timer (Some tm)
       | _ -> ()
@@ -568,8 +552,14 @@ let start_listen config =
   Tcp.listen ~name:"HTTP server" ~backlog:config.backlog config.ip config.port
 
 let setup_fd fd config answer =
-  Tcp.handle config.events fd (fun st (fd,addr) ->
-    handle_client config st fd (addr,Time.get(),ReqCache.create()) answer)
+  Tcp.handle config fd (fun server (fd,sockaddr) ->
+    INC server.total;
+    let req_id = server.total in
+    INC server.active;
+    let client = { fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 1024); } in
+    Unix.set_nonblock fd;
+    log #debug "accepted %s" (Nix.show_addr sockaddr);
+    handle_client client answer)
 
 let setup config answer =
   let fd = start_listen config in

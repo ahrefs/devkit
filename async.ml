@@ -42,14 +42,16 @@ let write_some fd buf ofs len =
   with
   | Unix.Unix_error ((Unix.EAGAIN|Unix.EWOULDBLOCK),_,_) -> 0
 
-(** Read out all immediately available input (no blocking) *)
+(** Read out all immediately available input (no blocking)
+  @return `Limit when [limit] is exceeded, `Chunk (data,final) otherwise
+  *)
 let read_available ~limit fd =
   let buf = Buffer.create 1024 in
   let s = String.create 1024 in
   let rec loop () =
     match read_some fd s 0 (String.length s) with
-    | End -> `Done (Buffer.contents buf)
-    | Block -> `Part (Buffer.contents buf)
+    | End -> `Chunk (Buffer.contents buf, true)
+    | Block -> `Chunk (Buffer.contents buf, false)
     | Exn exn -> raise exn
     | Data len ->
       Buffer.add_substring buf s 0 len;
