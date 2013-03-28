@@ -13,8 +13,6 @@ open M
 DEFINE INC(x) = x <- x + 1
 DEFINE DEC(x) = x <- x - 1
 
-let client_max_request_size = 8 * 1024
-
 (** {2 Server} *)
 
 (** server configuration *)
@@ -26,6 +24,7 @@ type config =
     log_epipe : bool;
     events : Ev.event_base;
     name : string;
+    max_request_size : int;
   }
 
 let default = 
@@ -36,6 +35,7 @@ let default =
     log_epipe = false;
     events = Ev.Global.base;
     name = "<default>";
+    max_request_size = 16 * 1024;
   }
 
 type request = { addr : Unix.sockaddr;
@@ -440,8 +440,8 @@ let send_error c exn =
   log #warn "error for %s : %s" (show_client c) msg;
   send_reply c (http_error,[],"")
 
-let send_reply_limit c =
-  log #info "request too large from %s" (show_client c);
+let send_reply_limit c n =
+  log #info "request too large from %s : %s" (show_client c) (Action.bytes_string n);
   send_reply c (`Request_too_large,[],"request entity too large")
 
 let handle_request c body answer =
@@ -462,9 +462,9 @@ let handle_request c body answer =
 
 let rec process_chunk c ev answer data final =
   match c.req with
-  | Headers buf | Body { buf; _ } when String.length data + Buffer.length buf > client_max_request_size ->
+  | Headers buf | Body { buf; _ } when String.length data + Buffer.length buf > c.server.config.max_request_size ->
     Ev.del ev;
-    send_reply_limit c
+    send_reply_limit c (String.length data + Buffer.length buf)
   | Headers buf ->
     Buffer.add_string  buf data;
     let input = Buffer.contents buf in
@@ -495,8 +495,8 @@ let rec process_chunk c ev answer data final =
 let handle_client c answer =
   Async.setup_simple_event c.server.config.events c.fd [Ev.READ] begin fun ev fd _ ->
     try
-      match Async.read_available ~limit:client_max_request_size fd with
-      | `Limit _ -> Ev.del ev; send_reply_limit c
+      match Async.read_available ~limit:c.server.config.max_request_size fd with
+      | `Limit s -> Ev.del ev; send_reply_limit c (String.length s)
       | `Chunk (data,final) -> process_chunk c ev answer data final
     with exn -> Ev.del ev; send_error c exn
   end
