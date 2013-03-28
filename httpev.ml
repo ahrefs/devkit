@@ -25,6 +25,7 @@ type config =
     backlog : int;
     log_epipe : bool;
     events : Ev.event_base;
+    name : string;
   }
 
 let default = 
@@ -34,6 +35,7 @@ let default =
     backlog = 100;
     log_epipe = false;
     events = Ev.Global.base;
+    name = "<default>";
   }
 
 type request = { addr : Unix.sockaddr;
@@ -514,31 +516,32 @@ let listen ~name ?(backlog=100) addr port =
     fd
   with exn -> log #warn ~exn "%s listen TCP %s failed" name (Nix.show_addr addr); close fd; raise exn
 
-let handle config fd k =
+let handle events fd k =
   set_nonblock fd;
-  let status = { total = 0; active = 0; errors = 0; reqs = Hashtbl.create 10; config; } in
   let rec setup () =
-  Async.setup_simple_event config.events fd [Ev.READ] begin fun ev fd _ ->
+  Async.setup_simple_event events fd [Ev.READ] begin fun ev fd _ ->
     try
       while true do (* accept as much as possible, socket is nonblocking *)
         let peer = accept fd in
         try
-          k status peer
+          k peer
         with
           exn -> log #error ~exn "accepted (%s)" (Nix.show_addr (snd peer))
       done
     with
     | Unix_error(EAGAIN,_,_) -> ()
     | exn ->
+(*
       log #error ~exn "accept (total requests %d)" (Hashtbl.length status.reqs);
       Hashtbl.iter (fun _ req -> log #error "%s" (show_request req)) status.reqs;
+*)
       match exn with
       | Unix_error(EMFILE,_,_) ->
         let tm = 2. in
         log #error "disable listening socket for %s " (Time.duration_str tm);
         Ev.del ev; 
         let timer = Ev.create () in
-        Ev.set_timer config.events timer ~persist:false (fun () ->
+        Ev.set_timer events timer ~persist:false (fun () ->
           Ev.del timer; log #info "reenabling listening socket"; setup ());
         Ev.add timer (Some tm)
       | _ -> ()
@@ -549,10 +552,11 @@ let handle config fd k =
 end
 
 let start_listen config =
-  Tcp.listen ~name:"HTTP server" ~backlog:config.backlog config.ip config.port
+  Tcp.listen ~name:config.name ~backlog:config.backlog config.ip config.port
 
 let setup_fd fd config answer =
-  Tcp.handle config fd (fun server (fd,sockaddr) ->
+  let server = { total = 0; active = 0; errors = 0; reqs = Hashtbl.create 10; config; } in
+  Tcp.handle config.events fd (fun (fd,sockaddr) ->
     INC server.total;
     let req_id = server.total in
     INC server.active;
