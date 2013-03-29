@@ -34,7 +34,7 @@ let default =
     backlog = 100;
     log_epipe = false;
     events = Ev.Global.base;
-    name = "<default>";
+    name = "HTTP server";
     max_request_size = 16 * 1024;
   }
 
