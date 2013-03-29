@@ -605,6 +605,7 @@ struct
   let get_int = Exn.catch (int_of_string $ arg)
   let str name = match get name with Some s -> s | None -> raise (Bad name)
   let int name = let s = str name in try int_of_string s with _ -> raise (Bad name)
+  let arr name = T.req.args >> List.filter (fun (name',_) -> name = name') >> List.map snd
 end
 
 (** Buffers all output *)
