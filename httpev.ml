@@ -7,8 +7,8 @@ module Ev = Libevent
 open Prelude
 
 (* hide log *)
-module M = struct let log = Log.from "httpev" end
-open M
+module Hidden = struct let log = Log.from "httpev" end
+open Hidden
 
 DEFINE INC(x) = x <- x + 1
 DEFINE DEC(x) = x <- x - 1
@@ -606,10 +606,10 @@ struct
   let str name = match get name with Some s -> s | None -> raise (Bad name)
   let int name = let s = str name in try int_of_string s with _ -> raise (Bad name)
   (**
-    @param name - pass array name without brackets e.g. Arg.arr "array" while GET /request?array[]=1&array[]=2
+    @param name array name without brackets e.g. [array "x"] to extract [x] from /request?x[]=1&x[]=2
   *)
-  let arr n =
-    let name = n ^ "[]" in
+  let array name =
+    let name = name ^ "[]" in
     T.req.args >> List.filter (fun (name',_) -> name = name') >> List.map snd
 end
 
