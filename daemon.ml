@@ -38,6 +38,7 @@ let manage () =
   Option.may (fun path -> Unix.(access path [R_OK;W_OK])) !logfile;
   Option.may (fun path -> Unix.(access path [R_OK;W_OK])) !pidfile;
 *)
+  Option.may Nix.check_pidfile !pidfile; (* check pidfile before fork to fail early *)
   if not !foreground then Nix.daemonize ();
   begin match !runas with
   | None -> ()
@@ -48,7 +49,7 @@ let manage () =
   end;
   Log.reopen !logfile; (* immediately after fork *)
   Log.set_rotation !lrot;
-  Option.may Nix.manage_pidfile !pidfile; (* after fork! *)
+  Option.may Nix.manage_pidfile !pidfile; (* write pidfile after fork! *)
   log #info "GC settings: %s" (Action.gc_settings ());
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
   Sys.set_signal Sys.sigusr1 (Sys.Signal_handle (fun _ -> Log.reopen !logfile));
