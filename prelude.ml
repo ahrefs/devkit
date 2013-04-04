@@ -1,6 +1,7 @@
 (** Useful shortcuts *)
 
 let ($) f g = fun x -> f (g x)
+let ($$) g f = fun x y -> f (g x) (g y)
 let (>>) x f = f x
 let (&) f x = f x
 let (!!) = Lazy.force
