@@ -314,7 +314,7 @@ let add h k v = Hashtbl.replace h k (v::get h k)
 let enum = Hashtbl.enum
 end
 
-class ['a] cache ((cb : ('a -> unit)), limit) =
+class ['a] cache ((cb : ('a list -> unit)), limit) =
 object
   val mutable l = []
   method name = "cache"
@@ -322,11 +322,11 @@ object
     l <- x :: l;
     if List.length l > limit then
     begin
-      List.iter cb l;
+      cb l;
       l <- [ x ]
     end
   method get = l
-  method dump = List.iter cb l
+  method dump = cb l
   method clear = l <- []
   method to_list = l
   method size = List.length l
