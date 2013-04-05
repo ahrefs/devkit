@@ -314,7 +314,7 @@ let add h k v = Hashtbl.replace h k (v::get h k)
 let enum = Hashtbl.enum
 end
 
-class ['a] cache ((cb : ('a list -> unit)), limit) =
+class ['a] cache (cb : ('a list -> unit)) ~limit =
 object
   val mutable l = []
   method name = "cache"
