@@ -326,7 +326,7 @@ object
       l <- [ x ]
     end
   method get = l
-  method dump = cb l
+  method dump = cb l; l <- []
   method clear = l <- []
   method to_list = l
   method size = List.length l
