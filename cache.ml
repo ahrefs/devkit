@@ -315,15 +315,15 @@ let enum = Hashtbl.enum
 end
 
 class ['a] cache (cb : ('a list -> unit)) ~limit =
-object
+object(self)
   val mutable l = []
   method name = "cache"
   method add x =
     l <- x :: l;
-    if List.length l > limit then
+    if List.length l >= limit then
     begin
       cb l;
-      l <- [ x ]
+      self#clear
     end
   method get = l
   method dump = cb l; l <- []
