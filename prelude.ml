@@ -33,7 +33,3 @@ struct
 end
 
 let (+=) a b = a := !a + b
-
-let fst3 (x,_,_) = x
-let snd3 (_,x,_) = x
-let trd3 (_,_,x) = x
