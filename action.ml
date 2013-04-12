@@ -314,3 +314,6 @@ let quick_sort d cmp = quick_sort d 0 (DynArray.length d - 1) cmp
 *)
 let list_min ?(cmp=compare) l =
   List.fold_left (fun x y -> if cmp x y < 0 then x else y) (List.hd l) l
+
+(** command-line arguments *)
+let args = List.tl (Array.to_list Sys.argv)
