@@ -318,6 +318,11 @@ let list_min ?(cmp=compare) l =
 (** command-line arguments *)
 let args = List.tl (Array.to_list Sys.argv)
 
+(** run [cb] after waiting for [delay].
+  @param cb can return [false] to stop the thread, [true] otherwise
+  @param now - show wether call cb before the first delay passes
+  @return created thread
+*)
 let run_periodic ~delay ?(now=false) cb =
   let do_first = ref true in
   let th = ref None in
