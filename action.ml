@@ -324,18 +324,18 @@ let args = List.tl (Array.to_list Sys.argv)
   @return created thread
 *)
 let run_periodic ~delay ?(now=false) cb =
-  let do_first = ref true in
+  let first_res = ref true in
   let th = ref None in
   let rec thread_fun f =
-    if now && !do_first then f ();
     Thread.delay delay;
-    f ();
-    thread_fun f
+    let res = f () in
+    if res then
+      thread_fun f
+    else () (* exit *)
   in
   let th_ = Thread.create (fun () ->
-    let do_cb () = let res = cb () in if not res then (match !th with None -> () | Some th -> Thread.kill th) else () in
-    if now && !do_first then (do_cb (); do_first := false);
-    thread_fun do_cb
+    if now then first_res := cb ();
+    if !first_res then thread_fun cb
   ) () in
   th := Some th_;
   th_
