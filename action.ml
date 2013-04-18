@@ -328,7 +328,7 @@ let run_periodic ~delay ?(now=false) cb =
   let th = ref None in
   let rec thread_fun f =
     Thread.delay delay;
-    let res = f () in
+    let res = try f () with exn -> Log.self #warn ~exn "uncaught exception : run periodic"; false in
     if res then
       thread_fun f
     else () (* exit *)
