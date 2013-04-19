@@ -201,13 +201,17 @@ let test_compact_duration () =
     (* FIXME epsilon compare *)
     assert_equal ~printer:string_of_float n (Devkit_ragel.parse_compact_duration s);
   in
-  t 10. "10s";
+  let tt n s =
+    t n s;
+    assert_equal ~printer:id (Time.compact_duration n) s;
+  in
+  tt 10. "10s";
   t 70. "70s";
-  t 70. "1m10s";
+  tt 70. "1m10s";
   t 10. "10";
   t 70. "70";
   t 70. "1m10";
-  t 7200. "2h";
+  tt 7200. "2h";
   t 7200. "2h0s";
   t 7200. "1h60m";
   t 7200. "1h60m0s";
@@ -220,6 +224,8 @@ let test_compact_duration () =
   t 7201.1 "90m1801.1s";
   t 7200.1 "2h0.1s";
   t 0.8 "0.8s";
+  tt 0.8 "0.80s";
+  tt 5356800. "62d";
   ()
 
 let tests () = 
