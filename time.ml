@@ -47,10 +47,10 @@ let duration_str t =
 
 (* 1m10s *)
 let compact_duration t =
-  let factors = [60; 60; 24; 30; ] in
+  let factors = [60; 60; 24; ] in
   let names = ["s"; "m"; "h"; "d"; ] in
   let rec loop t acc = function
-  | [] -> List.rev acc
+  | [] -> List.rev (t::acc)
   | n::tl -> loop (t/n) (t mod n :: acc) tl
   in
   if t < 1. then sprintf "%.2fs" t
