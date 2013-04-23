@@ -46,11 +46,18 @@ method kind = "string"
 method show v = Option.map_default id "none" !v
 end
 
+let optional = object
+method store v = Unit (fun () -> v := not !v)
+method kind = "bool"
+method show v = if !v then "true" else "false"
+end
+
 let int = make_arg int
 let str = make_arg string
 let duration = make_arg duration
 let may_int = make_arg int_option
 let may_str = make_arg str_option
+let optional = make_arg optional
 
 let usage_header = sprintf "Usage: %s [options]\nOptions are:" Sys.argv.(0)
 
