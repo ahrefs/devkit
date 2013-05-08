@@ -22,6 +22,7 @@ let with_open_in_bin name = bracket (open_in_bin name) close_in_noerr
 let with_open_out_bin name = bracket (open_out_bin name) close_out_noerr
 let with_open_out_temp_file ~mode = bracket (Filename.open_temp_file ~mode "dvkt" "tmp") (fun (_,ch) -> close_out_noerr ch)
 let with_open_out_temp_bin k = with_open_out_temp_file ~mode:[Open_binary] k
+let with_open_out_temp_txt k = with_open_out_temp_file ~mode:[Open_text] k
 
 let wrapped_output io = wrapped io IO.close_out
 let wrapped_outs k = wrapped_output (IO.output_string ()) k
