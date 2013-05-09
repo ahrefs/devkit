@@ -29,6 +29,21 @@ let list_random = function
 let array_random_exn a = a.(Random.int (Array.length a))
 let array_random = function [||] -> None | a -> Some (array_random_exn a)
 
+(** @return index of first element mathing [p] when iterating [a] in reverse
+    @raise Not_found if no such element exists *)
+let array_rfindi p a =
+  let j = ref 0 in
+  try
+    for i = Array.length a - 1 downto 0 do
+      if p (Array.unsafe_get a i) then begin j := i; raise Exit end
+    done;
+    raise Not_found
+  with Exit -> !j
+
+let array_rfind p a = a.(array_rfindi p a)
+
+let array_iter_rev f a = for i = Array.length a - 1 downto 0 do f (Array.unsafe_get a i) done
+
 (** [shuffle a] shuffles an array, giving a uniform random distribution *)
  let shuffle a =
    for i = pred (Array.length a) downto 1 do
