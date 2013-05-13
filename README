@@ -9,6 +9,6 @@ git clone git://repo.or.cz/ocaml-event.git
 git clone git://repo.or.cz/ocurl.git
 git clone http://git.ocamlcore.org/extunix/extunix.git
 (cd ocaml-event && make all allopt uninstall install)
-(cd ocurl && git checkout -b temp && git merge origin/event -m "merge event branch" && ./configure && make all uninstall install && git checkout master)
+(cd ocurl && ./configure && make all uninstall install)
 (cd extunix && ./configure && make build uninstall install)
 aptitude install libextlib-ocaml-dev libpcre-ocaml-dev libocamlnet-ocaml-dev libzip-ocaml-dev libocsigen-xhtml-ocaml-dev libounit-ocaml-dev
