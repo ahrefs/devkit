@@ -13,11 +13,6 @@ let init s = { s; pos = 0; }
 let left t = length t.s - t.pos
 let eos t = left t = 0
 
-(* just for fun, replace with library func *)
-let find_from s i sub =
-  let real_s = slice ~first: i s in
-  i + (find real_s sub)
-
 let rest t =
   let s = sub t.s t.pos (left t) in
   t.pos <- length t.s;
