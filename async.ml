@@ -114,14 +114,17 @@ let setup_periodic_timer_wait events delay ?name f =
   let (_:Ev.event) = periodic_timer_wait events delay ?name f in
   ()
 
-let periodic_timer_stop stop events delay ?(name="") f =
+let periodic_timer_stop_0 stop events first_delay delay ?(name="") f =
   let timer = Ev.create () in
   Ev.set_timer events timer ~persist:false begin fun () ->
     begin try f timer with exn -> log #warn ~exn "periodic_timer_stop %s" name end;
     if not !stop then Ev.add timer (Some delay)
   end;
-  Ev.add timer (Some 0.);
+  Ev.add timer (Some first_delay);
   timer
+
+let periodic_timer_stop_now stop events delay ?(name="") f = periodic_timer_stop_0 stop events 0. delay ~name f
+let periodic_timer_stop_wait stop events delay ?(name="") f = periodic_timer_stop_0 stop events delay delay ~name f
 
 module Peer = struct
 

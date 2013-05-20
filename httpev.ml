@@ -54,6 +54,8 @@ type request = { addr : Unix.sockaddr;
                  mutable blocking : unit IO.output option; (* hack for forked childs *)
                  }
 
+let timeout = Time.hours 1
+
 (** server state *)
 type server = {
   mutable total : int;
@@ -80,6 +82,7 @@ type client = {
   sockaddr : Unix.sockaddr;
   mutable req : request_state;
   server : server;
+  timeout_event : Ev.event; (** handle to timer event that checks connection time *)
 }
 
 let show_method = function
@@ -157,6 +160,13 @@ let get_content_length headers =
 
 let decode_args s =
   try Netencoding.Url.dest_url_encoded_parameters s with _ -> log #debug "failed to parse args : %s" s; []
+
+let setup_timeout_timer c sockaddr =
+  let stop = ref false in
+  Async.periodic_timer_stop_wait stop c.events timeout (fun ev ->
+    log #warn "peer %s hangs out, strange behavour" (Nix.show_addr sockaddr);
+    stop := true;
+  )
  
 let make_request c { line1; parsed_headers=headers; content_length; buf; } =
   match Pcre.split ~rex:space line1 with
@@ -231,6 +241,7 @@ let teardown fd =
 let finish c =
   DEC c.server.active;
   teardown c.fd;
+  Ev.del c.timeout_event;
   match c.req with
   | Headers _ | Body _ -> ()
   | Ready req ->
@@ -560,7 +571,8 @@ let setup_fd fd config answer =
     INC server.total;
     let req_id = server.total in
     INC server.active;
-    let client = { fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 1024); } in
+    let timeout_event = setup_timeout_timer config sockaddr in
+    let client = { fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 1024); timeout_event; } in
     Unix.set_nonblock fd;
     log #debug "accepted %s" (Nix.show_addr sockaddr);
     handle_client client answer)
