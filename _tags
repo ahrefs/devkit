@@ -11,4 +11,4 @@ true: annot, debug, thread, package(threads)
 "async.ml" or "nix.ml": package(event)
 <*.{top,byte,native}>: package(extlib), package(pcre), package(zip), package(event), package(curl), package(netstring),\
   package(extunix), package(netcgi2), package(ocsigen_xhtml)
-<test.*>: package(oUnit)
+<test.*>: package(oUnit), package(event)

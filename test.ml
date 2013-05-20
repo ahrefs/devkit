@@ -228,6 +228,14 @@ let test_compact_duration () =
   tt 5356800. "62d";
   ()
 
+let test_libevent () =
+  let fail_on_exn text f x = try f x with _ -> assert_failure text in
+  let module Ev = Libevent in
+  let ev = Ev.init () in
+  let () = Async.setup_periodic_timer_now ev 1. (fun ev -> Ev.del ev) in
+  fail_on_exn "libevent assert failed" Ev.dispatch ev;
+  ()
+
 let tests () = 
   run_test_tt ("devkit" >::: [
     "HtmlStream" >:: test_htmlstream;
@@ -240,6 +248,7 @@ let tests () =
     "match ipv4" >:: test_match_ipv4;
     "extract_first_number" >:: test_extract_first_number;
     "compact_duration" >:: test_compact_duration;
+    "libevent_bug" >:: test_libevent;
   ]) >> ignore
 
 let () =
