@@ -93,38 +93,28 @@ let read_buf base ?timeout buf fd err k =
 
 let read_n base ?timeout n fd err k = read_buf base ?timeout (String.create n) fd err k
 
-(** Call [f] with [delay]-second pauses between invocations *)
-let periodic_timer_0 events first_delay delay ?(name="") f =
+(** Call [f] with [delay]-second pauses between invocations.
+    Set [stop] to [true] to stop the timer. 
+    NB do not [Ev.del] the event inside the [f] callback. *)
+let periodic_timer_0 events stop first_delay delay ?(name="") f =
   let timer = Ev.create () in
   Ev.set_timer events timer ~persist:false begin fun () ->
-    begin try f timer with exn -> log #warn ~exn "periodic_timer %s" name end;
-    Ev.add timer (Some delay);
+    if not !stop then begin try f () with exn -> log #warn ~exn "periodic_timer %s" name end;
+    if not !stop then Ev.add timer (Some delay);
   end;
-  Ev.add timer (Some first_delay);
+  if not !stop then Ev.add timer (Some first_delay);
   timer
 
-let periodic_timer_now events delay ?name f = periodic_timer_0 events 0. delay ?name f
-let periodic_timer_wait events delay ?name f = periodic_timer_0 events delay delay ?name f
+let periodic_timer_now events ?(stop=ref false) delay ?name f = periodic_timer_0 events stop 0. delay ?name f
+let periodic_timer_wait events ?(stop=ref false) delay ?name f = periodic_timer_0 events stop delay delay ?name f
 
-let setup_periodic_timer_now events delay ?name f =
-  let (_:Ev.event) = periodic_timer_now events delay ?name f in
+let setup_periodic_timer_now events ?stop delay ?name f =
+  let (_:Ev.event) = periodic_timer_now events ?stop delay ?name f in
   ()
 
-let setup_periodic_timer_wait events delay ?name f =
-  let (_:Ev.event) = periodic_timer_wait events delay ?name f in
+let setup_periodic_timer_wait events ?stop delay ?name f =
+  let (_:Ev.event) = periodic_timer_wait events ?stop delay ?name f in
   ()
-
-let periodic_timer_stop_0 stop events first_delay delay ?(name="") f =
-  let timer = Ev.create () in
-  Ev.set_timer events timer ~persist:false begin fun () ->
-    begin try f timer with exn -> log #warn ~exn "periodic_timer_stop %s" name end;
-    if not !stop then Ev.add timer (Some delay)
-  end;
-  Ev.add timer (Some first_delay);
-  timer
-
-let periodic_timer_stop_now stop events delay ?(name="") f = periodic_timer_stop_0 stop events 0. delay ~name f
-let periodic_timer_stop_wait stop events delay ?(name="") f = periodic_timer_stop_0 stop events delay delay ~name f
 
 module Peer = struct
 
