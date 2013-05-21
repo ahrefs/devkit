@@ -54,8 +54,6 @@ type request = { addr : Unix.sockaddr;
                  mutable blocking : unit IO.output option; (* hack for forked childs *)
                  }
 
-let timeout = Time.hours 1
-
 (** server state *)
 type server = {
   mutable total : int;
@@ -82,7 +80,6 @@ type client = {
   sockaddr : Unix.sockaddr;
   mutable req : request_state;
   server : server;
-  timeout_event : Ev.event; (** handle to timer event that checks connection time *)
 }
 
 let show_method = function
@@ -161,13 +158,6 @@ let get_content_length headers =
 let decode_args s =
   try Netencoding.Url.dest_url_encoded_parameters s with _ -> log #debug "failed to parse args : %s" s; []
 
-let setup_timeout_timer c sockaddr =
-  let stop = ref false in
-  Async.periodic_timer_stop_wait stop c.events timeout (fun ev ->
-    log #warn "peer %s hangs out, strange behavour" (Nix.show_addr sockaddr);
-    stop := true;
-  )
- 
 let make_request c { line1; parsed_headers=headers; content_length; buf; } =
   match Pcre.split ~rex:space line1 with
   | [meth;url;version] ->
@@ -241,7 +231,6 @@ let teardown fd =
 let finish c =
   DEC c.server.active;
   teardown c.fd;
-  Ev.del c.timeout_event;
   match c.req with
   | Headers _ | Body _ -> ()
   | Ready req ->
@@ -567,12 +556,18 @@ let start_listen config =
 
 let setup_fd fd config answer =
   let server = { total = 0; active = 0; errors = 0; reqs = Hashtbl.create 10; config; } in
+  Async.setup_periodic_timer_wait config.events (Time.minutes 1) begin fun () ->
+    let now = Time.now () in
+    server.reqs >> Hashtbl.iter begin fun _ req ->
+      if req.recv -. now > Time.minutes 30 then
+        log #warn "request takes too much time to process : %s" (show_request req)
+    end
+  end;
   Tcp.handle config.events fd (fun (fd,sockaddr) ->
     INC server.total;
     let req_id = server.total in
     INC server.active;
-    let timeout_event = setup_timeout_timer config sockaddr in
-    let client = { fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 1024); timeout_event; } in
+    let client = { fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 1024); } in
     Unix.set_nonblock fd;
     log #debug "accepted %s" (Nix.show_addr sockaddr);
     handle_client client answer)
