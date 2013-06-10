@@ -1,6 +1,11 @@
 (** Parallel *)
 
+(** Invoke function in a forked process and return result *)
 val invoke : ('a -> 'b) -> 'a -> unit -> 'b
+
+(** Launch function for each element of the list in the forked process.
+  Does not wait for children to finish - returns immediately. *)
+val launch_forks : ('a -> unit) -> 'a list -> unit
 
 module type WorkerT = sig 
   type task 

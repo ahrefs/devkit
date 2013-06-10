@@ -282,3 +282,10 @@ module ThreadPool = struct
 
 end
 
+let rec launch_forks f = function
+| [] -> ()
+| x::xs ->
+  match Unix.fork () with
+  | 0 -> f x
+  | -1 -> log #warn "failed to fork"
+  | _ -> launch_forks f xs
