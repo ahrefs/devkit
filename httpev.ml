@@ -179,7 +179,10 @@ let make_request c { line1; parsed_headers=headers; content_length; buf; } =
     let body = Buffer.contents buf in
     if version = (1,1) && not (List.mem_assoc "host" headers) then failed Header "Host is required for HTTP/1.1";
     let args = match meth with
-    | `POST -> decode_args body (* TODO check content-type *)
+    | `POST ->
+      let args = decode_args args in
+      let cont_type = try List.assoc "content-type" headers with _ -> "" in
+      if cont_type = "application/x-www-form-urlencoded" then List.append args & decode_args body else args
     | `GET | `HEAD -> decode_args args
     in
     {
