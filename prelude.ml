@@ -9,9 +9,11 @@ let (>>) x f = f x
 (** @deprecated in favor of [@@] *)
 let (&) f x = f x
 (** reverse apply : [x |> f |> g] is equivalent to [g (f x)] *)
-external (|>) : 'a -> ('a -> 'b) -> 'b = "%revapply"
+let (|>) x f = f x
+(* external (|>) : 'a -> ('a -> 'b) -> 'b = "%revapply" *)
 (** apply : [g @@ f @@ x] is equivalent to [g (f x)] *)
-external (@@) : ('a -> 'b) -> 'a -> 'b = "%apply"
+let (@@) f x = f x
+(* external (@@) : ('a -> 'b) -> 'a -> 'b = "%apply" *)
 
 external id : 'a -> 'a = "%identity"
 let flip f x y = f y x
