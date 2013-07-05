@@ -211,6 +211,10 @@ let io_copy input output =
 let io_null = IO.create_out (fun _ -> ()) (fun _ _ len -> len) id id
 
 let compare_by f a b = compare (f a) (f b)
+let compare2 f g (a,b) (a',b') =
+  match f a a' with
+  | 0 -> g b b'
+  | x -> x
 
 let hexdump str =
   let buf = Buffer.create 80 and num = ref 0 in
