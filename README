@@ -6,9 +6,7 @@ Debian
 
 aptitude install ocaml-native-compilers ocaml-findlib libfindlib-ocaml-dev libevent-dev libcurl4-gnutls-dev
 svn checkout http://ocaml-extlib.googlecode.com/svn/trunk extlib
-git clone git://repo.or.cz/ocaml-event.git
-git clone git://repo.or.cz/ocurl.git
-git clone http://git.ocamlcore.org/extunix/extunix.git
+git submodule update --init
 (cd extlib/extlib && make all opt uninstall install)
 (cd ocaml-event && make all allopt uninstall install)
 (cd ocurl && ./configure && make all uninstall install)
