@@ -1,9 +1,9 @@
-[submodule "ocaml-event"]
-	path = ocaml-event
+[submodule "contrib/ocaml-event"]
+	path = contrib/ocaml-event
 	url = git://repo.or.cz/ocaml-event.git
-[submodule "ocurl"]
-	path = ocurl
+[submodule "contrib/ocurl"]
+	path = contrib/ocurl
 	url = git://repo.or.cz/ocurl.git
-[submodule "extunix"]
-	path = extunix
+[submodule "contrib/extunix"]
+	path = contrib/extunix
 	url = http://git.ocamlcore.org/extunix/extunix.git
