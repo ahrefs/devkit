@@ -16,6 +16,12 @@ let make_arg x =
   x#store var,
   sprintf "%s (default: %s)" (describe x#kind name desc) (x#show var)
 
+let test_int f = object
+method store v = Arg.Int (fun x -> if not (f x) then Exn.fail "Bad value %d" x; v := x)
+method kind = "int"
+method show v = string_of_int !v
+end
+
 let int = object
 method store v = Arg.Set_int v
 method kind = "int"
@@ -51,6 +57,7 @@ let str = make_arg string
 let duration = make_arg duration
 let may_int = make_arg int_option
 let may_str = make_arg str_option
+let positive_int = make_arg (test_int (fun x -> x > 0))
 
 let usage_header = sprintf "Usage: %s [options]\nOptions are:" Sys.argv.(0)
 
