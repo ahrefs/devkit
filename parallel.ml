@@ -1,4 +1,5 @@
 
+open Printf
 open ExtLib
 open Prelude
 
@@ -63,7 +64,7 @@ struct
 type task = T.task
 type result = T.result
 type instance = { cin : in_channel; cout : out_channel; pid : int; }
-type t = { mutable running : instance list; execute : (task -> result); mutable alive : bool; }
+type t = { mutable running : instance list; execute : (task -> result); mutable alive : bool; mutable gone : int; }
 
 let worker (execute : task -> result) =
   let main_read, child_write = Unix.pipe () in
@@ -102,7 +103,7 @@ let worker (execute : task -> result) =
 
 let create execute n =
   let running = List.init n (fun _ -> worker execute) in
-  { running; execute; alive=true; }
+  { running; execute; alive=true; gone=0; }
 
 open Unix
 
@@ -123,13 +124,14 @@ let stop ?wait t =
       | Unix_error (ESRCH,_,_) -> ()
       | exn -> log #warn ~exn "Worker PID %d (SIGKILL)" pid) (reap l)
   in
+  let gone () = if t.gone = 0 then "" else sprintf " (%d workers vanished)" t.gone in
   let rec reap_loop timeout l =
     match timeout, reap l with
-    | _, [] -> log #info "Stopped %d workers properly" (List.length l)
-    | Some 0, l -> log #info "Timeouted, killing %d workers with SIGKILL" (List.length l); hard_kill l
+    | _, [] -> log #info "Stopped %d workers properly%s" (List.length l) (gone ())
+    | Some 0, l -> log #info "Timeouted, killing %d workers with SIGKILL%s" (List.length l) (gone ()); hard_kill l
     | _, l -> Nix.sleep 1.; reap_loop (Option.map pred timeout) l
   in
-  log #info "Stopping %d workers" (List.length t.running);
+  log #info "Stopping %d workers%s" (List.length t.running) (gone ());
   t.alive <- false;
   let l = List.map (fun {cin;cout;pid} ->
     close_in_noerr cin;
@@ -165,6 +167,7 @@ let perform t e finish =
             match try Some (Marshal.from_channel w.cin : result) with End_of_file -> None with
             | None ->
               log #warn "PID %d gone, what now?" w.pid;
+              t.gone <- t.gone + 1;
               decr workers;
               let fd = Unix.descr_of_in_channel w.cin in
               (* close and forget pipes of a dead child, do not reap zombie so that premature exit is visible in process list *)
@@ -188,7 +191,8 @@ let perform t e finish =
         channels 
         in
         List.iter finish answers;
-      done
+      done;
+      if t.gone <> 0 then log #warn "Finished, %d workers vanished" t.gone
 
 end
 
