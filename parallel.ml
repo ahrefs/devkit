@@ -1,5 +1,6 @@
 
 open ExtLib
+open Prelude
 
 let log = Log.from "parallel"
 
@@ -61,6 +62,8 @@ struct
 
 type task = T.task
 type result = T.result
+type instance = { cin : in_channel; cout : out_channel; pid : int; }
+type t = { mutable running : instance list; execute : (task -> result); mutable alive : bool; }
 
 let worker (execute : task -> result) =
   let main_read, child_write = Unix.pipe () in
@@ -93,17 +96,17 @@ let worker (execute : task -> result) =
       exit 0
   | pid ->
       Unix.close child_read; Unix.close child_write;
-      let output = Unix.out_channel_of_descr main_write in
-      let input = Unix.in_channel_of_descr main_read in
-      input,output,pid
+      let cout = Unix.out_channel_of_descr main_write in
+      let cin = Unix.in_channel_of_descr main_read in
+      { cin; cout; pid; }
 
-type t = (in_channel * out_channel * int) list ref * (task -> result) * bool ref
-
-let create f n = let l = ref [] in for i = 1 to n do l := worker f :: !l done; l, f, ref true
+let create execute n =
+  let running = List.init n (fun _ -> worker execute) in
+  { running; execute; alive=true; }
 
 open Unix
 
-let stop ?wait (l,_,alive) =
+let stop ?wait t =
   let reap l =
     List.filter_map (fun pid ->
     try 
@@ -122,52 +125,53 @@ let stop ?wait (l,_,alive) =
   in
   let rec reap_loop timeout l =
     match timeout, reap l with
-    | _, [] -> log #info "All stopped"
-    | Some 0, l -> log #info "Timeouted, killing with SIGKILL"; hard_kill l
+    | _, [] -> log #info "Stopped %d workers properly" (List.length l)
+    | Some 0, l -> log #info "Timeouted, killing %d workers with SIGKILL" (List.length l); hard_kill l
     | _, l -> Nix.sleep 1.; reap_loop (Option.map pred timeout) l
   in
-  log #info "Stopping %d workers" (List.length !l);
-  alive := false;
-  let l = List.map (fun (cin,cout,pid) ->
+  log #info "Stopping %d workers" (List.length t.running);
+  t.alive <- false;
+  let l = List.map (fun {cin;cout;pid} ->
     close_in_noerr cin;
     close_out_noerr cout;
     begin try kill pid Sys.sigterm with exn -> log #warn ~exn "Worker PID %d lost (SIGTERM)" pid end;
-    pid) !l
+    pid) t.running
   in
   reap_loop wait l
 
-let perform (l,execute,alive) e f =
-    match !l with
-    | [] -> Enum.iter (fun x -> f (execute x)) e (* no workers *)
+let perform t e finish =
+    match t.running with
+    | [] -> Enum.iter (fun x -> finish (t.execute x)) e (* no workers *)
     | _ ->
       let workers = ref 0 in
-      List.iter (fun (i,o,p) ->
+      t.running |> List.iter begin fun w ->
         match Enum.get e with
         | None -> ()
-        | Some x -> incr workers; Marshal.to_channel o ( x : task) []; flush o) !l;
+        | Some x -> incr workers; Marshal.to_channel w.cout (x : task) []; flush w.cout
+      end;
 (*       Printf.printf "workers %u\n%!" !workers; *)
-      while !workers > 0 && !alive do
-        let fdl = List.map (fun (i,_,_) -> Unix.descr_of_in_channel i) !l in
+      while !workers > 0 && t.alive do
+        let fds = List.map (fun w -> Unix.descr_of_in_channel w.cin) t.running in
 (*         log #info "wait"; *)
-        let (r,_,err) = Nix.restart (fun () -> Unix.select fdl [] fdl (-1.)) () in
+        let (r,_,err) = Nix.restart (fun () -> Unix.select fds [] fds (-1.)) () in
         assert (err = []);
 (*         log #info "wait done"; *)
-        let channels = List.map (fun fd -> let (i,o,_) = List.find (fun (i,_,_) -> Unix.descr_of_in_channel i = fd) !l in i,o) r in
+        let channels = List.map (fun fd -> List.find (fun w -> Unix.descr_of_in_channel w.cin = fd) t.running) r in
 (*         log #info "channels done"; *)
-        let answers = List.filter_map (fun (r,w) ->
+        let answers = List.filter_map (fun w ->
           let task = Enum.get e in
           try 
 (*             log #info "read"; *)
-            match try Some (Marshal.from_channel r : result) with End_of_file -> None with
+            match try Some (Marshal.from_channel w.cin : result) with End_of_file -> None with
             | None ->
-              log #warn "child gone, what now?";
+              log #warn "PID %d gone, what now?" w.pid;
               decr workers;
-              let fd = Unix.descr_of_in_channel r in
+              let fd = Unix.descr_of_in_channel w.cin in
               (* close and forget pipes of a dead child, do not reap zombie so that premature exit is visible in process list *)
-              l := List.filter (fun (i,o,_) -> 
-                if Unix.descr_of_in_channel i = fd
-                then begin close_in_noerr i; close_out_noerr o; false end
-                else true) !l;
+              t.running <- List.filter (fun w -> 
+                if Unix.descr_of_in_channel w.cin = fd
+                then begin close_in_noerr w.cin; close_out_noerr w.cout; false end
+                else true) t.running;
               None
             | Some answer ->
 (*             log #info "read done"; *)
@@ -175,15 +179,15 @@ let perform (l,execute,alive) e f =
             | None -> decr workers
             | Some x ->
 (*               log #info "write"; *)
-              Marshal.to_channel w (x : task) []; flush w;
+              Marshal.to_channel w.cout (x : task) []; flush w.cout;
 (*               log #info "write done"; *)
             end;
             Some answer
           with 
-          | exn -> log #warn ~exn "perform"; decr workers; None)
+          | exn -> log #warn ~exn "perform (from PID %d)" w.pid; decr workers; None)
         channels 
         in
-        List.iter f answers;
+        List.iter finish answers;
       done
 
 end
