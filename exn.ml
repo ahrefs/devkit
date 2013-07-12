@@ -3,6 +3,7 @@
 *)
 
 open Printf
+open ExtLib
 
 let catch f x = try Some (f x) with _ -> None
 let default def f x = try f x with _ -> def
@@ -32,3 +33,4 @@ let fail ?exn fmt =
   let fails s = match exn with None -> failwith s | Some exn -> failwith (s ^ " : " ^ to_string exn) in
   ksprintf fails fmt
 
+let get_backtrace () = String.nsplit (Printexc.get_backtrace ()) "\n"

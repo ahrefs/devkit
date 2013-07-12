@@ -158,7 +158,7 @@ let run main =
     main ();
     Log.self #info "%s finished." Info.name
   with
-    e -> Log.self #error "%s aborted : %s" Info.name (Exn.str e); Log.self #error "%s" (Printexc.get_backtrace ())
+    exn -> Log.self #error ~exn ~backtrace:true "%s aborted" Info.name
 
 end
 
@@ -184,11 +184,9 @@ let perform ?name f x =
     Option.may (fun name -> Log.self #info "Action %S finished (elapsed %s)" name t#get_str) name;
     true
   with
-    e ->
+    exn ->
       let name = Option.map_default (Printf.sprintf " %S") "" name in
-      Log.self #error "Action%s aborted with uncaught exception : %s (elapsed %s)" name (Exn.str e) t#get_str;
-      let trace = Printexc.get_backtrace () in
-      if trace <> "" then Log.self #error "%s" trace;
+      Log.self #error ~exn ~backtrace:true "Action%s aborted with uncaught exception (elapsed %s)" name t#get_str;
       false
 
 let log ?name f x = let (_:bool) = perform ?name f x in ()

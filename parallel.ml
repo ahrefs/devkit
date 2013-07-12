@@ -85,7 +85,8 @@ let worker (execute : task -> result) =
         Marshal.to_channel output (r : result) []; flush output;
 (*         log #info "write done" *)
       done
-      with e -> log #error "Paraller.worker exception %s\n%s" (Exn.str e) (Printexc.get_backtrace ())
+      with exn ->
+        log #error ~exn ~backtrace:true "Paraller.worker aborting on uncaught exception"
       end;
       close_in_noerr input;
       close_out_noerr output;
