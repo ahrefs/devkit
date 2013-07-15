@@ -34,6 +34,7 @@ Output only messages of warning level or higher for all facilities
 
 open Printf
 open ExtLib
+open Prelude
 
 (** Global logger state *)
 module State = struct
@@ -138,23 +139,25 @@ include State.M
 let facility = State.facility
 let set_filter = State.set_filter
 
-type 'a pr = ?exn:exn -> ?backtrace:bool -> ('a, unit, string, unit) format4 -> 'a
+type 'a pr = ?exn:exn -> ?lines:bool -> ?backtrace:bool -> ('a, unit, string, unit) format4 -> 'a
 
 class logger facil =
-let perform f =
-  fun ?exn ?(backtrace=false) fmt ->
+let perform output_line =
+  fun ?exn ?(lines=false) ?(backtrace=false) fmt ->
     try State.rotate ();
+    let output = if lines then (fun facil s -> List.iter (output_line facil) @@ String.nsplit s "\n") else output_line in
     match exn, backtrace with
-    | Some exn, false -> ksprintf (fun s -> f facil (s ^ " : exn " ^ Exn.str exn)) fmt
+    | Some exn, false -> ksprintf (fun s -> output facil (s ^ " : exn " ^ Exn.str exn)) fmt
     | Some exn, true ->
       let print s =
         let bt = Exn.get_backtrace () in
-        f facil (s ^ " : exn " ^ Exn.str exn ^ (if bt = [] then " (no backtrace)" else ""));
-        List.iter (fun line -> f facil ("    " ^ line)) bt
+        output facil (s ^ " : exn " ^ Exn.str exn ^ (if bt = [] then " (no backtrace)" else ""));
+        List.iter (fun line -> output_line facil ("    " ^ line)) bt
       in
       ksprintf print fmt
-    | None, _ -> ksprintf (f facil) fmt
-    with exn -> ksprintf (fun s -> f facil (sprintf "Failed : %s with message %s" (Exn.str exn) s)) fmt
+    | None, _ -> ksprintf (output facil) fmt
+    with exn ->
+      ksprintf (fun s -> output_line facil (sprintf "LOG FAILED : %S with message %S" (Exn.str exn) s)) fmt
 in
 object
 method debug : 'a. 'a pr = perform debug_s
