@@ -16,6 +16,12 @@ let string_of_ipv4 addr =
   let (a,b,c,d) = bytes_of_ipv4 addr in
   Printf.sprintf "%u.%u.%u.%u" a b c d
 
+let string_of_classc_ipv4_exn addr =
+  let (a,b,c,d) = bytes_of_ipv4 addr in
+  if d <> 0 then
+    Exn.fail "bad classc %s" (string_of_ipv4 addr);
+  Printf.sprintf "%u.%u.%u.*" a b c
+
 (*
 1_500_000
    scanf : allocated     73.0GB, heap         0B, collection 0 979 37360, elapsed 43 secs, 23056.45/sec : ok
