@@ -331,3 +331,22 @@ object(self)
   method to_list = l
   method size = List.length l
 end
+
+let cached_io size descr =
+  let b = Buffer.create size in
+  let check_flush () = if Buffer.length b >= size then (assert ((Buffer.length b) = (Unix.write descr (Buffer.contents b) 0 (Buffer.length b))); Buffer.clear b) in
+  let rec output s p l =
+    if l + Buffer.length b > size then begin
+      let miss = size - Buffer.length b in
+      Buffer.add_substring b s p miss;
+      check_flush ();
+      output s (p+miss) (l - miss)
+    end else begin
+      Buffer.add_substring b s p l;
+      check_flush ()
+    end
+  in
+  IO.create_out ~write:(fun c -> Buffer.add_char b c; check_flush ())
+  ~output:(fun s p l -> output s p l; l)
+  ~flush:(fun () -> ()) (* disable flush *)
+  ~close:(fun _ -> ()) (* disable close *)
