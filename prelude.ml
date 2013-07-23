@@ -40,18 +40,3 @@ struct
 end
 
 let (+=) a b = a := !a + b
-
-(* src offset len *)
-external md5_string: string -> int -> int -> string = "caml_md5_string"
-
-(* oh ugly *)
-let md5_hex_string s =
-  let open ExtLib in
-  let md5 = md5_string s 0 (String.length s) in
-  let hex = function 0 -> '0' | 1 -> '1' | 2 -> '2' | 3 -> '3' | 4 -> '4' | 5 -> '5' | 6 -> '6' | 7 -> '7' | 8 -> '8' | 9 -> '9'
-    | 10 -> 'a' | 11 -> 'b' | 12 -> 'c' | 13 -> 'd' | 14 -> 'e' | 15 -> 'f' | _ -> raise (Invalid_argument s)
-  in
-  String.init 32 (fun i ->
-    let op = if i mod 2 = 0 then (/) else (mod) in
-    hex (op (int_of_char (md5.[i / 2])) 16)
-  )
