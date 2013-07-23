@@ -274,3 +274,38 @@ end
 (* in seconds *)
 let sleep = restart Thread.delay
 
+(**
+  Buffered output to [Unix.file_descr].
+  Doesn't own the file descriptor.
+*)
+let output_buf_fd ?(bufsize=1*1024*1024) fd =
+  if bufsize <= 0 then Exn.invalid_arg "output_fd: bufsize %d" bufsize;
+  let buf = String.create bufsize in
+  let len = ref 0 in
+  let flush () =
+    match !len with
+    | 0 -> ()
+    | _ ->
+      let written = Unix.write fd buf 0 !len in
+      if !len <> written then Exn.fail "output_fd: flush failed: %d <> %d" !len written;
+      len := 0
+  in
+  let check_flush () = if !len = bufsize then flush () in
+  let rec output s p l =
+    if l + !len > bufsize then
+    begin
+      let miss = bufsize - !len in
+      String.blit s p buf !len miss;
+      len := bufsize;
+      flush ();
+      output s (p + miss) (l - miss)
+    end else begin
+      String.blit s p buf !len l;
+      len := !len + l;
+      check_flush ()
+    end
+  in
+  IO.create_out ~write:(fun c -> buf.[!len] <- c; incr len; check_flush ())
+  ~output:(fun s p l -> output s p l; l)
+  ~flush
+  ~close:flush (* do not close file descriptor, flush the buffer *)

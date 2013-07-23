@@ -33,4 +33,6 @@ let fail ?exn fmt =
   let fails s = match exn with None -> failwith s | Some exn -> failwith (s ^ " : " ^ to_string exn) in
   ksprintf fails fmt
 
+let invalid_arg fmt = ksprintf invalid_arg fmt
+
 let get_backtrace () = String.nsplit (Printexc.get_backtrace ()) "\n"
