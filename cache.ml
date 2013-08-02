@@ -172,7 +172,6 @@ module Count : sig
   val report : 'a t -> ?limit:int -> ?cmp:('a -> 'a -> int) -> ?sep:string -> ('a -> string) -> string
   val distrib : float t -> float array
   val show_distrib : ?sep:string -> float t -> string
-  val singleton : 'a -> int -> 'a t
 end = struct
   open Hashtbl
   type 'a t = ('a,int) Hashtbl.t
@@ -243,7 +242,6 @@ end = struct
     let data = show_sorted t ?limit ~sep f in
     let stats = stats t ?cmp f in
     stats^sep^data
-  let singleton a i = let c = create () in plus c a i; c
 end
 
 module Group : sig
