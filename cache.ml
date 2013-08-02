@@ -156,6 +156,8 @@ end
 module Count : sig
   type 'a t
   val create : unit -> 'a t
+  val of_list : ('a * int) list -> 'a t
+  val of_enum : ('a * int) Enum.t -> 'a t
   val clear : 'a t -> unit
   val add : 'a t -> 'a -> unit
   val plus : 'a t -> 'a -> int -> unit
@@ -175,10 +177,12 @@ module Count : sig
 end = struct
   open Hashtbl
   type 'a t = ('a,int) Hashtbl.t
-  let create () : 'a t = create 100
+  let create () : 'a t = create 16
   let clear = Hashtbl.clear
   let plus t x n = try replace t x (find t x + n) with Not_found -> Hashtbl.add t x n
   let minus t x n = try replace t x (find t x - n) with Not_found -> Hashtbl.add t x (0 - n)
+  let of_enum e = let h = create () in Enum.iter (fun (k,n) -> plus h k n); h
+  let of_list l = of_enum @@ List.enum l
   let add t x = plus t x 1
   let del t x = minus t x 1
   let enum t = enum t
