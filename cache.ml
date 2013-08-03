@@ -181,7 +181,7 @@ end = struct
   let clear = Hashtbl.clear
   let plus t x n = try replace t x (find t x + n) with Not_found -> Hashtbl.add t x n
   let minus t x n = try replace t x (find t x - n) with Not_found -> Hashtbl.add t x (0 - n)
-  let of_enum e = let h = create () in Enum.iter (fun (k,n) -> plus h k n); h
+  let of_enum e = let h = create () in Enum.iter (fun (k,n) -> plus h k n) e; h
   let of_list l = of_enum @@ List.enum l
   let add t x = plus t x 1
   let del t x = minus t x 1
