@@ -42,16 +42,24 @@ let write_pidfile path =
 let read_pidfile path =
   Control.with_open_in_txt path (fun ch -> Scanf.fscanf ch " %u " Prelude.id)
 
-let check_pidfile path =
+let probe_pidfile path =
   if Sys.file_exists path then
-  try
-    let pid = read_pidfile path in
-    kill pid 0;
-    Log.self #info "pid is alive, exiting";
-    exit 2
-  with
-  | Unix_error (ESRCH, _, _) -> Log.self #info "removing stale pidfile"; Exn.suppress Sys.remove path
-  | e -> Log.self #warn "wrong pid file, exiting"; exit 3
+    try
+      let pid = read_pidfile path in
+      kill pid 0;
+      `Alive
+    with
+    | Unix_error (ESRCH, _, _) -> `Stale
+    | e -> `Error e
+  else
+    `Missing
+
+let check_pidfile path =
+  match probe_pidfile path with
+  | `Missing -> () (* free to go *)
+  | `Stale -> Log.self #info "removing stale pidfile"; Exn.suppress Sys.remove path
+  | `Alive -> Log.self #info "pid is alive, exiting"; exit 2
+  | `Error e -> Log.self #warn "wrong pid file, exiting"; exit 3
 
 let manage_pidfile path =
   check_pidfile path;
