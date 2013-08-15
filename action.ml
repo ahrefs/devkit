@@ -20,6 +20,11 @@ let uniq p e =
 
 let list_uniq p = List.of_enum $ uniq p $ List.enum
 
+let rec list_uniq_sorted p = function
+  | x :: y :: l when p x = p y -> list_uniq_sorted p (y :: l)
+  | x :: l -> x :: list_uniq_sorted p l
+  | [] -> []
+
 let list_random_exn l = List.nth l (Random.int (List.length l))
 
 let list_random = function
