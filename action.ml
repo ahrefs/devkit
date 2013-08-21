@@ -62,10 +62,29 @@ let array_iter_rev f a = for i = Array.length a - 1 downto 0 do f (Array.unsafe_
 
 (** [partition l n] splits [l] into [n] chunks *)
 let partition l n =
+  assert (n >= 0);
   if n < 2 then [| l |] else
   let a = Array.make n [] in
   ExtList.List.iteri (fun i x -> let i = i mod n in a.(i) <- x :: a.(i)) l;
   a
+
+let unpartition a =
+  match a with
+  | [| l |] -> l
+  | _ ->
+  let a = Array.map List.rev a in
+  let l = ref [] in
+  let more = ref true in
+  while !more do
+    more := false;
+    for i = 0 to Array.length a - 1 do
+      match a.(i) with
+      | [] -> ()
+      | x::xs -> more := true; a.(i) <- xs; l := x :: !l
+    done;
+  done;
+  assert (Array.for_all ((=)[]) a);
+  List.rev !l
 
 let file_lines_exn file =
   Control.with_open_in_txt file begin fun ch ->
