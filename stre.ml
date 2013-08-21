@@ -20,6 +20,8 @@ let nsplitc_rev str sep =
 
 let nsplitc str sep = List.rev (nsplitc_rev str sep)
 
+let countc s c = String.fold_left (fun acc c' -> if c = c' then acc+1 else acc) 0 s
+
 (** remove prefix from string if present *)
 let drop_prefix s pre = if String.starts_with s pre then String.slice s ~first:(String.length pre) else s
 let drop_suffix s suf = if String.ends_with s suf then String.slice ~last:(String.length s - String.length suf) s else s
