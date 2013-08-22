@@ -7,6 +7,16 @@ val invoke : ('a -> 'b) -> 'a -> unit -> 'b
   Does not wait for children to finish - returns immediately. *)
 val launch_forks : ('a -> unit) -> 'a list -> unit
 
+module Thread : sig
+type 'a t
+val detach : ('a -> 'b) -> 'a -> 'b t
+val join : 'a t -> [ `Ok of 'a | `Exn of exn ]
+val join_exn : 'a t -> 'a
+
+(** parallel Array.map *)
+val map : ('a -> 'b) -> 'a array -> 'b array
+end
+
 module type WorkerT = sig 
   type task 
   type result 

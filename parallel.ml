@@ -298,3 +298,13 @@ let rec launch_forks f = function
   | 0 -> f x
   | -1 -> log #warn "failed to fork"
   | _ -> launch_forks f xs
+
+module Thread = struct
+type 'a t = [ `Exn of exn | `None | `Ok of 'a ] ref * Thread.t
+let detach f x =
+  let result = ref `None in
+  result, Thread.create (fun () -> result := try `Ok (f x) with exn -> `Exn exn) ()
+let join (result,thread) = Thread.join thread; match !result with `None -> assert false | (`Ok _ | `Exn _ as x) -> x
+let join_exn t = match join t with `Ok x -> x | `Exn exn -> raise exn
+let map f a = Array.map join_exn @@ Array.map (detach f) a
+end
