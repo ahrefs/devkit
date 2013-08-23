@@ -14,4 +14,12 @@ let find_peek f e =
   | Option.No_value -> raise Not_found
   | exn -> raise exn (* f *)
 
-
+let list_loop l =
+  assert (l <> []);
+  let r = ref l in
+  let rec next () =
+    match !r with
+    | x :: xs -> r := xs; x
+    | [] -> r := l; next ()
+  in
+  Enum.from next
