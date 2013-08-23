@@ -9,6 +9,11 @@ let period n f =
   let count = ref 0 in
   (fun () -> incr count; if !count mod n = 0 then f !count)
 
+let timely period f =
+  assert (period > 0.);
+  let next = ref (Time.get () +. period) in
+  (fun () -> if Time.get () > !next then begin next := Time.get () +. period; f () end)
+
 let strl f l = sprintf "[%s]" (String.concat ";" (List.map f l))
 let catmap f l = String.concat "" (List.map f l)
 
@@ -354,7 +359,7 @@ let quick_sort d cmp = quick_sort d 0 (DynArray.length d - 1) cmp
 (**
   find the minimum element in the list
   @param cmp compare function, default [Pervasives.compare]
-  @raise Empty_list when list is emtpty
+  @raise Empty_list when list is empty
 *)
 let list_min ?(cmp=compare) l =
   List.fold_left (fun x y -> if cmp x y < 0 then x else y) (List.hd l) l
@@ -362,24 +367,16 @@ let list_min ?(cmp=compare) l =
 (** command-line arguments *)
 let args = List.tl (Array.to_list Sys.argv)
 
-(** run [cb] after waiting for [delay].
-  @param cb can return [false] to stop the thread, [true] otherwise
-  @param now - show wether call cb before the first delay passes
-  @return created thread
+(** run [f] in thread periodically once in [delay] seconds.
+  @param f returns [false] to stop the thread, [true] otherwise
+  @param now default [false]
 *)
-let run_periodic ~delay ?(now=false) cb =
-  let first_res = ref true in
-  let th = ref None in
-  let rec thread_fun f =
-    Thread.delay delay;
-    let res = try f () with exn -> Log.self #warn ~exn "uncaught exception : run periodic"; false in
-    if res then
-      thread_fun f
-    else () (* exit *)
+let thread_run_periodic ~delay ?(now=false) f =
+  let (_:Thread.t) = Thread.create begin fun () ->
+    if not now then Nix.sleep delay;
+    while try f () with exn -> Log.self #warn ~exn "Action.thread_run_periodic"; true do
+      Nix.sleep delay
+    done
+  end ()
   in
-  let th_ = Thread.create (fun () ->
-    if now then first_res := cb ();
-    if !first_res then thread_fun cb
-  ) () in
-  th := Some th_;
-  th_
+  ()
