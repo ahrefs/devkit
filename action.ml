@@ -244,6 +244,7 @@ let hexdump str =
     match List.take 16 chars with
     | [] -> Buffer.contents buf
     | l ->
+          if Buffer.length buf <> 0 then Buffer.add_char buf '\n';
           bprintf buf "%08x|  " !num;
           num := !num + 16;
           let rec bytes pos = function
@@ -266,7 +267,6 @@ let hexdump str =
           Buffer.add_string buf " |";
           List.iter (fun ch -> Buffer.add_char buf (if ch >= '\x20' && ch <= '\x7e' then ch else '.')) l;
           Buffer.add_char buf '|';
-          Buffer.add_char buf '\n';
           loop (List.drop 16 chars)
   in
    loop (String.explode str)
