@@ -143,9 +143,19 @@ type 'a pr = ?exn:exn -> ?lines:bool -> ?backtrace:bool -> ('a, unit, string, un
 
 class logger facil =
 let perform output_line =
-  fun ?exn ?(lines=false) ?(backtrace=false) fmt ->
+  fun ?exn ?(lines=true) ?(backtrace=false) fmt ->
     try State.rotate ();
-    let output = if lines then (fun facil s -> List.iter (output_line facil) @@ String.nsplit s "\n") else output_line in
+    let output =
+      if lines then
+        begin fun facil s ->
+          if String.contains s '\n' then
+            List.iter (output_line facil) @@ String.nsplit s "\n"
+          else
+            output_line facil s
+        end
+      else
+        output_line
+    in
     match exn, backtrace with
     | Some exn, false -> ksprintf (fun s -> output facil (s ^ " : exn " ^ Exn.str exn)) fmt
     | Some exn, true ->
