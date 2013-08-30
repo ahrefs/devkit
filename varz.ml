@@ -72,7 +72,7 @@ end
 (** Exponential Weighted Moving Average 
   (smooth) 0.05 < alpha < 0.15 (dynamic)
 *)
-let ewma alpha name =
+class ewma alpha name =
 object (self)
 val mutable x = nan
 method add n = if compare nan x = 0 then x <- n else x <- x +. alpha *. (n -. x)
