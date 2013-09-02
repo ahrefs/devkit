@@ -23,6 +23,17 @@ let uniq p e =
     let k = p x in
     if Hashtbl.mem h k then false else (Hashtbl.add h k (); true)) e
 
+let all_uniq p e =
+  let h = Hashtbl.create 16 in
+  let rec loop () =
+    match Enum.get e with
+    | None -> true
+    | Some x ->
+      let k = p x in
+      if Hashtbl.mem h k then false else (Hashtbl.add h k (); loop ())
+  in
+  loop ()
+
 let list_uniq p = List.of_enum $ uniq p $ List.enum
 
 let rec list_uniq_sorted p = function
