@@ -50,7 +50,12 @@ let manage () =
   Log.reopen !logfile; (* immediately after fork *)
   Log.set_rotation !lrot;
   Option.may Nix.manage_pidfile !pidfile; (* write pidfile after fork! *)
-  log #info "GC settings: %s" (Action.gc_settings ());
+  if Option.is_some !logfile then
+  begin
+    let quote s = try Scanf.sscanf s "%_[a-zA-Z0-9:_/.-]%!" s with _ -> Filename.quote s in
+    log #info "run: %s" (String.concat " " (List.map quote Action.args));
+    log #info "GC settings: %s" (Action.gc_settings ());
+  end;
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
   Sys.set_signal Sys.sigusr1 (Sys.Signal_handle (fun _ -> Log.reopen !logfile));
   Sys.set_signal Sys.sigusr2 (Sys.Signal_handle (fun _ -> U.malloc_stats (); Action.gc_show "compact" Gc.compact ()));
