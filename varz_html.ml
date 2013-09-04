@@ -1,5 +1,5 @@
 
-open XHTML.M
+open Xhtml.M
 open ExtLib
 open Printf
 

@@ -647,7 +647,7 @@ let serve_text req ?status text =
 
 let serve_html req html =
   serve_io req "text/html" (fun out -> 
-    XHTML.M.pretty_print (IO.nwrite out) html)
+    Xhtml.P.print (IO.nwrite out) html)
 
 let run ?(ip=Unix.inet_addr_loopback) port answer =
   server { default with ip = ip; port = port } answer

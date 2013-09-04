@@ -65,7 +65,7 @@ let serve_text cgi ?status text =
   serve_text_io cgi ?status (flip IO.nwrite text)
 
 let serve_html cgi html =
-  serve_content cgi ~ctype:"text/html" (fun out -> XHTML.M.pretty_print (IO.nwrite out) html)
+  serve_content cgi ~ctype:"text/html" (fun out -> Xhtml.P.print ~output:(IO.nwrite out) html)
 
 let not_found cgi = serve_text cgi ~status:`Not_found "Not found"
 let bad_request ?(text="Bad request") cgi = serve_text cgi ~status:`Bad_request text

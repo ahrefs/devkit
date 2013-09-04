@@ -1,6 +1,6 @@
 name="devkit"
 version="svn"
 description="devkit"
-requires="extlib,pcre,netstring,netsys,netcgi2,zip,ocsigen_xhtml,unix,threads,event,curl,extunix"
+requires="extlib,pcre,netstring,netsys,netcgi2,zip,tyxml,unix,threads,event,curl,extunix"
 archive(mt,byte)="devkit.cma"
 archive(mt,native)="devkit.cmxa"
