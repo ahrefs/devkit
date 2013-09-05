@@ -1,9 +1,0 @@
-[submodule "contrib/ocaml-event"]
-	path = contrib/ocaml-event
-	url = git://repo.or.cz/ocaml-event.git
-[submodule "contrib/ocurl"]
-	path = contrib/ocurl
-	url = git://repo.or.cz/ocurl.git
-[submodule "contrib/extunix"]
-	path = contrib/extunix
-	url = http://git.ocamlcore.org/extunix/extunix.git

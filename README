@@ -1,14 +1,6 @@
 Dependencies
 ============
 
-Debian
-------
+aptitude install libevent-dev libcurl4-gnutls-dev libpcre3-dev zlib1g-dev
 
-aptitude install ocaml-native-compilers ocaml-findlib libfindlib-ocaml-dev libevent-dev libcurl4-gnutls-dev
-svn checkout http://ocaml-extlib.googlecode.com/svn/trunk extlib
-git submodule update --init
-(cd extlib/extlib && make all opt uninstall install)
-(cd ocaml-event && make all allopt uninstall install)
-(cd ocurl && ./configure && make all uninstall install)
-(cd extunix && ./configure && make build uninstall install)
-aptitude install libpcre-ocaml-dev libocamlnet-ocaml-dev libzip-ocaml-dev libocsigen-xhtml-ocaml-dev libounit-ocaml-dev
+opam install "ocamlfind" "extlib" "ounit" "camlzip" "ocaml-event" "ocurl" "ocamlnet" "tyxml" "pcre-ocaml" "extunix"
