@@ -166,7 +166,10 @@ module Count : sig
   val enum : 'a t -> ('a * int) Enum.t
   val iter : 'a t -> ('a -> int -> unit) -> unit
   val fold : 'a t -> ('a -> int -> 'b -> 'b) -> 'b -> 'b
+  (** number of times given element was seen *)
   val count : 'a t -> 'a -> int
+  val count_all : 'a t -> int
+  (** number of distinct elements *)
   val size : 'a t -> int
   val show : 'a t -> ?sep:string -> ('a -> string) -> string
   val show_sorted : 'a t -> ?limit:int -> ?sep:string -> ('a -> string) -> string
@@ -187,8 +190,9 @@ end = struct
   let del t x = minus t x 1
   let enum t = enum t
   let iter t k = iter k t
-  let fold t f acc = fold f t acc
+  let fold t f acc = Hashtbl.fold f t acc
   let count t k = Option.default 0 & Hashtbl.find_option t k
+  let count_all t = Hashtbl.fold (fun _ n acc -> acc + n) t 0
   let size = Hashtbl.length
   let show t ?(sep=" ") f = enum t >>
     List.of_enum >> List.sort ~cmp:(Action.compare_by fst) >>
