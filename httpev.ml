@@ -40,6 +40,8 @@ let default =
     max_request_size = 16 * 1024;
   }
 
+type encode = Gzip | Identity
+
 type request = { addr : Unix.sockaddr;
                  url : string; (* path and arguments *)
                  path : string;
@@ -54,6 +56,7 @@ type request = { addr : Unix.sockaddr;
                  socket : Unix.file_descr;
                  line : string; (** request line *)
                  mutable blocking : unit IO.output option; (* hack for forked childs *)
+                 encode : encode;
                  }
 
 (** server state *)
@@ -134,7 +137,7 @@ type ('a,'b) result = [ `Ok of 'a | `Error of 'b ]
 
 let space = Pcre.regexp "[ \t]+"
 
-type reason = Url | Version | Method | Header | RequestLine | Split | Extra
+type reason = Url | Version | Method | Header | RequestLine | Split | Extra | NotAcceptable
 exception Parse of reason * string
 let failed reason s =
   let name =
@@ -142,6 +145,7 @@ let failed reason s =
   | Url -> "url" | Version -> "version" | Method -> "method"
   | RequestLine -> "RequestLine" | Split -> "split" | Header -> "header"
   | Extra -> "Extra"
+  | NotAcceptable -> "Not Acceptable"
   in
   let lim = 1024 in
   let s =
@@ -159,6 +163,29 @@ let get_content_length headers =
 
 let decode_args s =
   try Netencoding.Url.dest_url_encoded_parameters s with _ -> Exn.fail "decode_args : %s" s
+
+let parse_encode headers =
+  let wise_nsplit s c = List.map (String.strip ~chars:" \t\r\n") @@ Stre.nsplitc s c in
+  match Exn.catch (List.assoc "accept-encoding") headers with
+  | Some str ->
+    let encodings = wise_nsplit str ',' in
+    let encodings = List.map (fun s ->
+      match wise_nsplit (String.lowercase s) ';' with
+      | [ enc ] -> enc, None
+      | [ enc; q ] -> enc, (Some q)
+      | _ -> Exn.fail "bad ecoding record %S" s
+    ) encodings in
+    let test_available s =
+      if List.mem (s, Some "q=0") encodings then false else
+      if List.exists (fun (enc,_) -> enc = s) encodings then true else
+      if List.mem ("*", Some "q=0") encodings then false else
+      if List.exists (fun (enc,_) -> enc = "*") encodings then true else
+      s = "identity" (* identity is always accepted, unless prohibited *)
+    in
+    if test_available "gzip" then Gzip else
+    if test_available "identity" then Identity
+    else Exn.fail "not acceptable : %S" str
+  | None -> Identity
 
 let make_request c { line1; parsed_headers=headers; buf; _ } =
   match Pcre.split ~rex:space line1 with
@@ -187,6 +214,7 @@ let make_request c { line1; parsed_headers=headers; buf; _ } =
       if cont_type = "application/x-www-form-urlencoded" then List.append args & decode_args body else args
     | `GET | `HEAD -> decode_args args
     in
+    let encode = try parse_encode headers with Failure s -> failed NotAcceptable s in
     {
       url; path; args; headers; body; meth;
       id = c.req_id;
@@ -197,6 +225,7 @@ let make_request c { line1; parsed_headers=headers; buf; _ } =
       blocking = None;
       line = line1;
       socket = c.fd;
+      encode;
     }
   | _ -> failed RequestLine line1
 
@@ -280,6 +309,7 @@ type reply_status =
   | `Unauthorized
   | `Forbidden
   | `Not_found
+  | `Not_acceptable
   | `Length_required
   | `Request_too_large
   | `Internal_server_error
@@ -303,6 +333,7 @@ let status_code : reply_status -> int = function
   | `Unauthorized -> 401
   | `Forbidden -> 403
   | `Not_found -> 404
+  | `Not_acceptable -> 406
   | `Length_required -> 411
   | `Request_too_large -> 413
 
@@ -325,6 +356,7 @@ let http_reply_exn : reply_status -> string = function
   | `Unauthorized -> "HTTP/1.0 401 Unauthorized"
   | `Forbidden -> "HTTP/1.0 403 Forbidden"
   | `Not_found -> "HTTP/1.0 404 Not Found"
+  | `Not_acceptable -> "HTTP/1.0 406 Not Acceptable"
   | `Length_required -> "HTTP/1.0 411 Length Required"
   | `Request_too_large -> "HTTP/1.0 413 Request Entity Too Large"
 
@@ -385,7 +417,9 @@ let set_blocking req =
   let ch = Unix.out_channel_of_descr req.socket in
   let io = IO.output_channel ch in
   req.blocking <- Some io;
-  io
+  match req.encode with
+  | Identity -> io
+  | Gzip -> Gzip_io.output io
 
 let set_blocking' req =
   let ch = Unix.out_channel_of_descr req.socket in
@@ -418,6 +452,19 @@ let send_reply c (code,hdrs,body) =
   | No_reply -> finish c
   | exn -> abort c exn "send_reply"
 
+let make_headers_with_encode enc hdrs =
+  match enc with
+  | Identity -> hdrs
+  | Gzip ->
+    let header_name = "Content-Encoding" in
+    begin match Exn.catch (List.find (fun (h,_) -> Stre.iequal h header_name)) hdrs with
+    | Some (_,enc) ->
+    log #warn "gzip encoding is surpassed by user : %S" enc;
+    hdrs
+    | None ->
+    ((header_name, "gzip")::hdrs)
+    end
+
 let send_reply_blocking c (code,hdrs) =
   try
     write_reply_blocking c (make_request_headers_exn code hdrs)
@@ -426,11 +473,14 @@ let send_reply_blocking c (code,hdrs) =
   | exn -> abort c exn "send_reply_blocking"; raise exn
 
 let send_reply_user c (code,hdrs,body) =
+  let encode = match c.req with Ready r -> r.encode | _ -> Identity in
+  let hdrs = make_headers_with_encode encode hdrs in
   match match c.req with Ready x -> x.blocking | _ -> None with
   | Some _ ->
     Unix.clear_nonblock c.fd;
     send_reply_blocking c (code,hdrs);
   | None ->
+    let body = match encode with Identity -> body | Gzip -> Gzip_io.gzip body in
     send_reply c (code,hdrs,body)
 
 let send_error c exn =
@@ -439,6 +489,7 @@ let send_error c exn =
     let error = match what with
     | Url | RequestLine | Header | Split | Version | Extra -> `Bad_request
     | Method -> `Not_implemented
+    | NotAcceptable -> `Not_acceptable
     in
     error, msg
   | Failure s -> `Bad_request, s
@@ -457,7 +508,8 @@ let handle_request c body answer =
   c.req <- Ready req;
   try
     match req.version with
-    | (1,_) -> answer c.server req (send_reply_user c)
+    | (1,_) ->
+        answer c.server req (send_reply_user c)
     | _ ->
       log #info "version %u.%u not supported from %s" (fst req.version) (snd req.version) (show_request req);
       send_reply c (`Version_not_supported, [], "HTTP/1.0 is supported")

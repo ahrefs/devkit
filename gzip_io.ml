@@ -34,3 +34,7 @@ let pipe_in f =
     )
 *)
 
+let gzip s =
+  let out = output @@ IO.output_string () in
+  IO.nwrite out s;
+  IO.close_out out
