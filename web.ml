@@ -554,17 +554,16 @@ let curl_default_setup h =
   Curl.set_encoding h Curl.CURL_ENCODING_ANY;
   ()
 
-let http_get_io_exn ?(extra=ignore) ?(check=curl_ok) url out =
+let http_get_io_exn ?(setup=ignore) ?(check=curl_ok) url out =
   let inner = ref None in
   try
     with_curl begin fun h ->
-      let check = lazy (check h) in
       Curl.set_url h url;
       curl_default_setup h;
-      extra h;
+      setup h;
       Curl.set_writefunction h (fun s -> 
         try 
-          match Lazy.force check with 
+          match check h with 
           | false -> 0
           | true -> IO.nwrite out s; String.length s
         with exn -> inner := Some exn; 0);
@@ -573,27 +572,32 @@ let http_get_io_exn ?(extra=ignore) ?(check=curl_ok) url out =
   with
   | exn -> raise (Option.default exn !inner)
 
-let http_get_io url ?(verbose=true) ?extra out =
+let http_get_io url ?(verbose=true) ?setup out =
   try
-    http_get_io_exn url ?extra out
+    http_get_io_exn url ?setup out
   with 
   | Curl.CurlException(Curl.CURLE_WRITE_ERROR,_,_) -> ()
   | exn -> if verbose then Log.main #warn ~exn "http_get_io(%s)" url else ()
 
-let http_get ?verbose ?extra url = wrapped (IO.output_string ()) IO.close_out (http_get_io ?verbose ?extra url)
+let http_get ?verbose ?setup url = wrapped (IO.output_string ()) IO.close_out (http_get_io ?verbose ?setup url)
 
-let http_gets ?(setup=ignore) url =
-  try
+let http_gets ?(setup=ignore) ?(check=(fun _ -> true)) ?(result=(fun _ _ -> ())) url =
   with_curl begin fun h ->
     Curl.set_url h url;
     curl_default_setup h;
-    setup h;
+    let () = setup h in
     let b = Buffer.create 10 in
-    Curl.set_writefunction h (fun s -> Buffer.add_string b s; String.length s);
-    Curl.perform h;
-    `Ok (Curl.get_httpcode h, Buffer.contents b)
+    Curl.set_writefunction h begin fun s ->
+      match check h with
+      | true -> Buffer.add_string b s; String.length s
+      | false -> 0
+    end;
+    try
+      Curl.perform h;
+      let () = result h Curl.CURLE_OK in
+      `Ok (Curl.get_httpcode h, Buffer.contents b)
+    with
+    | Curl.CurlException (code,_,_) ->
+      let () = result h code in
+      `Error code
   end
-  with
-  | Curl.CurlException (code,_,_) -> `Error code
-
-
