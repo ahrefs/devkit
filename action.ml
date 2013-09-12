@@ -352,8 +352,8 @@ let rec quick_sort d left right cmp =
   let i = ref left and j = ref right in
   let pivot = DynArray.unsafe_get d ((left + right) / 2) in
   while !i <= !j do
-    while cmp (DynArray.unsafe_get d !i) pivot  = -1 do incr i done;
-    while cmp pivot (DynArray.unsafe_get d !j)  = -1 do decr j done;
+    while cmp (DynArray.unsafe_get d !i) pivot < 0 do incr i done;
+    while cmp pivot (DynArray.unsafe_get d !j) < 0 do decr j done;
     if !i <= !j then begin
       let tmp = DynArray.unsafe_get d !i in
       DynArray.unsafe_set d !i (DynArray.unsafe_get d !j);
