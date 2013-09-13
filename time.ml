@@ -10,11 +10,42 @@ type t = float
 let get = Unix.gettimeofday
 let now = Unix.gettimeofday
 
+let fast_to_string =
+  (* "%04u-%02u-%02uT%02u:%02u:%02u%s" *)
+  let template = "2013-__-__T__:__:__" in
+  let template_z = template ^ "Z" in
+  let digit n = Char.unsafe_chr (Char.code '0' + n) in
+  let put s ofs n =
+    String.unsafe_set s ofs (digit (n / 10));
+    String.unsafe_set s (ofs+1) (digit (n mod 10))
+  in
+  fun ~gmt f ->
+    let open Unix in
+    let t = (if gmt then gmtime else localtime) f in
+    let s = String.copy (if gmt then template_z else template) in
+    let year = 1900 + t.tm_year in
+    if year <> 2013 then
+    begin
+      if year >= 2010 && year < 2020 then
+        String.unsafe_set s 3 (digit (year mod 10))
+      else
+        String.unsafe_blit (string_of_int year) 0 s 0 4;
+    end;
+    put s 5 (t.tm_mon+1);
+    put s 8 t.tm_mday;
+    put s 11 t.tm_hour;
+    put s 14 t.tm_min;
+    put s 17 t.tm_sec;
+    s
+
 let to_string ?(gmt=false) ?(ms=false) f =
-  let t = (if gmt then Unix.gmtime else Unix.localtime) f in
-  let sec = if ms then sprintf "%07.4f" (mod_float f 60.) else sprintf "%02u" t.Unix.tm_sec in
-  sprintf "%04u-%02u-%02uT%02u:%02u:%s%s"
-    (1900 + t.Unix.tm_year) (t.Unix.tm_mon+1) t.Unix.tm_mday t.Unix.tm_hour t.Unix.tm_min sec (if gmt then "Z" else "")
+  match ms with
+  | false -> fast_to_string ~gmt f
+  | true ->
+    let t = (if gmt then Unix.gmtime else Unix.localtime) f in
+    let sec = sprintf "%07.4f" (mod_float f 60.) in
+    sprintf "%04u-%02u-%02uT%02u:%02u:%s%s"
+      (1900 + t.Unix.tm_year) (t.Unix.tm_mon+1) t.Unix.tm_mday t.Unix.tm_hour t.Unix.tm_min sec (if gmt then "Z" else "")
 
 (** @see <http://www.w3.org/TR/NOTE-datetime> W3C Datetime *)
 let gmt_string = to_string ~gmt:true ~ms:false
