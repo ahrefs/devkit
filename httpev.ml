@@ -22,6 +22,7 @@ type config =
     port : int;
     backlog : int;
     log_epipe : bool;
+    mutable debug : bool; (** more logging *)
     events : Ev.event_base;
     name : string;
     max_request_size : int;
@@ -33,6 +34,7 @@ let default =
     port = 8080;
     backlog = 100;
     log_epipe = false;
+    debug = false;
     events = Ev.Global.base;
     name = "HTTP server";
     max_request_size = 16 * 1024;
@@ -156,7 +158,7 @@ let get_content_length headers =
   | Some s -> try Some (int_of_string s) with _ -> failed Header (sprintf "content-length %S" s)
 
 let decode_args s =
-  try Netencoding.Url.dest_url_encoded_parameters s with _ -> log #debug "failed to parse args : %s" s; []
+  try Netencoding.Url.dest_url_encoded_parameters s with _ -> Exn.fail "decode_args : %s" s
 
 let make_request c { line1; parsed_headers=headers; content_length; buf; } =
   match Pcre.split ~rex:space line1 with
@@ -238,7 +240,8 @@ let finish c =
   | Headers _ | Body _ -> ()
   | Ready req ->
     Hashtbl.remove c.server.reqs req.id;
-    log #debug "finished %s" (show_request req)
+    if c.server.config.debug then
+      log #info "finished %s" (show_request req)
 
 let write_f c (data,ack) ev fd _flags =
   let finish () = finish c; Ev.del ev in
@@ -405,10 +408,11 @@ let send_reply c (code,hdrs,body) =
     let headers = make_request_headers_exn code hdrs in
     (* do not transfer body for HEAD requests *)
     let body = match c.req with Ready { meth = `HEAD; _ } -> "" | _ -> body in
-    log #debug "will answer to %s with %d+%d bytes"
-      (show_peer c)
-      (String.length headers)
-      (String.length body);
+    if c.server.config.debug then
+      log #info "will answer to %s with %d+%d bytes"
+        (show_peer c)
+        (String.length headers)
+        (String.length body);
     write_reply c [headers;body]
   with
   | No_reply -> finish c
@@ -572,7 +576,7 @@ let setup_fd fd config answer =
     INC server.active;
     let client = { fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 1024); } in
     Unix.set_nonblock fd;
-    log #debug "accepted %s" (Nix.show_addr sockaddr);
+    if config.debug then log #info "accepted %s" (Nix.show_addr sockaddr);
     handle_client client answer)
 
 let setup config answer =
