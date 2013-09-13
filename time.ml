@@ -19,7 +19,13 @@ let fast_to_string =
     String.unsafe_set s ofs (digit (n / 10));
     String.unsafe_set s (ofs+1) (digit (n mod 10))
   in
+  let last_time = ref 0 in
+  let last_gmt = ref true in
+  let last_s = ref "1970-01-01T00:00:00Z" in
   fun ~gmt f ->
+    let seconds = int_of_float f in
+    if gmt = !last_gmt && seconds = !last_time then !last_s
+    else
     let open Unix in
     let t = (if gmt then gmtime else localtime) f in
     let s = String.copy (if gmt then template_z else template) in
@@ -36,6 +42,9 @@ let fast_to_string =
     put s 11 t.tm_hour;
     put s 14 t.tm_min;
     put s 17 t.tm_sec;
+    last_time := seconds;
+    last_gmt := gmt;
+    last_s := s;
     s
 
 let to_string ?(gmt=false) ?(ms=false) f =
