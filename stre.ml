@@ -101,8 +101,6 @@ let string_of_stream s =
 let split_words = split by_words $ string_of_stream $ erase_dots
 let split_words s = try split_words s with exn -> Log.self #warn ~exn "split_words \"%s\"" s; [s]
 
-let concat sep e = String.concat " " (List.of_enum e)
-
 module ASCII = struct
 let is_alpha = function
 | 'a'..'z' | 'A'..'Z' -> true
