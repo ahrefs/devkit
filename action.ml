@@ -245,7 +245,7 @@ let io_copy input output =
     done
   with IO.No_more_input -> ()
 
-let io_null = IO.create_out (fun _ -> ()) (fun _ _ len -> len) id id
+let io_null = IO.create_out ~write:(fun _ -> ()) ~output:(fun _ _ len -> len) ~flush:id ~close:id
 
 let compare_by f a b = compare (f a) (f b)
 let compare2 f g (a,b) (a',b') =

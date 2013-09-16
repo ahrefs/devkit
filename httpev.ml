@@ -160,7 +160,7 @@ let get_content_length headers =
 let decode_args s =
   try Netencoding.Url.dest_url_encoded_parameters s with _ -> Exn.fail "decode_args : %s" s
 
-let make_request c { line1; parsed_headers=headers; content_length; buf; } =
+let make_request c { line1; parsed_headers=headers; buf; _ } =
   match Pcre.split ~rex:space line1 with
   | [meth;url;version] ->
     if url.[0] <> '/' then (* abs_path *)
@@ -311,7 +311,7 @@ let status_code : reply_status -> int = function
   | `Service_unavailable -> 503
   | `Version_not_supported -> 505
 
-  | `Custom s -> 999
+  | `Custom _ -> 999
 
   | `No_reply -> 0
 
@@ -427,7 +427,7 @@ let send_reply_blocking c (code,hdrs) =
 
 let send_reply_user c (code,hdrs,body) =
   match match c.req with Ready x -> x.blocking | _ -> None with
-  | Some io ->
+  | Some _ ->
     Unix.clear_nonblock c.fd;
     send_reply_blocking c (code,hdrs);
   | None ->
@@ -651,7 +651,7 @@ let serve_text req ?status text =
 
 let serve_html req html =
   serve_io req "text/html" (fun out -> 
-    Xhtml.P.print (IO.nwrite out) html)
+    Xhtml.P.print ~output:(IO.nwrite out) html)
 
 let run ?(ip=Unix.inet_addr_loopback) port answer =
   server { default with ip = ip; port = port } answer

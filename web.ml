@@ -27,15 +27,15 @@ let extract_n_number =
   let threshold = 2 in
   let rec start = parser
   | [< ''0'..'9' as c; t >] -> number [c] t
-  | [< 'x; t >] -> start t
+  | [< '_; t >] -> start t
   | [< >] -> Exn.fail "no digits"
   and number acc = parser
   | [< ''0'..'9' as c; t >] -> number (c::acc) t
-  | [< 'x; t >] -> unsure 1 acc t
+  | [< '_; t >] -> unsure 1 acc t
   | [< >] -> fin acc
   and unsure depth acc = parser
   | [< ''0'..'9' as c; t >] -> number (c::acc) t
-  | [< 'x; t >] -> if depth >= threshold then fin acc else unsure (depth+1) acc t
+  | [< '_; t >] -> if depth >= threshold then fin acc else unsure (depth+1) acc t
   | [< >] -> fin acc
   and fin acc = int_of_string & String.implode & List.rev acc
   in
@@ -58,7 +58,7 @@ module Stream = ExtStream
   @raise Not_found on stream end *)
 let rec stream_get ?(limit=max_int) f = parser
   | [< 'x when f x >] -> x
-  | [< 'x; t >] -> if limit = 0 then raise Not_found else stream_get ~limit:(limit-1) f t
+  | [< '_; t >] -> if limit = 0 then raise Not_found else stream_get ~limit:(limit-1) f t
   | [< >] -> raise Not_found
 
 (** see {!stream_get} *)
@@ -161,7 +161,7 @@ let get_results ?(debug=false) ~parse_url s' =
       | _ -> search t
       end
     | [< 'x when tag "div" ~a:["id","resultStats"] x; t >] -> stream_skip any_tag t; make_text & stream_extract_while any_text t
-    | [< 'x; t >] -> search t
+    | [< '_; t >] -> search t
     | [< >] -> raise Not_found
     in
     let h = search s in

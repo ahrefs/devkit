@@ -31,7 +31,7 @@ let worker qi f qo =
     Mtq.put qo (f (Mtq.get qi))
   done
 
-let stop ?wait (qi,_,_) = Mtq.clear qi
+let stop ?wait:_ (qi,_,_) = Mtq.clear qi
 
 let create f n =
   let qi = Mtq.create () and qo = Mtq.create () in
@@ -114,7 +114,7 @@ let stop ?wait t =
       if pid = fst (waitpid [WNOHANG] pid) then None (* exited *) else Some pid 
     with 
     | Unix_error (ECHILD,_,_) -> None (* exited *)
-    | exn -> log #warn "Worker PID %d lost (wait)" pid; None) l
+    | exn -> log #warn ~exn "Worker PID %d lost (wait)" pid; None) l
   in
   let hard_kill l =
       List.iter (fun pid -> 

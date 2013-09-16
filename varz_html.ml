@@ -51,7 +51,7 @@ let to_html () =
 
 let to_html_doc () =
   document "Varz" [
-    style "text/css" (List.map t [
+    style ~contenttype:"text/css" (List.map t [
       ".nvp .name {font-weight:bold;padding-right:2em;}";
       ".nvp .value {}";
       ".nvp .value input {width:10em;}";

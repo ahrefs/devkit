@@ -59,7 +59,7 @@ let check_pidfile path =
   | `Missing -> () (* free to go *)
   | `Stale -> Log.self #info "removing stale pidfile"; Exn.suppress Sys.remove path
   | `Alive -> Log.self #info "pid is alive, exiting"; exit 2
-  | `Error e -> Log.self #warn "wrong pid file, exiting"; exit 3
+  | `Error exn -> Log.self #warn ~exn "wrong pid file, exiting"; exit 3
 
 let manage_pidfile path =
   check_pidfile path;
@@ -72,21 +72,25 @@ let restart f x = let rec loop () = try f x with Unix.Unix_error (EINTR,_,_) -> 
 (** NB be careful with mutexes in signal handlers.
     Outputting anything to ocaml channels is a potential deadlock.
     Use signalfd which invokes signal handlers in predictable context.
+    @deprecated easy to deadlock, use signalfd instead
 *)
 let handle_sig_exit_with ~exit fin =
   List.iter
     (fun signal -> Sys.set_signal signal (Sys.Signal_handle 
-      (fun n ->
+      (fun _signo ->
 (*         Log.self #info "Received signal %i (exit)..." n; *)
         (try fin () with exn -> Log.self #warn ~exn "handle_sig_exit");
 (*         Log.self #info "Signal handler done.%s" (if exit then " Exiting." else ""); *)
         if exit then Pervasives.exit 0)))
     [Sys.sigint; Sys.sigterm]
 
+(**
+  @deprecated easy to deadlock, use signalfd instead
+*)
 let handle_sig_reload_with fin =
   List.iter
     (fun signal -> Sys.set_signal signal (Sys.Signal_handle 
-      (fun n -> 
+      (fun _signo -> 
 (*         Log.self #info "Received signal %i (reload)..." n;  *)
         (try fin () with exn -> Log.self #warn ~exn "handle_sig_reload");
 (*         Log.self #info "Signal handler done." *)

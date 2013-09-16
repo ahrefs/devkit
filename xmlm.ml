@@ -840,7 +840,7 @@ struct
       | Eoi -> err i `Unexpected_eoi
       in
       begin match i.peek with          
-      | `El_start (n, _) ->                   (* finish to input start el. *)
+      | `El_start (_n, _) ->                   (* finish to input start el. *)
 	  skip_white i;
 	  if i.c = u_gt then (accept i u_gt; p_limit i) else
 	  if i.c = u_slash then 
@@ -1097,7 +1097,7 @@ struct
 	  | `El (tag, childs) ->
 	      output o (`El_start tag);
 	      aux o (childs :: rest :: context)
-	  | (`Data d) as signal -> 
+	  | (`Data _) as signal -> 
 	      output o signal;
 	      aux o (rest :: context)
 	  end
