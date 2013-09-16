@@ -36,8 +36,9 @@ dispatch begin function
     flag ["ocaml"; "pp"; "pa_macro"] (S[A"Camlp4MacroParser.cmo"]);
     flag ["compile"; "ocaml"; "native"; "asm"] & atomize ["-S"];
 
+    pflag ["compile"; "ocaml"] "warn" (fun s -> atomize ["-w";s]);
+
     ()
  
 | _ -> ()
 end
-
