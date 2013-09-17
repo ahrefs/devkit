@@ -259,8 +259,9 @@ let tests () =
 
 let () =
   let google = Web.Provider.(google {Google.hl="en"; gl="US"; tld="com"; lang="en";}) in
-  match Array.to_list Sys.argv with
-  | [_;"query";query] -> test_search google (`Query query)
-  | [_;"file";file] -> test_search google (`File file)
+  match Action.args with
+  | ["query";query] -> test_search google (`Query query)
+  | ["file";file] -> test_search google (`File file)
+  | ["http";port] -> Test_httpev.run (int_of_string port)
   | _ -> tests ()
 
