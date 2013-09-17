@@ -9,7 +9,7 @@ let () =
   bracket (open_out "version.ml") close_out (fun out ->
    let revision = 
     try
-     get_line (Unix.open_process_in "svnversion") (Unix.close_process_in)
+     get_line (Unix.open_process_in "git describe --always") (Unix.close_process_in)
     with
      _ -> (try get_line (open_in "version.id") close_in with _ -> "<unknown>")
    in
