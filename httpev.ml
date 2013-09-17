@@ -428,12 +428,20 @@ let make_request_headers_exn code hdrs =
   put "";
   Buffer.contents b
 
-let send_reply c (code,hdrs,body) =
+let send_reply_async c encoding (code,hdrs,body) =
   try
+    (* calculate size before encoding *)
     let hdrs = ("Content-Length", string_of_int (String.length body)) :: hdrs in
-    let headers = make_request_headers_exn code hdrs in
     (* do not transfer body for HEAD requests *)
     let body = match c.req with Ready { meth = `HEAD; _ } -> "" | _ -> body in
+    (* possibly apply encoding *)
+    let (hdrs,body) =
+      (* TODO do not apply encoding to application/gzip *)
+      match encoding with
+      | Gzip when String.length body > 128 -> ("Content-Encoding", "gzip") :: hdrs, Gzip_io.string body
+      | _ -> hdrs, body
+    in
+    let headers = make_request_headers_exn code hdrs in
     if c.server.config.debug then
       log #info "will answer to %s with %d+%d bytes"
         (show_peer c)
@@ -443,6 +451,8 @@ let send_reply c (code,hdrs,body) =
   with
   | No_reply -> finish c
   | exn -> abort c exn "send_reply"
+
+let send_reply c code body = send_reply_async c Identity (code,[],body)
 
 let send_reply_blocking c (code,hdrs) =
   try
@@ -464,15 +474,14 @@ let send_reply_user c encoding (code,hdrs,body) =
     in
     not forbidden
   end in
-  let hdrs = match encoding with Identity -> hdrs | Gzip -> ("Content-Encoding", "gzip") :: hdrs in
   match blocking with
   | true ->
     (* this is forked child, events are gone, so write to socket with blocking *)
     Unix.clear_nonblock c.fd;
+    let hdrs = match encoding with Identity -> hdrs | Gzip -> ("Content-Encoding", "gzip") :: hdrs in
     send_reply_blocking c (code,hdrs);
   | false ->
-    let body = match encoding with Identity -> body | Gzip -> Gzip_io.string body in
-    send_reply c (code,hdrs,body)
+    send_reply_async c encoding (code,hdrs,body)
 
 let send_error c exn =
   let (http_error,msg) = match exn with
@@ -487,11 +496,11 @@ let send_error c exn =
   | exn -> `Bad_request, Exn.str exn
   in
   log #warn "error for %s : %s" (show_client c) msg;
-  send_reply c (http_error,[],"")
+  send_reply c http_error ""
 
 let send_reply_limit c n =
   log #info "request too large from %s : %s" (show_client c) (Action.bytes_string n);
-  send_reply c (`Request_too_large,[],"request entity too large")
+  send_reply c `Request_too_large  "request entity too large"
 
 let handle_request c body answer =
   let req = make_request c body in
@@ -503,11 +512,11 @@ let handle_request c body answer =
         answer c.server req (send_reply_user c req.encoding)
     | _ ->
       log #info "version %u.%u not supported from %s" (fst req.version) (snd req.version) (show_request req);
-      send_reply c (`Version_not_supported, [], "HTTP/1.0 is supported")
+      send_reply c `Version_not_supported "HTTP/1.0 is supported"
   with exn ->
     log #error ~exn "answer %s" & show_request req;
     match req.blocking with
-    | None -> send_reply c (`Not_found,[],"Not found")
+    | None -> send_reply c `Not_found "Not found"
     | Some _ -> Exn.suppress teardown c.fd
 
 let rec process_chunk c ev answer data final =
