@@ -40,7 +40,7 @@ let default =
     max_request_size = 16 * 1024;
   }
 
-type encode = Gzip | Identity
+type encoding = Gzip | Identity
 
 type request = { addr : Unix.sockaddr;
                  url : string; (* path and arguments *)
@@ -56,7 +56,7 @@ type request = { addr : Unix.sockaddr;
                  socket : Unix.file_descr;
                  line : string; (** request line *)
                  mutable blocking : unit IO.output option; (* hack for forked childs *)
-                 encode : encode;
+                 encoding : encoding;
                  }
 
 (** server state *)
@@ -164,17 +164,16 @@ let get_content_length headers =
 let decode_args s =
   try Netencoding.Url.dest_url_encoded_parameters s with _ -> Exn.fail "decode_args : %s" s
 
-let parse_encode headers =
-  let wise_nsplit s c = List.map (String.strip ~chars:" \t\r\n") @@ Stre.nsplitc s c in
+let acceptable_encoding headers =
+  let split s c = List.map (String.strip ~chars:" \t\r\n") @@ Stre.nsplitc s c in
   match Exn.catch (List.assoc "accept-encoding") headers with
   | Some str ->
-    let encodings = wise_nsplit str ',' in
-    let encodings = List.map (fun s ->
-      match wise_nsplit (String.lowercase s) ';' with
-      | [ enc ] -> enc, None
-      | [ enc; q ] -> enc, (Some q)
-      | _ -> Exn.fail "bad ecoding record %S" s
-    ) encodings in
+    let encodings = split str ',' |> List.filter_map begin fun s ->
+      match split (String.lowercase s) ';' with
+      | [ enc ] -> Some (enc, None)
+      | [ enc; q ] -> Some (enc, Some q)
+      | _ -> log #warn "bad accept-encoding record, ignoring : %S" s; None
+    end in
     let test_available s =
       if List.mem (s, Some "q=0") encodings then false else
       if List.exists (fun (enc,_) -> enc = s) encodings then true else
@@ -214,7 +213,7 @@ let make_request c { line1; parsed_headers=headers; buf; _ } =
       if cont_type = "application/x-www-form-urlencoded" then List.append args & decode_args body else args
     | `GET | `HEAD -> decode_args args
     in
-    let encode = try parse_encode headers with Failure s -> failed NotAcceptable s in
+    let encoding = try acceptable_encoding headers with Failure s -> failed NotAcceptable s in
     {
       url; path; args; headers; body; meth;
       id = c.req_id;
@@ -225,7 +224,7 @@ let make_request c { line1; parsed_headers=headers; buf; _ } =
       blocking = None;
       line = line1;
       socket = c.fd;
-      encode;
+      encoding;
     }
   | _ -> failed RequestLine line1
 
@@ -415,17 +414,10 @@ let write_reply_blocking c s =
 
 let set_blocking req =
   let ch = Unix.out_channel_of_descr req.socket in
-  let io = IO.output_channel ch in
+  let encode = match req.encoding with Identity -> id | Gzip -> Gzip_io.output in
+  let io = encode @@ IO.output_channel ch in
   req.blocking <- Some io;
-  match req.encode with
-  | Identity -> io
-  | Gzip -> Gzip_io.output io
-
-let set_blocking' req =
-  let ch = Unix.out_channel_of_descr req.socket in
-  let io = IO.output_channel ch in
-  req.blocking <- Some io;
-  ch
+  io
 
 let make_request_headers_exn code hdrs =
   let b = Buffer.create 1024 in
@@ -438,7 +430,7 @@ let make_request_headers_exn code hdrs =
 
 let send_reply c (code,hdrs,body) =
   try
-    let hdrs = ("Content-length", string_of_int (String.length body)) :: hdrs in
+    let hdrs = ("Content-Length", string_of_int (String.length body)) :: hdrs in
     let headers = make_request_headers_exn code hdrs in
     (* do not transfer body for HEAD requests *)
     let body = match c.req with Ready { meth = `HEAD; _ } -> "" | _ -> body in
@@ -452,19 +444,6 @@ let send_reply c (code,hdrs,body) =
   | No_reply -> finish c
   | exn -> abort c exn "send_reply"
 
-let make_headers_with_encode enc hdrs =
-  match enc with
-  | Identity -> hdrs
-  | Gzip ->
-    let header_name = "Content-Encoding" in
-    begin match Exn.catch (List.find (fun (h,_) -> Stre.iequal h header_name)) hdrs with
-    | Some (_,enc) ->
-    log #warn "gzip encoding is surpassed by user : %S" enc;
-    hdrs
-    | None ->
-    ((header_name, "gzip")::hdrs)
-    end
-
 let send_reply_blocking c (code,hdrs) =
   try
     write_reply_blocking c (make_request_headers_exn code hdrs)
@@ -472,15 +451,27 @@ let send_reply_blocking c (code,hdrs) =
   | No_reply -> finish c
   | exn -> abort c exn "send_reply_blocking"; raise exn
 
-let send_reply_user c (code,hdrs,body) =
-  let encode = match c.req with Ready r -> r.encode | _ -> Identity in
-  let hdrs = make_headers_with_encode encode hdrs in
-  match match c.req with Ready x -> x.blocking | _ -> None with
-  | Some _ ->
+(* this function is called back by user to actually send data *)
+let send_reply_user c encoding (code,hdrs,body) =
+  let blocking = match c.req with Ready x -> Option.is_some x.blocking | _ -> false in
+  (* filter headers *)
+  let hdrs = hdrs |> List.filter begin fun (k,_) ->
+    let open Stre in
+    let forbidden =
+      (iequal k "content-length" && not blocking) || (* httpev will calculate *)
+      (iequal k "connection") ||
+      (iequal k "content-encoding") (* none of the user's business *)
+    in
+    not forbidden
+  end in
+  let hdrs = match encoding with Identity -> hdrs | Gzip -> ("Content-Encoding", "gzip") :: hdrs in
+  match blocking with
+  | true ->
+    (* this is forked child, events are gone, so write to socket with blocking *)
     Unix.clear_nonblock c.fd;
     send_reply_blocking c (code,hdrs);
-  | None ->
-    let body = match encode with Identity -> body | Gzip -> Gzip_io.gzip body in
+  | false ->
+    let body = match encoding with Identity -> body | Gzip -> Gzip_io.string body in
     send_reply c (code,hdrs,body)
 
 let send_error c exn =
@@ -509,7 +500,7 @@ let handle_request c body answer =
   try
     match req.version with
     | (1,_) ->
-        answer c.server req (send_reply_user c)
+        answer c.server req (send_reply_user c req.encoding)
     | _ ->
       log #info "version %u.%u not supported from %s" (fst req.version) (snd req.version) (show_request req);
       send_reply c (`Version_not_supported, [], "HTTP/1.0 is supported")
