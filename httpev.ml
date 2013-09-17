@@ -430,10 +430,6 @@ let make_request_headers_exn code hdrs =
 
 let send_reply_async c encoding (code,hdrs,body) =
   try
-    (* calculate size before encoding *)
-    let hdrs = ("Content-Length", string_of_int (String.length body)) :: hdrs in
-    (* do not transfer body for HEAD requests *)
-    let body = match c.req with Ready { meth = `HEAD; _ } -> "" | _ -> body in
     (* possibly apply encoding *)
     let (hdrs,body) =
       (* TODO do not apply encoding to application/gzip *)
@@ -441,6 +437,9 @@ let send_reply_async c encoding (code,hdrs,body) =
       | Gzip when String.length body > 128 -> ("Content-Encoding", "gzip") :: hdrs, Gzip_io.string body
       | _ -> hdrs, body
     in
+    let hdrs = ("Content-Length", string_of_int (String.length body)) :: hdrs in
+    (* do not transfer body for HEAD requests *)
+    let body = match c.req with Ready { meth = `HEAD; _ } -> "" | _ -> body in
     let headers = make_request_headers_exn code hdrs in
     if c.server.config.debug then
       log #info "will answer to %s with %d+%d bytes"
