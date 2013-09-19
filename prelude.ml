@@ -1,5 +1,7 @@
 (** Useful shortcuts *)
 
+module U = ExtUnix.Specific
+
 let ($) f g = fun x -> f (g x)
 let ($$) f g = fun x y -> f (g x) (g y)
 let (!!) = Lazy.force

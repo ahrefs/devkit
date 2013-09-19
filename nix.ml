@@ -156,7 +156,7 @@ let open_proc cmd input output toclose =
   |  0 -> if input <> stdin then begin dup2 input stdin; close input end;
           if output <> stdout then begin dup2 output stdout; close output end;
           if not cloexec then List.iter close toclose;
-          ExtUnix.Specific.setpgid 0 0; (* separate process group *)
+          U.setpgid 0 0; (* separate process group *)
           begin try execv "/bin/sh" [| "/bin/sh"; "-c"; cmd |]
           with _ -> exit 127
           end
@@ -321,3 +321,5 @@ let output_buf_fd ?(bufsize=1*1024*1024) fd =
   ~output:(fun s p l -> output s p l; l)
   ~flush
   ~close:flush (* do not close file descriptor, flush the buffer *)
+
+let unlimit_soft r = let (_,hard) = U.getrlimit r in U.setrlimit r ~soft:hard ~hard

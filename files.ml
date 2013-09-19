@@ -69,7 +69,7 @@ let save_as name ?(mode=0o644) f =
 (*       Unix.fchmod fd mode; *)
       f ch;
       flush ch;
-      ExtUnix.Specific.fsync fd;
+      U.fsync fd;
       Unix.rename temp name
     with
       exn -> Exn.suppress Unix.unlink temp; raise exn
