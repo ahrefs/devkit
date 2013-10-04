@@ -86,3 +86,10 @@ let two_strings k =
        Arg.String (fun x -> old := x);
        Arg.String (fun s -> k !old s)
       ])
+
+let rest () =
+  let n = Array.length Sys.argv in
+  if !Arg.current >= n then
+    []
+  else
+    Array.to_list @@ Array.sub Sys.argv (!Arg.current+1) (Array.length Sys.argv - !Arg.current - 1)

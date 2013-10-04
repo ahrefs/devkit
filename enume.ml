@@ -22,3 +22,7 @@ let list_loop l =
     | [] -> r := l; next ()
   in
   Enum.from next
+
+(* HACK *)
+let next : 'a Enum.t -> 'a = fun e -> (Obj.obj (Obj.field (Obj.repr e) 1) : unit -> 'a) ()
+let take limit e = Enum.init limit (fun _ -> next e)
