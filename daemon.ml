@@ -9,6 +9,8 @@ let runas = ref None
 let foreground = ref false
 let logrotation = ref None
 
+let managed = ref false
+
 let args =
   [
     ExtArg.may_str "logfile" logfile "<file> Log file";
@@ -21,6 +23,9 @@ let args =
   ]
 
 let manage () =
+  match !managed with
+  | true -> () (* be smart *)
+  | false ->
   (* check logrotation param before daemonize *)
   let lrot = ref Log.No_rotation in
   begin match !logfile, !logrotation with
@@ -59,3 +64,5 @@ let manage () =
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
   Sys.set_signal Sys.sigusr1 (Sys.Signal_handle (fun _ -> Log.reopen !logfile));
   Sys.set_signal Sys.sigusr2 (Sys.Signal_handle (fun _ -> U.malloc_stats (); Action.gc_show "compact" Gc.compact ()));
+  managed := true;
+  ()
