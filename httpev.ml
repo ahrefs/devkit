@@ -95,9 +95,7 @@ let show_method = function
 let show_client_addr req =
   try
     match req.addr with
-    | Unix.ADDR_INET (addr,_) when addr = Unix.inet_addr_loopback ->
-      let real = List.assoc "x-real-ip" req.headers in
-      sprintf "%s(via:%s)" real (Nix.show_addr req.addr)
+    | Unix.ADDR_INET (addr,_) when addr = Unix.inet_addr_loopback -> List.assoc "x-real-ip" req.headers
     | _ -> raise Not_found
   with Not_found ->
     Nix.show_addr req.addr
