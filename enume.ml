@@ -30,7 +30,7 @@ let list_loop_changes l =
   let rec next () =
     match !r with
     | x :: xs -> r := xs; x
-    | [] -> r := !l; next ()
+    | [] -> assert (!l <> []); r := !l; next ()
   in
   Enum.from next
 
