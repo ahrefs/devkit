@@ -124,20 +124,22 @@ let hashtbl_find h f k =
   try Hashtbl.find h k with Not_found -> let v = f () in Hashtbl.replace h k v; v
 
 (** array must be sorted *)
-let binary_search arr cmp x =
+let binary_search' arr cmp x =
   let rec loop a b =
     match b - a with
-    | 0 -> false
-    | 1 -> cmp arr.(a) x = 0
+    | 0 -> None
+    | 1 -> if cmp arr.(a) x = 0 then Some arr.(a) else None
     | n ->
       let mid = a + n / 2 in
       let v = arr.(mid) in
       match cmp v x with
-      | 0 -> true 
+      | 0 -> Some v
       | 1 -> loop a mid
       | _ (* -1 *) -> loop (mid+1) b
   in
   loop 0 (Array.length arr)
+
+let binary_search a b c = Option.is_some @@ binary_search' a b c
 
 (* hm FIXME? *)
 let chunk n l =
