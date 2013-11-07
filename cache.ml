@@ -177,6 +177,7 @@ module Count : sig
   val report : 'a t -> ?limit:int -> ?cmp:('a -> 'a -> int) -> ?sep:string -> ('a -> string) -> string
   val distrib : float t -> float array
   val show_distrib : ?sep:string -> float t -> string
+  val names : 'a t -> 'a list
 end = struct
   open Hashtbl
   type 'a t = ('a,int) Hashtbl.t
@@ -250,6 +251,7 @@ end = struct
     let data = show_sorted t ?limit ~sep f in
     let stats = stats t ?cmp f in
     stats^sep^data
+  let names (t : 'a t) = List.of_enum @@ Hashtbl.keys t
 end
 
 module Group : sig
