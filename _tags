@@ -1,7 +1,7 @@
 true: annot, debug, thread, package(threads), warn_A, warn_e
 <*.ml{,i}>: package(extlib), package(pcre)
-"web.ml": package(netstring), package(curl)
-"exn.ml": package(curl)
+"web.ml": package(netstring), package(curl), package(xmlm)
+"exn.ml": package(curl), package(xmlm)
 "htmlStream.ml" or "stre.ml" or "php_serialize.ml" or "web.ml": camlp4o
 "nix.ml" or "files.ml" or "daemon.ml" or "prelude.ml": package(extunix)
 "netcgi_ext.ml": package(netcgi2)
@@ -10,6 +10,6 @@ true: annot, debug, thread, package(threads), warn_A, warn_e
 "httpev.ml": package(event), package(netstring), camlp4o, pa_macro
 "async.ml" or "nix.ml": package(event)
 <*.{top,byte,native}>: package(extlib), package(pcre), package(zip), package(event), package(curl), package(netstring),\
-  package(extunix), package(netcgi2), package(tyxml)
+  package(extunix), package(netcgi2), package(tyxml), package(xmlm)
 <test.*>: package(oUnit)
 "extStream.ml": warn(-9-27)
