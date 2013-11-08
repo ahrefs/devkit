@@ -14,6 +14,7 @@ let urlencode = Netencoding.Url.encode ~plus:true
 let urldecode s = try Netencoding.Url.decode s with _ -> s
 let htmlencode = Netencoding.Html.encode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
 let htmldecode = Netencoding.Html.decode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
+let make_url_args = String.concat "&" $ List.map (fun (k, v) -> k ^ "=" ^ urlencode v)
 
 (** Minimum strictness, Neturl will fail on malformed parameters in url *)
 let url_get_args url =
