@@ -11,6 +11,11 @@ let logrotation = ref None
 
 let managed = ref false
 
+(** global flag indicating that process should exit,
+    [manage] will automatically set this flag on SIGTERM unless default signal handling is overriden
+*)
+let should_exit = ref false
+
 let args =
   [
     ExtArg.may_str "logfile" logfile "<file> Log file";
@@ -64,5 +69,6 @@ let manage () =
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
   Sys.set_signal Sys.sigusr1 (Sys.Signal_handle (fun _ -> Log.reopen !logfile));
   Sys.set_signal Sys.sigusr2 (Sys.Signal_handle (fun _ -> U.malloc_stats (); Action.gc_show "compact" Gc.compact ()));
+  Nix.handle_sig_exit_with ~exit:false (fun () -> should_exit := true);
   managed := true;
   ()
