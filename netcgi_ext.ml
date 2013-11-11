@@ -3,7 +3,6 @@
 open Netcgi
 
 open Prelude
-open Control
 
 let cgi_show_exn exn cgi =
   (cgi:>cgi)#set_header ~cache:`No_cache ~content_type:"text/plain" ~status:`Internal_server_error ();

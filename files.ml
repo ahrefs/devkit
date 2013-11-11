@@ -8,7 +8,7 @@ let with_readdir dirname = bracket (Unix.opendir dirname) Unix.closedir
 
 (** [f fd path rel] gets invoked for each file under [dirname] where
 [fd] is a read-only [Unix.file_descr], [path] is full path and [rel] - path relative to [dirname] *)
-let rec iter_names dirname f =
+let iter_names dirname f =
   let rec loop path rel =
   with_readdir path (fun d ->
     enum_dir d >>
@@ -30,7 +30,7 @@ let rec iter_names dirname f =
     )
   in loop dirname ""
 
-let rec iter_names_q dirname f =
+let iter_names_q dirname f =
   let rec loop path rel =
   with_readdir path (fun d ->
     enum_dir d >>

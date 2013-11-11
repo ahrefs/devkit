@@ -2,7 +2,6 @@
 
 open Prelude
 open Printf
-open ExtLib
 
 let log = Httpev.Hidden.log
 

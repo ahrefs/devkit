@@ -63,7 +63,7 @@ let rec stream_get ?(limit=max_int) f = parser
   | [< >] -> raise Not_found
 
 (** see {!stream_get} *)
-let rec stream_find ?limit f s = ignore (stream_get ?limit f s)
+let stream_find ?limit f s = ignore (stream_get ?limit f s)
 
 (** scan stream while predicate holds, stop on first non-matching element or stream end *)
 let rec stream_skip f = parser

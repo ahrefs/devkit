@@ -1,4 +1,4 @@
-true: annot, debug, thread, package(threads), warn_A, warn_e
+true: annot, debug, thread, package(threads), warn_A, warn_e, warn(-35)
 <*.ml{,i}>: package(extlib), package(pcre)
 "web.ml": package(netstring), package(curl), package(xmlm)
 "exn.ml": package(curl), package(xmlm)
@@ -13,3 +13,4 @@ true: annot, debug, thread, package(threads), warn_A, warn_e
   package(extunix), package(netcgi2), package(tyxml), package(xmlm)
 <test.*>: package(oUnit)
 "extStream.ml": warn(-9-27)
+"devkit_ragel.ml": warn(-38)

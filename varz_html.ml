@@ -1,7 +1,6 @@
 
 open Xhtml.M
 open ExtLib
-open Printf
 
 open Prelude
 

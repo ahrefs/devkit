@@ -1,4 +1,4 @@
-open Prelude
+(** Extensions to Enum *)
 
 exception Exit
 

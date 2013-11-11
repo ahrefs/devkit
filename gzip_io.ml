@@ -1,7 +1,6 @@
 (** gzip IO *)
 
 open Prelude
-open Control
 
 let input io =
   let iz = Gzip_stream.open_in io in
