@@ -39,7 +39,7 @@ let list_uniq p = List.of_enum $ uniq p $ List.enum
 let list_sorted_uniq p =
   List.rev $ List.fold_left begin fun acc x ->
     match acc with
-    | y :: _ when p x = p y -> acc
+    | y :: _ when p x y -> acc
     | _ -> x :: acc
   end []
 
