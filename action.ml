@@ -36,12 +36,12 @@ let all_uniq p e =
 
 let list_uniq p = List.of_enum $ uniq p $ List.enum
 
-let list_uniq_sorted p =
-  List.fold_left begin fun acc x ->
+let list_sorted_uniq p =
+  List.rev $ List.fold_left begin fun acc x ->
     match acc with
-    | y :: _ when x = y -> acc
+    | y :: _ when p x = p y -> acc
     | _ -> x :: acc
-  end [] p |> List.rev
+  end []
 
 let list_random_exn l = List.nth l (Random.int (List.length l))
 
