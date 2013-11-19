@@ -136,8 +136,8 @@ let binary_search' arr cmp x =
       let v = arr.(mid) in
       match cmp v x with
       | 0 -> Some v
-      | 1 -> loop a mid
-      | _ (* -1 *) -> loop (mid+1) b
+      | n when n > 0 -> loop a mid
+      | _ (* n when n < 0 *) -> loop (mid+1) b
   in
   loop 0 (Array.length arr)
 
