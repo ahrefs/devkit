@@ -60,6 +60,11 @@ let to_string ?(gmt=false) ?(ms=false) f =
 let gmt_string = to_string ~gmt:true ~ms:false
 let gmt_string_ms = to_string ~gmt:true ~ms:true
 
+let date_to_string ?(gmt=false) f =
+  let t = (if gmt then Unix.gmtime else Unix.localtime) f in
+  sprintf "%04u-%02u-%02u" (1900 + t.Unix.tm_year) (t.Unix.tm_mon+1) t.Unix.tm_mday
+let date_gmt_string = date_to_string ~gmt:true
+
 (** unix timestamp to RFC-2822 date
     Example: Tue, 15 Nov 1994 12:45:26 GMT *)
 let to_rfc2822 secs =
