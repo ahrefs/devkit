@@ -10,9 +10,11 @@ end
 
 open Internal
 
-(** Create persistent event. Don't forget [del]. No (infinite) timeout. *)
-let simple_event events ?timeout fd flags f =
-  let ev = Ev.create () in
+(** Create a new event or use the provided [ev] and make it persistent
+  with the infinite timeout (or use the provided [timeout]).
+  Schedule this event with provided callback [f].
+  Don't forget [del] to unschedule. *)
+let simple_event events ?(ev=Ev.create ()) ?timeout fd flags f =
   Ev.set events ev fd flags ~persist:true (fun fd flags ->
     try
       f ev fd flags
@@ -21,8 +23,8 @@ let simple_event events ?timeout fd flags f =
   Ev.add ev timeout;
   ev
 
-let setup_simple_event events ?timeout fd flags f =
-  let (_:Ev.event) = simple_event events ?timeout fd flags f in
+let setup_simple_event events ?ev ?timeout fd flags f =
+  let (_:Ev.event) = simple_event events ?ev ?timeout fd flags f in
   ()
 
 type result = End | Data of int | Block | Exn of exn
@@ -68,11 +70,11 @@ let show_error = function
 
 (** [read_buf buf fd err k] - asynchronously fill [buf] with data from [fd] and call [k buf] when done (buffer is full).
   [fd] should be nonblocking. Call [err] on error (EOF). *)
-let read_buf base ?timeout buf fd err k =
+let read_buf base ?ev ?timeout buf fd err k =
   let len = String.length buf in
   let later cur =
     let cur = ref cur in
-    setup_simple_event base ?timeout fd [Ev.READ] (fun ev fd flags ->
+    setup_simple_event base ?ev ?timeout fd [Ev.READ] (fun ev fd flags ->
       match flags with
       | Ev.TIMEOUT -> Ev.del ev; err `Timeout !cur
       | Ev.WRITE | Ev.SIGNAL -> assert false
@@ -91,7 +93,7 @@ let read_buf base ?timeout buf fd err k =
   | Block -> later 0
   | Data n -> later n
 
-let read_n base ?timeout n fd err k = read_buf base ?timeout (String.create n) fd err k
+let read_n base ?ev ?timeout n fd err k = read_buf base ?ev ?timeout (String.create n) fd err k
 
 (** Call [f] with [delay]-second pauses between invocations.
     Set [stop] to [true] to stop the timer. 
