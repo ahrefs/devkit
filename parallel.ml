@@ -308,3 +308,15 @@ let join (result,thread) = Thread.join thread; match !result with `None -> asser
 let join_exn t = match join t with `Ok x -> x | `Exn exn -> raise exn
 let map f a = Array.map join_exn @@ Array.map (detach f) a
 end
+
+let run_forks (type t) (f : t -> unit) l =
+  let module Worker = struct type task = t type result = unit end in
+  let module W = Forks(Worker) in
+  let worker x =
+    (* sane signal handler FIXME restore? *)
+    Nix.handle_sig_exit_with ~exit:false (fun () -> Daemon.should_exit := true);
+    f x
+  in
+  let proc = W.create worker (List.length l) in
+  Nix.handle_sig_exit_with ~exit:true (fun () -> W.stop proc);
+  W.perform proc (List.enum & List.map id l) id

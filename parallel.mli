@@ -7,6 +7,9 @@ val invoke : ('a -> 'b) -> 'a -> unit -> 'b
   Does not wait for children to finish - returns immediately. *)
 val launch_forks : ('a -> unit) -> 'a list -> unit
 
+(** Launch forks for each element of the list and wait for all workers to finish. Pass exit signals to the workers. *)
+val run_forks : ('a -> unit) -> 'a list -> unit
+
 module Thread : sig
 type 'a t
 val detach : ('a -> 'b) -> 'a -> 'b t
@@ -59,4 +62,3 @@ val status : t -> string
 val put : t -> (unit -> unit) -> unit
 val wait_blocked : ?n:int -> t -> unit
 end
-
