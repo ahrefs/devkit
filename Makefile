@@ -25,7 +25,7 @@ top:
 
 test:
 		$(OCAMLBUILD) test.byte test.native
-		_build/test.byte
+		_build/test.native
 
 doc:
 		$(OCAMLBUILD) devkit.docdir/index.html

@@ -5,6 +5,9 @@ open ExtLib
 
 open Prelude
 
+let tests = ref []
+let test name f = let open OUnit in tests := (name >:: f) :: !tests
+
 let test_search p s =
   let module WP = Web.Provider in
   let pr = print_endline in
@@ -31,7 +34,7 @@ let test_search p s =
   show ads;
   pr summary
 
-let test_htmlstream () =
+let () = test "HtmlStream" begin fun () ->
   Printexc.record_backtrace true;
   let module HS = HtmlStream in
   let (==>) s s' = 
@@ -58,9 +61,9 @@ let test_htmlstream () =
   "<a q='>" ==> "<a q='>'>";
   "<a b='&amp;'>&amp;</a>" ==> "<a b='&amp;'>&amp;</a>";
   "<a b='&'>&</a>" ==> "<a b='&'>&</a>";
-  ()
+end
 
-let test_iequal () =
+let () = test "iequal" begin fun () ->
   let t = let n = ref 0 in fun x -> assert_bool (sprintf "testcase %d" !n) x; incr n in
   let fail = t $ not in
   t (Stre.iequal "dSaDAS" "dsadas");
@@ -71,9 +74,9 @@ let test_iequal () =
   t (Stre.iequal "hello" "HELLO");
   fail (Stre.iequal "hello" "hello!");
   fail (Stre.iequal "hello1" "hello!");
-  ()
+end
 
-let test_iexists () =
+let () = test "Stre.iexists" begin fun () ->
   let f = Stre.iexists in
   let t = let n = ref 0 in fun x -> assert_bool (sprintf "testcase %d" !n) x; incr n in
   let fail = t $ not in
@@ -97,9 +100,9 @@ let test_iexists () =
   fail (f "hellox!helloXxx" "hello!");
   fail (f "" "x");
   fail (f "xyXZZx!x_" "xx");
-  ()
+end
 
-let test_lim_cache () =
+let () = test "Cache.SizeLimited" begin fun () ->
   let module T = Cache.SizeLimited in
   let c = T.create 100 in
   let key = T.key in
@@ -119,17 +122,17 @@ let test_lim_cache () =
   iter none 0 899;
   iter (fun k -> some k k) 900 999;
   iter none 1000 2000;
-  ()
+end
 
-let test_split_by_words () =
+let () = test "Stre.by_words" begin fun () ->
   let t = let n = ref 0 in fun x -> assert_bool (sprintf "testcase %d" !n) x; incr n in
   let f a l = t (Stre.split Stre.by_words a = l) in
   f ("a" ^ String.make 10 '_' ^ "b") ["a"; "b"];
   f ("a" ^ String.make 1024 ' ' ^ "b") ["a"; "b"];
   f ("a" ^ String.make 10240 ' ' ^ "b") ["a"; "b"];
-  ()
+end
 
-let test_threadpool () =
+let () = test "ThreadPool" begin fun () ->
   let module TP = Parallel.ThreadPool in
   let pool = TP.create 3 in
   TP.wait_blocked pool;
@@ -140,9 +143,9 @@ let test_threadpool () =
   done;
   TP.wait_blocked pool;
   assert_equal !i 10;
-  ()
+end
 
-let test_parse_ipv4 () =
+let () = test "Network.string_of_ipv4" begin fun () ->
   let t ip s =
     assert_equal ~printer:Int32.to_string ip (Network.ipv4_of_string_null s);
     assert_equal ~printer:id (Network.string_of_ipv4 ip) s
@@ -154,8 +157,9 @@ let test_parse_ipv4 () =
   t 16777343l "1.0.0.127";
   t 0xFFFFFFFFl "255.255.255.255";
   t 257l "0.0.1.1"
+end
 
-let test_match_ipv4 () =
+let () = test "Network.ipv4_matches" begin fun () ->
   let t ip mask ok =
     try
       assert_equal ok (Network.ipv4_matches (Network.ipv4_of_string_null ip) (Network.cidr_of_string_exn mask))
@@ -179,8 +183,9 @@ let test_match_ipv4 () =
   t "172.1.0.1" "172.16.0.0/12" false;
   t "255.255.255.255" "255.255.255.255/32" true;
   t "255.255.255.254" "255.255.255.255/32" false
+end
 
-let test_extract_first_number () =
+let () = test "Web.extract_first_number" begin fun () ->
   let t n s =
     assert_equal ~printer:string_of_int n (Web.extract_first_number s);
   in
@@ -194,9 +199,9 @@ let test_extract_first_number () =
   t 12345 "a1,2,3,4,5,,,6,7,8dasd";
   t 12345678 "a1,2,3,4,5,,6,7,8dasd";
   t 12345 "a,1,,2,,3,,4,,5,,,6,7,8dasd";
-  ()
+end
 
-let test_compact_duration () =
+let () = test "Time.compact_duration" begin fun () ->
   let t n s =
     (* FIXME epsilon compare *)
     assert_equal ~printer:string_of_float n (Devkit_ragel.parse_compact_duration s);
@@ -226,9 +231,9 @@ let test_compact_duration () =
   t 0.8 "0.8s";
   tt 0.8 "0.80s";
   tt 5356800. "62d";
-  ()
+end
 
-let test_partition () =
+let () = test "Action.partition" begin fun () ->
   let t l n =
     let open Action in
     assert_equal ~msg:(sprintf "partition %d" n) ~printer:(strl string_of_int) l (unpartition @@ partition l n)
@@ -240,22 +245,11 @@ let test_partition () =
   for i = 1 to 10 do
     t (List.init (Random.int 10_000) id) (Random.int 100)
   done;
-  ()
+end
 
 let tests () = 
-  run_test_tt ("devkit" >::: [
-    "HtmlStream" >:: test_htmlstream;
-    "Stre.ieuqual" >:: test_iequal;
-    "Stre.iexists" >:: test_iexists;
-    "Cache.SizeLimited" >:: test_lim_cache;
-    "split by words" >:: test_split_by_words;
-    "ThreadPool test" >:: test_threadpool;
-    "parse ipv4" >:: test_parse_ipv4;
-    "match ipv4" >:: test_match_ipv4;
-    "extract_first_number" >:: test_extract_first_number;
-    "compact_duration" >:: test_compact_duration;
-    "partition" >:: test_partition;
-  ]) >> ignore
+  let (_:test_results) = run_test_tt_main ("devkit" >::: List.rev !tests) in
+  ()
 
 let () =
   let google = Web.Provider.(google {Google.hl="en"; gl="US"; tld="com"; lang="en";}) in
