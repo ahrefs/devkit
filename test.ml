@@ -247,6 +247,41 @@ let () = test "Action.partition" begin fun () ->
   done;
 end
 
+let () = test "Enum.align" begin fun () ->
+  let e1 = List.enum [1;3;6;] in
+  let e2 = List.enum [2;4;5;7;8;] in
+  let l = List.of_enum & Enum.align compare e1 e2 in
+  let expect = [1;2;3;4;5;6;7;8;] in
+  OUnit.assert_equal ~printer:(Action.strl string_of_int) expect l
+end
+
+let () = test "Enum.group_assoc" begin fun () ->
+  OUnit.assert_equal ~msg:"1"
+    ["ds", 3; "dsa", 7; "ds", 11; ]
+    (List.of_enum & Enum.group_assoc (=) (+) 0 & List.enum ["ds",1; "ds",2; "dsa",3; "dsa",4; "ds", 1; "ds", 10]);
+  OUnit.assert_equal ~msg:"2"
+    []
+    (List.of_enum & Enum.group_assoc (=) (+) 0 & List.enum []);
+end
+
+let () = test "Enum.uniq" begin fun () ->
+  OUnit.assert_equal ~msg:"1" ~printer:(Action.strl id)
+    ["ds"; "dsa"; "ds"; ]
+    (List.of_enum & Enum.uniq (=) & List.enum ["ds"; "ds"; "dsa"; "dsa"; "ds"; "ds"]);
+  OUnit.assert_equal ~msg:"2"
+    []
+    (List.of_enum & Enum.uniq (=) & List.enum []);
+  OUnit.assert_equal ~msg:"3" ~printer:(Action.strl string_of_int)
+    [1;20;1;2;3;44]
+    (List.of_enum & Enum.uniq (fun x y -> x mod 10 = y mod 10) & List.enum [1;11;20;100;0;1;2;3;133;44]);
+end
+
+let () = test "Enum.iter_while" begin fun () ->
+  let e = List.enum [1;2;3;4;5;6;7;] in
+  Enum.iter_while (fun x -> if x = 2 then Enum.iter_while (fun x -> x < 6) e; x < 4) e;
+  OUnit.assert_equal ~printer:(Action.strl string_of_int) [6;7] (List.of_enum e)
+end
+
 let tests () = 
   let (_:test_results) = run_test_tt_main ("devkit" >::: List.rev !tests) in
   ()
