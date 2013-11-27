@@ -1,6 +1,7 @@
 (** Useful shortcuts *)
 
 module U = ExtUnix.Specific
+module Enum = ExtEnum
 
 let ($) f g = fun x -> f (g x)
 let ($$) f g = fun x y -> f (g x) (g y)

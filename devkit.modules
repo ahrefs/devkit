@@ -29,6 +29,6 @@ MVar
 Network
 Devkit_ragel
 Seq
-Enume
+ExtEnum
 Static_config
 Reader

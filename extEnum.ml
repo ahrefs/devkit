@@ -1,16 +1,16 @@
 (** Extensions to Enum *)
 
-exception Exit
+include Enum
 
-(* same as Enum.find, but found element is peeked, but not junked *)
+(* same as Enum.find, but found element is peeked, not junked *)
 let rec find_peek f e =
-  match Enum.peek e with
+  match peek e with
   | Some x when f x ->
     x
   | None ->
     raise Not_found
   | _ ->
-    Enum.junk e;
+    junk e;
     find_peek f e
 
 let list_loop l =
@@ -21,7 +21,7 @@ let list_loop l =
     | x :: xs -> r := xs; x
     | [] -> r := l; next ()
   in
-  Enum.from next
+  from next
 
 (* same as list loop, but after loop takes new list *)
 let list_loop_changes l =
@@ -32,6 +32,6 @@ let list_loop_changes l =
     | x :: xs -> r := xs; x
     | [] -> assert (!l <> []); r := !l; next ()
   in
-  Enum.from next
+  from next
 
-let take limit e = Enum.init limit (fun _ -> Enum.next e)
+let take limit e = init limit (fun _ -> next e)
