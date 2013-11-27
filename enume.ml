@@ -34,6 +34,4 @@ let list_loop_changes l =
   in
   Enum.from next
 
-(* HACK *)
-let next : 'a Enum.t -> 'a = fun e -> (Obj.obj (Obj.field (Obj.repr e) 1) : unit -> 'a) ()
-let take limit e = Enum.init limit (fun _ -> next e)
+let take limit e = Enum.init limit (fun _ -> Enum.next e)

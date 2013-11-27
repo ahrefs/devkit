@@ -9,8 +9,6 @@ let log = Log.from "html"
 
 module Raw = New(struct type t = string end)
 
-module Stream = ExtStream
-
 type elem = Tag of (string * (string * Raw.t) list) | Text of Raw.t | Close of string
 
 module Parser = struct 

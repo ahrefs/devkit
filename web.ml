@@ -51,8 +51,6 @@ let extract_first_number = extract_n_number 1
 
 module T = struct
 
-module Stream = ExtStream
-
 (** scan stream until predicate is true
   @param limit skip not more than [limit] elements
   @return matching element
@@ -204,7 +202,7 @@ let get_results ?(debug=false) ~parse_url s' =
       if String.starts_with href "/" then
       begin
         let rec miniloop () =
-          match ExtStream.next s with
+          match Stream.next s with
           | Close "li" -> Exn.fail "not an absolute url : %s" href;
           | x when tag "h3" ~a:["class","r"] x ->
              let href_candidate = get_h3_href () in
@@ -224,7 +222,7 @@ let get_results ?(debug=false) ~parse_url s' =
       let t = stream_extract_till (Close "span") s in
 *)
       let rec extract_description () =
-        let x = ExtStream.next s in
+        let x = Stream.next s in
 (*        if tag "span" ~a:["class","f"] x then
         begin
           stream_find (tag "br") s;
@@ -235,7 +233,7 @@ let get_results ?(debug=false) ~parse_url s' =
         begin
           let nr_span = ref 0 in
           let rec skip () =
-          match ExtStream.next s with (* skip date or x days ago messages *)
+          match Stream.next s with (* skip date or x days ago messages *)
           | x when tag "span" x -> incr nr_span; skip ()
           | Close "span" when !nr_span = 1 -> ()
           | Close "span" -> decr nr_span; skip ()
