@@ -1,5 +1,5 @@
 name="devkit"
-version="svn"
+version="git"
 description="devkit"
 requires="extlib,pcre,netstring,netsys,netcgi2,zip,tyxml,unix,threads,event,curl,extunix,xmlm"
 archive(mt,byte)="devkit.cma"

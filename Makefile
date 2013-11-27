@@ -2,7 +2,7 @@
 .PHONY: build lib top doc clean install uninstall test gen
 
 INSTALL_FILES=$(filter-out \
-  _build/myocamlbuild% _build/test.cm% _build/version.cm%, \
+  _build/myocamlbuild% _build/test.cm%, \
   $(wildcard _build/*.cmx _build/*.cmi _build/*.mli _build/*.cma _build/*.cmxa \
 						 _build/*.lib _build/*.a _build/*.dll _build/*.so))
 OCAMLBUILD=ocamlbuild -use-ocamlfind -no-links -j 0
@@ -31,7 +31,7 @@ doc:
 		$(OCAMLBUILD) devkit.docdir/index.html
 
 install: lib
-		ocamlfind install -patch-version "svn $(shell svnversion)" devkit META $(INSTALL_FILES)
+		ocamlfind install -patch-version "$(shell git describe --always)" devkit META $(INSTALL_FILES)
 
 uninstall:
 		ocamlfind remove devkit

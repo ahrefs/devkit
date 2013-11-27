@@ -8,8 +8,6 @@ let log = Httpev.Hidden.log
 let http_handle _st req k_http =
   let module Arg = Httpev.Args(struct let req = req end) in
   match req.Httpev.path with
-  | "/version" ->
-    k_http & Httpev.serve_text req (Version.id ^ "\n")
   | "/hello" ->
     let name = Option.default "world" (Arg.get "name") in
     k_http & Httpev.serve_text req (sprintf "Hello, %s!" name)
@@ -18,8 +16,6 @@ let http_handle _st req k_http =
     k_http & Httpev.not_found
 
 let run http_port =
-  log #info "version %s" Version.id;
-
   let main () =
     let http_config = { Httpev.default with
       Httpev.events = Async.Ev.init ();
