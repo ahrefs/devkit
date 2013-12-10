@@ -43,3 +43,4 @@ struct
 end
 
 let (+=) a b = a := !a + b
+let tuck l x = l := x :: !l
