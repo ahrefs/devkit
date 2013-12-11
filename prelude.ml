@@ -42,5 +42,6 @@ struct
   let proj = id
 end
 
+let cons x y = x :: y
 let (+=) a b = a := !a + b
 let tuck l x = l := x :: !l
