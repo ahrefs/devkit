@@ -85,6 +85,21 @@ let uniq equal e =
   in
   from next
 
+(** Replace subenum (a consecuitive sequence of elements from [e] comparing equal
+  with the given comparison function) with the first element from that sequence and the number of duplicates *)
+let count_unique equal e =
+  let current = ref None in
+  let n = ref 0 in
+  let rec next () =
+    match get e, !current with
+    | None, None -> raise No_more_elements
+    | None, Some x -> current := None; x, !n
+    | Some v, None -> current := Some v; n := 1; next ()
+    | Some v, Some x when equal x v -> incr n; next ()
+    | Some v, Some x -> let count = !n in current := Some v; n := 1; x, count
+  in
+  from next
+
 (** Extract subenum (a consecuitive sequence of the elements from [e])
   that satisfy the predicate [f] *)
 let sub e f =

@@ -274,6 +274,9 @@ let () = test "Enum.uniq" begin fun () ->
   OUnit.assert_equal ~msg:"3" ~printer:(Action.strl string_of_int)
     [1;20;1;2;3;44]
     (List.of_enum & Enum.uniq (fun x y -> x mod 10 = y mod 10) & List.enum [1;11;20;100;0;1;2;3;133;44]);
+  OUnit.assert_equal ~msg:"4" ~printer:Std.dump
+    [(1, 1); (2, 2); (3, 1); (1, 4); (4, 1)]
+    (List.of_enum @@ Enum.count_unique (=) @@ List.enum [1;2;2;3;1;1;1;1;4;]);
 end
 
 let () = test "Enum.iter_while" begin fun () ->
