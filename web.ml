@@ -600,3 +600,31 @@ let http_gets ?(setup=ignore) ?(check=(fun _ -> true)) ?(result=(fun _ _ -> ()))
       let () = result h code in
       `Error code
   end
+
+type http_action = [ `GET | `POST_FORM of (string * string) list | `POST of (string * string) (** content-type and body *) ]
+
+let http_do ?timeout ?(setup=ignore) ?(http_1_0=false) (action:http_action) url =
+  let open Curl in
+  let post h ct body =
+    set_post h true;
+    set_postfields h body;
+    set_postfieldsize h (String.length body);
+    set_httpheader h ["Content-Type: "^ct];
+    (* disable sending Expect header, our server doesn't support it *)
+(*       set_httpheader h ["Expect: "]; *)
+    if http_1_0 then set_httpversion h HTTP_VERSION_1_0;
+  in
+  let setup h =
+    begin match action with
+    | `GET -> ()
+    | `POST (ct,body) -> post h ct body
+    | `POST_FORM args -> post h "application/x-www-form-urlencoded" (make_url_args args)
+    end;
+    Option.may (set_timeout h) timeout;
+    let () = setup h in
+    ()
+  in
+  match http_gets ~setup url with
+  | `Ok (200, s) -> `Ok s
+  | `Error code -> `Error (sprintf "(%d) %s" (errno code) (strerror code))
+  | `Ok (n, _) -> `Error (sprintf "http %d" n)
