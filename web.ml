@@ -540,8 +540,21 @@ end
 
 let () = Curl.global_init Curl.CURLINIT_GLOBALALL
 
-let with_curl f =
-  bracket (Curl.init ()) Curl.cleanup f
+module CurlCache : sig
+val get : unit -> Curl.t
+val release : Curl.t -> unit
+end = struct
+let cache = Stack.create ()
+let get () =
+  if Stack.is_empty cache then Curl.init ()
+  else Stack.pop cache
+let release h =
+  Curl.reset h;
+  Stack.push h cache
+end
+
+let with_curl f = bracket (Curl.init ()) Curl.cleanup f
+let with_curl_cache f = bracket (CurlCache.get ()) CurlCache.release f
 
 let curl_ok h = Curl.get_httpcode h = 200
 
@@ -556,7 +569,7 @@ let curl_default_setup h =
 let http_get_io_exn ?(setup=ignore) ?(check=curl_ok) url out =
   let inner = ref None in
   try
-    with_curl begin fun h ->
+    with_curl_cache begin fun h ->
       Curl.set_url h url;
       curl_default_setup h;
       setup h;
@@ -581,7 +594,7 @@ let http_get_io url ?(verbose=true) ?setup out =
 let http_get ?verbose ?setup url = wrapped (IO.output_string ()) IO.close_out (http_get_io ?verbose ?setup url)
 
 let http_gets ?(setup=ignore) ?(check=(fun _ -> true)) ?(result=(fun _ _ -> ())) url =
-  with_curl begin fun h ->
+  with_curl_cache begin fun h ->
     Curl.set_url h url;
     curl_default_setup h;
     let () = setup h in
