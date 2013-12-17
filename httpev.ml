@@ -145,13 +145,7 @@ let failed reason s =
   | Extra -> "Extra"
   | NotAcceptable -> "Not Acceptable"
   in
-  let lim = 1024 in
-  let s =
-    if String.length s > lim then
-      sprintf "%S [%d bytes more]" (String.slice ~last:lim s) (String.length s - lim)
-    else
-      sprintf "%S" s
-  in
+  let s = Stre.shorten 1024 s in
   raise (Parse (reason, sprintf "%s : %s" name s))
 
 let get_content_length headers =
