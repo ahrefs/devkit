@@ -121,3 +121,7 @@ let find_prefix s1 s2 =
   let min_len = min (String.length s1) (String.length s2) in
   while !i < min_len && s1.[!i] = s2.[!i] do incr i done;
   !i
+
+let truncate limit s =
+  if String.length s <= limit then s else
+    Printf.sprintf "%s...[%d more bytes]" (String.slice ~last:(limit - 16) s) (String.length s - limit)
