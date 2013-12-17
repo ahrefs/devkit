@@ -14,8 +14,7 @@ gen: devkit_ragel.ml
 %.ml: %.ml.rl
 		ragel -O -F1 $< -o $@
 
-build:
-		$(OCAMLBUILD) devkit.otarget
+build: lib top build-test
 
 lib:
 		$(OCAMLBUILD) devkit.cma devkit.cmxa
@@ -23,8 +22,10 @@ lib:
 top:
 		$(OCAMLBUILD) devkit.top
 
-test:
+build-test:
 		$(OCAMLBUILD) test.byte test.native
+
+test: build-test
 		_build/test.native
 
 doc:
@@ -42,4 +43,3 @@ reinstall:
 
 clean:
 		ocamlbuild -clean
-
