@@ -45,3 +45,7 @@ end
 let cons x y = x :: y
 let (+=) a b = a := !a + b
 let tuck l x = l := x :: !l
+
+let round f =
+  let bot = floor f in
+  if f -. bot < 0.5 then bot else bot +. 1.
