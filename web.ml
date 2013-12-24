@@ -616,7 +616,7 @@ let http_gets ?(setup=ignore) ?(check=(fun _ -> true)) ?(result=(fun _ _ -> ()))
 
 type http_action = [ `GET | `POST_FORM of (string * string) list | `POST of (string * string) (** content-type and body *) ]
 
-let http_do ?timeout ?(setup=ignore) ?(http_1_0=false) (action:http_action) url =
+let http_do ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (action:http_action) url =
   let open Curl in
   let post h ct body =
     set_post h true;
@@ -637,6 +637,12 @@ let http_do ?timeout ?(setup=ignore) ?(http_1_0=false) (action:http_action) url 
     let () = setup h in
     ()
   in
+  if verbose then
+    begin match action with
+    | `GET -> log #info "GET %s" url
+    | `POST (ct,body) -> log #info "POST %s %s %s" url ct (Stre.shorten 64 body)
+    | `POST_FORM l -> log #info "POST %s %s" url (String.concat " " @@ List.map (fun (k,v) -> sprintf "%s=%s" k (Stre.shorten 64 v)) l)
+    end;
   match http_gets ~setup url with
   | `Ok (200, s) -> `Ok s
   | `Error code -> `Error (sprintf "(%d) %s" (errno code) (strerror code))
