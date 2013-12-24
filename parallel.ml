@@ -75,20 +75,21 @@ let worker (execute : task -> result) =
       Unix.close main_read; Unix.close main_write;
       let output = Unix.out_channel_of_descr child_write in
       let input = Unix.in_channel_of_descr child_read in
-      begin try
-      while true do
-(*         log #info "wait"; *)
+      let rec loop () =
         let (r,_,e) = Nix.restart (fun () -> Unix.select [child_read] [] [child_read] (-1.)) () in
         assert (e=[]);
         assert (r<>[]);
-(*         log #info "wait done, read"; *)
-        let v = (Marshal.from_channel input : task) in
-(*         log #info "read done, execute"; *)
-        let r = execute v in
-(*         log #info "execute done, write"; *)
-        Marshal.to_channel output (r : result) []; flush output;
-(*         log #info "write done" *)
-      done
+        let v = try Some (Marshal.from_channel input : task) with End_of_file -> None in
+        match v with
+        | None -> ()
+        | Some v ->
+          let r = execute v in
+          Marshal.to_channel output (r : result) [];
+          flush output;
+          loop ()
+      in
+      begin try
+        loop ()
       with exn ->
         log #error ~exn ~backtrace:true "Paraller.worker aborting on uncaught exception"
       end;
@@ -154,16 +155,12 @@ let perform t e finish =
 (*       Printf.printf "workers %u\n%!" !workers; *)
       while !workers > 0 && t.alive do
         let fds = List.map (fun w -> Unix.descr_of_in_channel w.cin) t.running in
-(*         log #info "wait"; *)
         let (r,_,err) = Nix.restart (fun () -> Unix.select fds [] fds (-1.)) () in
         assert (err = []);
-(*         log #info "wait done"; *)
         let channels = List.map (fun fd -> List.find (fun w -> Unix.descr_of_in_channel w.cin = fd) t.running) r in
-(*         log #info "channels done"; *)
         let answers = List.filter_map (fun w ->
           let task = Enum.get e in
           try 
-(*             log #info "read"; *)
             match try Some (Marshal.from_channel w.cin : result) with End_of_file -> None with
             | None ->
               log #warn "PID %d gone, what now?" w.pid;
@@ -177,13 +174,10 @@ let perform t e finish =
                 else true) t.running;
               None
             | Some answer ->
-(*             log #info "read done"; *)
             begin match task with
             | None -> decr workers
             | Some x ->
-(*               log #info "write"; *)
               Marshal.to_channel w.cout (x : task) []; flush w.cout;
-(*               log #info "write done"; *)
             end;
             Some answer
           with 
@@ -192,7 +186,9 @@ let perform t e finish =
         in
         List.iter finish answers;
       done;
-      if t.gone <> 0 then log #warn "Finished, %d workers vanished" t.gone
+      match t.gone with
+      | 0 -> log #info "Finished"
+      | n -> log #warn "Finished, %d workers vanished" n
 
 end
 
