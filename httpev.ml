@@ -709,3 +709,10 @@ let header_safe req name = try find_header req name with _ -> ""
 
 let header_referer req =
   try find_header req "Referer" with _ -> try find_header req "Referrer" with _ -> ""
+
+let log_access_apache ch code size req =
+  begin try
+    fprintf ch "%s - - [%s] %S %d %dB . %S %S %.3f %s\n%!"
+      (show_client_addr req) (Time.to_string & Unix.time()) req.line code size
+      (header_referer req) (header_safe req "user-agent") (Time.get () -. req.conn) (header_safe req "host")
+  with exn -> log #warn ~exn "access log : %s" & show_request req end
