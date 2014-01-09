@@ -154,7 +154,15 @@ let get_content_length headers =
   | Some s -> try Some (int_of_string s) with _ -> failed Header (sprintf "content-length %S" s)
 
 let decode_args s =
-  try Netencoding.Url.dest_url_encoded_parameters s with _ -> Exn.fail "decode_args : %s" s
+  try Netencoding.Url.dest_url_encoded_parameters s with exn -> Exn.fail ~exn "decode_args : %s" s
+
+(** Minimum strictness, Neturl will fail on malformed parameters in url *)
+let decode_args_soft s =
+  try
+    String.nsplit s "&" |>
+    List.filter_map (fun s -> try String.split s "=" |> apply2 Web.urldecode |> some with _ -> None)
+  with
+    exn -> Exn.fail ~exn "decode_args : %s" s
 
 let acceptable_encoding headers =
   let split s c = List.map (String.strip ~chars:" \t\r\n") @@ Stre.nsplitc s c in
