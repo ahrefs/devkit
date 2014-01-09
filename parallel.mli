@@ -13,11 +13,13 @@ val run_forks : ('a -> unit) -> 'a list -> unit
 module Thread : sig
 type 'a t
 val detach : ('a -> 'b) -> 'a -> 'b t
-val join : 'a t -> [ `Ok of 'a | `Exn of exn ]
+val join : 'a t -> 'a Exn.result
 val join_exn : 'a t -> 'a
 
 (** parallel Array.map *)
 val map : ('a -> 'b) -> 'a array -> 'b array
+(** parallel map with the specified number of workers, default=8 *)
+val mapn : ?n:int -> ('a -> 'b) -> 'a list -> 'b Exn.result list
 end
 
 module type WorkerT = sig 

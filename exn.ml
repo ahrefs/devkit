@@ -5,6 +5,8 @@
 open Printf
 open ExtLib
 
+type 'a result = [ `Ok of 'a | `Exn of exn ]
+
 let catch f x = try Some (f x) with _ -> None
 let default def f x = try f x with _ -> def
 let suppress f x = try f x with _ -> ()
