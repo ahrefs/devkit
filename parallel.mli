@@ -64,3 +64,24 @@ val status : t -> string
 val put : t -> (unit -> unit) -> unit
 val wait_blocked : ?n:int -> t -> unit
 end
+
+(**
+ Some callbacks must be executed in the same thread.
+ E.g.:
+ - libevent loop running in that thread
+ - httpev replying to client may need to add new event
+ - libevent doesn't provide the facility to break loop from another thread
+
+ So here is a separate queue to store results from ThreadPool for
+ subsequent execution on main thread.
+*)
+module Fin : sig
+type t
+val setup : Libevent.event_base -> t
+val callback : t -> ('a -> unit) -> 'a -> unit
+
+(** Execute [f x] in ThreadPool [pool] and invoke [k result] back in originating thread.
+   [result] is either [f x] or [default] if [f] throws an exception.
+   Name poolback is a pun on 'execute in pool and callback' *)
+val poolback : t -> ThreadPool.t -> 'a -> ('b -> 'a) -> 'b -> ('a -> unit) -> unit
+end
