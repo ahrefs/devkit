@@ -98,8 +98,10 @@ let compact_duration t =
   | [] -> List.rev (t::acc)
   | n::tl -> loop (t/n) (t mod n :: acc) tl
   in
-  if t < 1. then sprintf "%.2fs" t
-  else if t < 10. then sprintf "%.1fs" t
+  if t < 0.000_01 then sprintf "%.0fns" (t *. 1_000_000_000.)
+  else if t < 0.01 then sprintf "%.2gms" (t *. 1_000.)
+  else if t < 1. then sprintf "%.0fms" (t *. 1_000.)
+  else if t < 10. then sprintf "%.2gs" t
   else 
   loop (int_of_float t) [] factors >> List.combine names >>
   List.dropwhile (fun (_,x) -> x = 0) >>
@@ -109,6 +111,7 @@ let compact_duration t =
 
 (** parse compact_duration representation (except for fractional seconds) *)
 let of_compact_duration s = Devkit_ragel.parse_compact_duration s
+(* TODO ms ns not parsed *)
 
 let minutes x = float & 60 * x
 let hours x = minutes & 60 * x
