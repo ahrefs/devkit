@@ -301,3 +301,7 @@ let output_buf_fd ?(bufsize=1*1024*1024) fd =
   ~close:flush (* do not close file descriptor, flush the buffer *)
 
 let unlimit_soft r = let (_,hard) = U.getrlimit r in U.setrlimit r ~soft:hard ~hard
+
+(** returns CPU cores number for UNIX systems *)
+let nproc () =
+  int_of_string @@ String.strip @@ read_process "nproc"
