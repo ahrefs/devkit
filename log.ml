@@ -60,10 +60,13 @@ module State = struct
     fun str -> try output_string ch str; flush ch with _ -> () (* logging never fails, most probably ENOSPC *)
 
   let format_simple level facil msg =
-    sprintf "[%s] %06u:%04u [%s:%s] %s\n" 
-      (Time.to_string ~gmt:false ~ms:true (Unix.gettimeofday ())) 
-      (Unix.getpid ()) 
-      (Thread.id (Thread.self ()))
+    let pid = Unix.getpid () in
+    let tid = U.gettid () in
+    let oid = Thread.id (Thread.self ()) in
+    let pinfo = if pid = tid then sprintf "%5u:%u" pid oid else sprintf "%5u:%u:%u" pid oid tid in
+    sprintf "[%s] %s [%s:%s] %s\n"
+      (Time.to_string ~gmt:false ~ms:true (Unix.gettimeofday ()))
+      pinfo
       facil.Logger.name
       (Logger.string_level level)
       msg
