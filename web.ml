@@ -614,25 +614,34 @@ let http_gets ?(setup=ignore) ?(check=(fun _ -> true)) ?(result=(fun _ _ -> ()))
       `Error code
   end
 
-type http_action = [ `GET | `POST_FORM of (string * string) list | `POST of (string * string) (** content-type and body *) ]
+type http_action =
+[ `GET
+| `POST_FORM of (string * string) list
+| `POST of (string * string) (** content-type and body *)
+| `PUT of (string * string)
+| `DELETE
+]
 
 let http_do ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (action:http_action) url =
   let open Curl in
-  let post h ct body =
+  let post ?req h ct body =
     set_post h true;
+    begin match req with None -> () | Some s -> set_customrequest h s end;
     set_postfields h body;
     set_postfieldsize h (String.length body);
     set_httpheader h ["Content-Type: "^ct];
     (* disable sending Expect header, our server doesn't support it *)
 (*       set_httpheader h ["Expect: "]; *)
-    if http_1_0 then set_httpversion h HTTP_VERSION_1_0;
   in
   let setup h =
     begin match action with
     | `GET -> ()
+    | `DELETE -> set_customrequest h "DELETE"
     | `POST (ct,body) -> post h ct body
+    | `PUT (ct,body) -> post ~req:"PUT" h ct body
     | `POST_FORM args -> post h "application/x-www-form-urlencoded" (make_url_args args)
     end;
+    if http_1_0 then set_httpversion h HTTP_VERSION_1_0;
     Option.may (set_timeout h) timeout;
     let () = setup h in
     ()
@@ -640,11 +649,13 @@ let http_do ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (action:
   if verbose then
     begin match action with
     | `GET -> log #info "GET %s" url
+    | `DELETE -> log #info "DELETE %s" url
     | `POST (ct,body) -> log #info "POST %s %s %s" url ct (Stre.shorten 64 body)
-    | `POST_FORM l -> log #info "POST %s %s" url (String.concat " " @@ List.map (fun (k,v) -> sprintf "%s=%s" k (Stre.shorten 64 v)) l)
+    | `PUT (ct,body) -> log #info "PUT %s %s %s" url ct (Stre.shorten 64 body)
+    | `POST_FORM l -> log #info "POST %s %s" url (String.concat " " @@ List.map (fun (k,v) -> sprintf "%s=%S" k (Stre.shorten 64 v)) l)
     end;
   match http_gets ~setup url with
-  | `Ok (200, s) -> `Ok s
+  | `Ok (code, s) when code / 100 = 2 -> `Ok s
   | `Error code -> `Error (sprintf "(%d) %s" (errno code) (strerror code))
   | `Ok (n, _) -> `Error (sprintf "http %d" n)
 
