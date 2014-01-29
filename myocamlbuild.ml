@@ -3,6 +3,12 @@ open Command
 open Printf
 ;;
 
+let dversion =
+  if Sys.ocaml_version >= "4.01" then [A"-DOCAML401"]
+  else if Sys.ocaml_version >= "4.00" then [A"-DOCAML400"]
+  else []
+;;
+
 dispatch begin function
 | After_rules ->
 
@@ -19,6 +25,7 @@ dispatch begin function
 
     flag ["ocaml"; "doc"] (S[A"-short-functors"; A"-sort"; A"-m"; A"A"; A"-hide-warnings"]);
     flag ["ocaml"; "pp"; "pa_macro"] (S[A"Camlp4MacroParser.cmo"]);
+    flag ["ocaml"; "pp"; "dversion"] (S dversion);
     flag ["compile"; "ocaml"; "native"; "asm"] & atomize ["-S"];
 
     pflag ["compile"; "ocaml"] "warn" (fun s -> atomize ["-w";s]);
