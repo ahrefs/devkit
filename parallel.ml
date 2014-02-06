@@ -69,7 +69,7 @@ type t = { mutable running : instance list; execute : (task -> result); mutable 
 let worker (execute : task -> result) =
   let main_read, child_write = Unix.pipe () in
   let child_read, main_write = Unix.pipe () in
-  match Unix.fork() with
+  match Lwt_unix.fork() with
   | -1 -> assert false
   | 0 -> (* child *)
       Unix.close main_read; Unix.close main_write;
@@ -194,7 +194,7 @@ end
 
 let invoke (f : 'a -> 'b) x : unit -> 'b =
   let input, output = Unix.pipe() in
-  match Unix.fork() with
+  match Lwt_unix.fork() with
   | -1 -> Unix.close input; Unix.close output; (let v = f x in fun () -> v)
   | 0 ->
       Unix.close input;
@@ -290,7 +290,7 @@ end
 let rec launch_forks f = function
 | [] -> ()
 | x::xs ->
-  match Unix.fork () with
+  match Lwt_unix.fork () with
   | 0 -> f x
   | -1 -> log #warn "failed to fork"
   | _ -> launch_forks f xs

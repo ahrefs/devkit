@@ -9,7 +9,7 @@ open Prelude
 open ExtLib
 
 let unparent () =
-  match fork () with  (* fork off and die *)
+  match Lwt_unix.fork () with  (* fork off and die *)
   | 0 -> ()
   | -1 -> failwith "Fork failed"
   | _ -> exit 0
@@ -130,7 +130,7 @@ let try_set_close_on_exec fd =
 
 let open_proc cmd input output toclose =
   let cloexec = List.for_all try_set_close_on_exec toclose in
-  match fork() with
+  match Lwt_unix.fork () with
   |  0 -> if input <> stdin then begin dup2 input stdin; close input end;
           if output <> stdout then begin dup2 output stdout; close output end;
           if not cloexec then List.iter close toclose;

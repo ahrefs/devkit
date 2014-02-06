@@ -3,7 +3,7 @@ true: annot, debug, thread, package(threads), warn_A, warn_e, warn(-35)
 "web.ml": package(netstring), package(curl), package(xmlm)
 "exn.ml": package(curl), package(xmlm)
 "htmlStream.ml" or "stre.ml" or "php_serialize.ml" or "web.ml": camlp4o
-"nix.ml" or "files.ml" or "daemon.ml" or "prelude.ml": package(extunix)
+"nix.ml" or "files.ml" or "daemon.ml" or "prelude.ml" or "parallel.ml": package(extunix), package(lwt.unix)
 "netcgi_ext.ml": package(netcgi2)
 <gzip_*.ml>: package(zip)
 "varz_html.ml" or "netcgi_ext.ml" or "httpev.ml": package(tyxml)
@@ -11,7 +11,7 @@ true: annot, debug, thread, package(threads), warn_A, warn_e, warn(-35)
 "prelude.ml": camlp4o, pa_macro, dversion
 "async.ml" or "nix.ml" or "parallel.mli": package(event)
 <*.{top,byte,native}>: package(extlib), package(pcre), package(zip), package(event), package(curl), package(netstring),\
-  package(extunix), package(netcgi2), package(tyxml), package(xmlm)
+  package(extunix), package(netcgi2), package(tyxml), package(xmlm), package(lwt.unix)
 <test.*>: package(oUnit)
 "extStream.ml": warn(-9-27)
 "devkit_ragel.ml": warn(-38)
