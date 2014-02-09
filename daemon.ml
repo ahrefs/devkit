@@ -73,5 +73,6 @@ let manage () =
   Sys.set_signal Sys.sigusr1 (Sys.Signal_handle (fun _ -> Log.reopen !logfile));
   Sys.set_signal Sys.sigusr2 (Sys.Signal_handle (fun _ -> U.malloc_stats (); Action.gc_show "compact" Gc.compact ()));
   Nix.handle_sig_exit_with ~exit:false (fun () -> should_exit := true);
+  Nix.raise_limits ();
   managed := true;
   ()
