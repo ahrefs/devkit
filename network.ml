@@ -58,3 +58,14 @@ let special_cidr = List.map cidr_of_string_exn [
   "255.255.255.255/32"; (* Broadcast	RFC 919 *)
 ]
 
+(* get device ip to listen for only private network *)
+(* RFC 1918 *)
+let private_network_ip () =
+  let private_net = List.map cidr_of_string_exn [ "10.0.0.0/8"; "172.16.0.0/12"; "192.168.0.0/16"; ] in
+  let ips = U.getifaddrs () |> List.filter begin fun (_,ip) ->
+    let ip = ipv4_of_string_exn ip in
+    List.exists (ipv4_matches ip) private_net
+  end in
+  match ips with
+  | [] -> Unix.inet_addr_loopback
+  | (_,ip)::_ -> Unix.inet_addr_of_string ip
