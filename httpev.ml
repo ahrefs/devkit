@@ -669,7 +669,11 @@ struct
   let get = Exn.catch arg
   let get_int = Exn.catch (int_of_string $ arg)
   let str name = match get name with Some s -> s | None -> raise (Bad name)
-  let int name = let s = str name in try int_of_string s with _ -> raise (Bad name)
+  let int ?default name =
+    match get name, default with
+    | None, None -> raise (Bad name)
+    | None, Some n -> n
+    | Some s, _ -> try int_of_string s with _ -> raise (Bad name)
   (**
     @param name array name without brackets e.g. [array "x"] to extract [x] from /request?x[]=1&x[]=2
   *)
