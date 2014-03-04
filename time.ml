@@ -12,7 +12,7 @@ let now = Unix.gettimeofday
 
 let fast_to_string =
   (* "%04u-%02u-%02uT%02u:%02u:%02u%s" *)
-  let template = "2013-__-__T__:__:__" in
+  let template = "2014-__-__T__:__:__" in
   let template_z = template ^ "Z" in
   let digit n = Char.unsafe_chr (Char.code '0' + n) in
   let put s ofs n =
@@ -30,7 +30,7 @@ let fast_to_string =
     let t = (if gmt then gmtime else localtime) f in
     let s = String.copy (if gmt then template_z else template) in
     let year = 1900 + t.tm_year in
-    if year <> 2013 then
+    if year <> 2014 then
     begin
       if year >= 2010 && year < 2020 then
         String.unsafe_set s 3 (digit (year mod 10))
