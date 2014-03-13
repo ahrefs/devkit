@@ -1,5 +1,7 @@
 open Prelude
 
+let () = assert (Sys.word_size = 64)
+
 type ipv4 = int32
 type ipv4_cidr = int32 * int32
 
@@ -16,6 +18,12 @@ let string_of_ipv4 addr =
   let (a,b,c,d) = bytes_of_ipv4 addr in
   Printf.sprintf "%u.%u.%u.%u" a b c d
 
+let ipv4_of_int32 = id
+let int32_of_ipv4 = id
+
+let ipv4_of_int = Int32.of_int
+let int_of_ipv4 = Int32.to_int
+
 (*
 1_500_000
    scanf : allocated     73.0GB, heap         0B, collection 0 979 37360, elapsed 43 secs, 23056.45/sec : ok
@@ -23,22 +31,26 @@ ocamllex : allocated     11.2GB, heap         0B, collection 0 33 5718, elapsed 
    ragel : allocated      6.5GB, heap         0B, collection 0 0 3319, elapsed 8.07 secs, 123908.12/sec : ok
 *)
 let ipv4_of_string_exn = Devkit_ragel.parse_ipv4
+let ipv4_of_string_null s = try ipv4_of_string_exn s with _ -> 0l
+let is_ipv4 = Devkit_ragel.is_ipv4
+
+let class_c ip = Int32.logand 0xFFFFFF00l ip
 
 let make_broadcast addr netmask = Int32.logor addr (Int32.lognot netmask)
 
 let cidr_of_string_exn s =
   Scanf.sscanf s "%s@/%u%!" (fun ip len ->
     if len < 0 || len > 32 then Exn.fail "bad cidr %s" s;
-    let mask = Int32.lognot (if len = 0 then (-1l) else Int32.pred (Int32.shift_left 1l (32 - len))) in
-    ipv4_of_string_exn ip, mask)
+    let mask = if len = 0 then 0l else Int32.lognot @@ Int32.pred @@ Int32.shift_left 1l (32 - len) in
+    let ip = ipv4_of_string_exn ip in
+    Int32.logand ip mask, mask)
 
-let range_of_cidr (cidr,mask) = cidr, make_broadcast cidr mask
+let cidr_of_string_exn s = try ipv4_of_string_exn s, -1l with Invalid_argument _ -> cidr_of_string_exn s
+
+let range_of_cidr (ip0,mask) = ip0, make_broadcast ip0 mask
 
 let ipv4_matches ip (prefix, mask) = Int32.logand ip mask = prefix
-
-let ipv4_of_string_null s = try ipv4_of_string_exn s with _ -> 0l
-
-let is_ipv4 = Devkit_ragel.is_ipv4
+let prefix_of_cidr = fst
 
 let special_cidr = List.map cidr_of_string_exn [
   "0.0.0.0/8"; (*	Current network (only valid as source address)	RFC 1700 *)
@@ -58,9 +70,8 @@ let special_cidr = List.map cidr_of_string_exn [
   "255.255.255.255/32"; (* Broadcast	RFC 919 *)
 ]
 
-(* get device ip to listen for only private network *)
-(* RFC 1918 *)
 let private_network_ip () =
+  (* RFC 1918 *)
   let private_net = List.map cidr_of_string_exn [ "10.0.0.0/8"; "172.16.0.0/12"; "192.168.0.0/16"; ] in
   let ips = U.getifaddrs () |> List.filter begin fun (_,ip) ->
     let ip = ipv4_of_string_exn ip in

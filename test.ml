@@ -146,9 +146,9 @@ let () = test "ThreadPool" begin fun () ->
 end
 
 let () = test "Network.string_of_ipv4" begin fun () ->
-  let t ip s =
-    assert_equal ~printer:Int32.to_string ip (Network.ipv4_of_string_null s);
-    assert_equal ~printer:id (Network.string_of_ipv4 ip) s
+  let t n s =
+    assert_equal ~printer:Int32.to_string n (Network.int32_of_ipv4 @@ Network.ipv4_of_string_null s);
+    assert_equal ~printer:id (Network.string_of_ipv4 @@ Network.ipv4_of_int32 n) s
   in
   t 0l "0.0.0.0";
   t 1l "0.0.0.1";
