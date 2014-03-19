@@ -76,7 +76,8 @@ let to_rfc2822 secs =
   let mon = mons.(t.U.tm_mon mod 12) in
   sprintf "%s, %02u %s %04u %02u:%02u:%02u GMT" wday t.U.tm_mday mon (1900 + t.U.tm_year) t.U.tm_hour t.U.tm_min t.U.tm_sec
 
-let duration_str t =
+(** @param cut - round down to the number of complete most significant periods *)
+let duration_str ?(cut=false) t =
   let factors = [60; 60; 24; 30; 12;] in
   let names = ["secs"; "min"; "hours"; "days"; "months";] in
   let rec loop t acc = function
@@ -88,10 +89,11 @@ let duration_str t =
   else 
   loop (int_of_float t) [] factors >> List.combine names >> List.rev >> 
   List.dropwhile (fun (_,x) -> x = 0) >>
+  (if cut then List.take 1 else id) >>
   List.map (fun (n,x) -> sprintf "%u %s" x n) >> String.concat " "
 
 (* 1m10s *)
-let compact_duration t =
+let compact_duration ?(cut=false) t =
   let factors = [60; 60; 24; ] in
   let names = ["s"; "m"; "h"; "d"; ] in
   let rec loop t acc = function
@@ -107,6 +109,7 @@ let compact_duration t =
   List.dropwhile (fun (_,x) -> x = 0) >>
   List.rev >>
   List.dropwhile (fun (_,x) -> x = 0) >>
+  (if cut then List.take 1 else id) >>
   List.map (fun (n,x) -> sprintf "%u%s" x n) >> String.concat ""
 
 (** parse compact_duration representation (except for fractional seconds) *)
