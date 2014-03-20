@@ -34,9 +34,12 @@ let list_loop_changes l =
   in
   from next
 
-let dyn_range ?(first=0) ?last d =
-  let len = DynArray.length d in
-  let last = Option.map_default (min len) len last in
+let dyn_range ?(start=0) ?n d =
+  let last =
+    match n with
+    | None -> DynArray.length d
+    | Some n -> start + n
+  in
   let rec make start =
     let idxref = ref start in
     let next () =
@@ -52,7 +55,7 @@ let dyn_range ?(first=0) ?last d =
     in
     Enum.make ~next ~count ~clone
   in
-  make first
+  make start
 
 let take limit e = init limit (fun _ -> next e)
 
