@@ -368,7 +368,7 @@ let rec quick_sort d left right cmp =
   if left < !j then quick_sort d left !j cmp;
   if !i < right then quick_sort d !i right cmp
 
-let quick_sort d cmp = quick_sort d 0 (DynArray.length d - 1) cmp
+let quick_sort d ?(first=0) ?(last=DynArray.length d) cmp = quick_sort d first (last - 1) cmp
 
 (**
   find the minimum element in the list
