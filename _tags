@@ -4,6 +4,7 @@ true: annot, debug, thread, package(threads), warn_A, warn_e, warn(-35)
 "exn.ml": package(curl), package(xmlm)
 "htmlStream.ml" or "stre.ml" or "php_serialize.ml" or "web.ml": camlp4o
 "nix.ml" or "files.ml" or "daemon.ml" or "prelude.ml" or "parallel.ml" or "signal.ml": package(extunix), package(lwt.unix)
+"exn_lwt.ml": package(lwt)
 "netcgi_ext.ml": package(netcgi2)
 <gzip_*.ml>: package(zip)
 "varz_html.ml" or "netcgi_ext.ml" or "httpev.ml": package(tyxml)
