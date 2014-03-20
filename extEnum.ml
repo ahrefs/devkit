@@ -34,6 +34,26 @@ let list_loop_changes l =
   in
   from next
 
+let dyn_range ?(first=0) ?last d =
+  let len = DynArray.length d in
+  let last = Option.map_default (min len) len last in
+  let rec make start =
+    let idxref = ref start in
+    let next () =
+      if !idxref >= last then
+        raise Enum.No_more_elements;
+      let retval = DynArray.unsafe_get d !idxref in
+      incr idxref;
+      retval
+    and count () =
+      if !idxref >= last then 0 else last - !idxref
+    and clone () =
+      make !idxref
+    in
+    Enum.make ~next ~count ~clone
+  in
+  make first
+
 let take limit e = init limit (fun _ -> next e)
 
 let align f e1 e2 =
