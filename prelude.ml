@@ -38,6 +38,7 @@ let const x = fun () -> x
 let apply2 f = fun (x,y) -> f x, f y
 
 let printfn fmt = Printf.ksprintf print_endline fmt
+let eprintfn fmt = Printf.ksprintf prerr_endline fmt
 
 let curry f a b = f (a, b)
 let uncurry f (a,b) = f a b
