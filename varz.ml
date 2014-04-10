@@ -41,13 +41,12 @@ let controls () = Hashtbl.enum controls >> Enum.map (fun (k,v) -> k,v#gets) >> L
 let value name =
 object (self)
 
-val mutable x = 0L
-method inc = x <- Int64.succ x
-method dec = x <- Int64.pred x
-method addl n = x <- Int64.add x n
-method add n = x <- Int64.add x (Int64.of_int n)
+val mutable x = 0
+method inc = x <- succ x
+method dec = x <- pred x
+method add n = x <- x + n
 method get = x
-method gets = Int64.to_string x
+method gets = string_of_int x
 method name = name
 
 initializer
@@ -186,10 +185,9 @@ let uptime =
 let value_bytes name =
 object (self)
 
-val mutable x = 0L
-method add n = x <- Int64.add x (Int64.of_int n)
-method addl n = x <- Int64.add x n
-method gets = Int64.to_float x >> bytes_string_f
+val mutable x = 0
+method add n = x <- x + n
+method gets = bytes_string_f @@ float x
 method get = x
 method name = name
 
