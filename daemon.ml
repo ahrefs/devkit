@@ -19,6 +19,9 @@ let managed = ref false
 *)
 let should_exit = ref false
 
+(** exception to be raised by functions that wish to signal premature termination due to [!should_exit = true] *)
+exception ShouldExit
+
 let args =
   [
     ExtArg.may_str "logfile" logfile "<file> Log file";
