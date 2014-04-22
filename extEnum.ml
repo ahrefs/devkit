@@ -2,6 +2,10 @@
 
 include Enum
 
+(** Construct an enumeration over elements of the queue *)
+let of_queue q =
+  Enum.from (fun () -> try Queue.pop q with Queue.Empty -> raise No_more_elements)
+
 (* same as Enum.find, but found element is peeked, not junked *)
 let rec find_peek f e =
   match peek e with
