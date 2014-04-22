@@ -10,6 +10,9 @@ val launch_forks : ('a -> unit) -> 'a list -> unit
 (** Launch forks for each element of the list and wait for all workers to finish. Pass exit signals to the workers. *)
 val run_forks : ('a -> unit) -> 'a list -> unit
 
+(** Same as [run_forks] but do not fork for one worker *)
+val run_forks' : ('a -> unit) -> 'a list -> unit
+
 module Thread : sig
 type 'a t
 val detach : ('a -> 'b) -> 'a -> 'b t

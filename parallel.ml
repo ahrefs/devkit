@@ -320,6 +320,12 @@ let run_forks (type t) (f : t -> unit) l =
   Nix.handle_sig_exit_with ~exit:true (fun () -> W.stop proc);
   W.perform proc (List.enum & List.map id l) id
 
+let run_forks' f l =
+  match l with
+  | [] -> ()
+  | [x] -> f x
+  | l -> run_forks f l
+
 module Fin = struct
 
   type t = { q : (unit -> unit) Mtq.t; evfd : Unix.file_descr; }
