@@ -93,12 +93,10 @@ let show_method = function
   | `HEAD -> "HEAD"
 
 let show_client_addr req =
-  try
-    match req.addr with
-    | Unix.ADDR_INET (addr,_) when addr = Unix.inet_addr_loopback -> List.assoc "x-real-ip" req.headers
-    | _ -> raise Not_found
-  with Not_found ->
-    Nix.show_addr req.addr
+  let orig = Nix.show_addr req.addr in
+  match req.addr with
+  | Unix.ADDR_INET (addr,_) when addr = Unix.inet_addr_loopback -> (try List.assoc "x-real-ip" req.headers with Not_found -> orig)
+  | _ -> orig
 
 let client_addr req = match req.addr with Unix.ADDR_INET (addr,port) -> addr, port | _ -> assert false
 
