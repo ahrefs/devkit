@@ -142,33 +142,30 @@ include State.M
 let facility = State.facility
 let set_filter = State.set_filter
 
-type 'a pr = ?exn:exn -> ?lines:bool -> ?backtrace:bool -> ('a, unit, string, unit) format4 -> 'a
+type 'a pr = ?exn:exn -> ?lines:bool -> ?backtrace:bool -> ?saved_backtrace:string list -> ('a, unit, string, unit) format4 -> 'a
 
 class logger facil =
 let perform output_line =
-  fun ?exn ?(lines=true) ?(backtrace=false) fmt ->
+  let output = function
+  | true ->
+      fun facil s ->
+        if String.contains s '\n' then
+          List.iter (output_line facil) @@ String.nsplit s "\n"
+        else
+          output_line facil s
+  | false -> output_line
+  in
+  let print_bt lines exn bt s =
+    output lines facil (s ^ " : exn " ^ Exn.str exn ^ (if bt = [] then " (no backtrace)" else ""));
+    List.iter (fun line -> output_line facil ("    " ^ line)) bt
+  in
+  fun ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace fmt ->
     try State.rotate ();
-    let output =
-      if lines then
-        begin fun facil s ->
-          if String.contains s '\n' then
-            List.iter (output_line facil) @@ String.nsplit s "\n"
-          else
-            output_line facil s
-        end
-      else
-        output_line
-    in
-    match exn, backtrace with
-    | Some exn, false -> ksprintf (fun s -> output facil (s ^ " : exn " ^ Exn.str exn)) fmt
-    | Some exn, true ->
-      let print s =
-        let bt = Exn.get_backtrace () in
-        output facil (s ^ " : exn " ^ Exn.str exn ^ (if bt = [] then " (no backtrace)" else ""));
-        List.iter (fun line -> output_line facil ("    " ^ line)) bt
-      in
-      ksprintf print fmt
-    | None, _ -> ksprintf (output facil) fmt
+    match exn, backtrace, saved_backtrace with
+    | Some exn, false, _ -> ksprintf (fun s -> output lines facil (s ^ " : exn " ^ Exn.str exn)) fmt
+    | Some exn, true, None -> ksprintf (print_bt lines exn (Exn.get_backtrace ())) fmt
+    | Some exn, true, Some bt -> ksprintf (print_bt lines exn bt) fmt
+    | None, _, _ -> ksprintf (output lines facil) fmt
     with exn ->
       ksprintf (fun s -> output_line facil (sprintf "LOG FAILED : %S with message %S" (Exn.str exn) s)) fmt
 in
