@@ -1,7 +1,5 @@
 (** daemon utilities *)
 
-open Prelude
-
 module U = ExtUnix.Specific
 
 let log = Log.from "daemon"
@@ -69,7 +67,7 @@ let manage () =
   if Option.is_some !logfile then
   begin
     let quote s = try Scanf.sscanf s "%_[a-zA-Z0-9:_/.-]%!" s with _ -> Filename.quote s in
-    log #info "run: %s" (String.concat " " @@ List.map quote @@ Array.to_list Sys.argv);
+    log #info "run: %s" (String.concat " " (List.map quote (Array.to_list Sys.argv)));
     log #info "GC settings: %s" (Action.gc_settings ());
   end;
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;

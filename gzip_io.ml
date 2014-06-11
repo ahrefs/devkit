@@ -1,7 +1,5 @@
 (** gzip IO *)
 
-open Prelude
-
 let input io =
   let iz = Gzip_stream.open_in io in
   IO.create_in 
@@ -34,6 +32,6 @@ let pipe_in f =
 *)
 
 let string s =
-  let out = output @@ IO.output_string () in
+  let out = output (IO.output_string ()) in
   IO.nwrite out s;
   IO.close_out out
