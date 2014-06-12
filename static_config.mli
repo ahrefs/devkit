@@ -1,6 +1,7 @@
 (** Static mapping of simple config format.
 
 Format is simple key-value pairs. Key must start with a letter and may include letters, numbers and underscore.
+Lines starting with '#' are treated as comments, i.e. ignored.
 Value can be arbitrary - there are several ways to represent them :
 
 * if the value doesn't contain any spaces, just write out the value directly
@@ -35,6 +36,21 @@ Example usage:
     let last_id = int root "last_id" 0
     let last_key = string root "last_key" ""
   end
+
+or as an object:
+
+  let simple_config filename =
+    let open Static_config in
+    let root = new_root () in
+    let port = int root "port" 8080 in
+    object
+      inherit base root filename
+      method port = port
+    end
+
+  let conf = simple_config "some.config" in (* get's loaded here *)
+  conf#port#set 8081;
+  conf#save ()
 
 *)
 
