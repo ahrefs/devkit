@@ -128,14 +128,17 @@ open Unix
 let try_set_close_on_exec fd =
   try set_close_on_exec fd; true with Invalid_argument _ -> false
 
-let open_proc cmd input output toclose =
+let open_proc cmd ?(input=stdin) ?(output=stdout) ?(error=stderr) ?chdir ?(env=Unix.environment ()) toclose =
   let cloexec = List.for_all try_set_close_on_exec toclose in
   match Lwt_unix.fork () with
   |  0 -> if input <> stdin then begin dup2 input stdin; close input end;
           if output <> stdout then begin dup2 output stdout; close output end;
+          if error <> stderr then begin dup2 error stderr; close error end;
           if not cloexec then List.iter close toclose;
           U.setpgid 0 0; (* separate process group *)
-          begin try execv "/bin/sh" [| "/bin/sh"; "-c"; cmd |]
+          begin try
+            Option.may Unix.chdir chdir;
+            execve "/bin/sh" [| "/bin/sh"; "-c"; cmd |] env
           with _ -> exit 127
           end
   | id -> id
@@ -143,7 +146,7 @@ let open_proc cmd input output toclose =
 let open_process_in cmd =
   let (in_read, in_write) = pipe() in
   let inchan = in_channel_of_descr in_read in
-  let pid = open_proc cmd stdin in_write [in_read] in
+  let pid = open_proc cmd ~input:stdin ~output:in_write [in_read] in
   close in_write;
   inchan, pid
 
