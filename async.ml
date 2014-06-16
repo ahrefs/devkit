@@ -49,14 +49,14 @@ let write_some fd buf ofs len =
   *)
 let read_available ~limit fd =
   let buf = Buffer.create 1024 in
-  let s = String.create 1024 in
+  let s = Bytes.create 1024 in
   let rec loop () =
-    match read_some fd s 0 (String.length s) with
+    match read_some fd s 0 (Bytes.length s) with
     | End -> `Chunk (Buffer.contents buf, true)
     | Block -> `Chunk (Buffer.contents buf, false)
     | Exn exn -> raise exn
     | Data len ->
-      Buffer.add_substring buf s 0 len;
+      Buffer.add_substring buf (Bytes.to_string s) 0 len;
       if Buffer.length buf > limit then `Limit (Buffer.contents buf) else loop ()
   in
   loop ()
@@ -71,7 +71,7 @@ let show_error = function
 (** [read_buf buf fd err k] - asynchronously fill [buf] with data from [fd] and call [k buf] when done (buffer is full).
   [fd] should be nonblocking. Call [err] on error (EOF). *)
 let read_buf base ?ev ?timeout buf fd err k =
-  let len = String.length buf in
+  let len = Bytes.length buf in
   let later cur =
     let cur = ref cur in
     setup_simple_event base ?ev ?timeout fd [Ev.READ] (fun ev fd flags ->
@@ -93,7 +93,7 @@ let read_buf base ?ev ?timeout buf fd err k =
   | Block -> later 0
   | Data n -> later n
 
-let read_n base ?ev ?timeout n fd err k = read_buf base ?ev ?timeout (String.create n) fd err k
+let read_n base ?ev ?timeout n fd err k = read_buf base ?ev ?timeout (Bytes.create n) fd err k
 
 (** Call [f] with [delay]-second pauses between invocations.
     Set [stop] to [true] to stop the timer. 
@@ -140,7 +140,7 @@ let error ?exn p msg =
   Std.finally (fun () -> finish p) p.err ()
 
 let receive p ?timeout buf k =
-  let len = String.length buf in
+  let len = Bytes.length buf in
   let later cur =
     let cur = ref cur in
     Ev.set p.events p.read p.fd [Ev.READ] ~persist:true (fun fd flags ->
