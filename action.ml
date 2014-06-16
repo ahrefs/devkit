@@ -47,7 +47,7 @@ let list_random_exn l = List.nth l (Random.int (List.length l))
 
 let list_random = function
   | [] -> None
-  | l -> list_random_exn l >> some
+  | l -> Some (list_random_exn l)
 
 let array_random_exn a = a.(Random.int (Array.length a))
 let array_random = function [||] -> None | a -> Some (array_random_exn a)
@@ -106,15 +106,17 @@ let unpartition a =
 
 let file_lines_exn file =
   Control.with_open_in_txt file begin fun ch ->
-    Std.input_lines ch >> List.of_enum
+    Std.input_lines ch |> List.of_enum
+  end
+
+let make_config_lines =
+  List.filter_map begin fun s ->
+    let s = String.strip s in
+    if s <> "" && s.[0] <> '#' then Some s else None
   end
 
 (** read lines from file skipping empty lines and comments (lines starting with '#') *)
-let config_lines_exn file =
-  Control.with_open_in_txt file begin fun ch ->
-    Std.input_lines ch >> Enum.map String.strip >>
-    Enum.filter (fun s -> s <> "" && s.[0] <> '#') >> List.of_enum
-  end
+let config_lines_exn = make_config_lines $ file_lines_exn
 
 let file_lines_exn file = try file_lines_exn file with exn -> Exn.fail ~exn "file_lines %s" file
 let config_lines_exn file = try config_lines_exn file with exn -> Exn.fail ~exn "config_lines %s" file
@@ -213,7 +215,7 @@ object
 val mutable start = tm ()
 method reset = start <- tm ()
 method get = tm () -. start
-method get_str = Time.duration_str & tm () -. start
+method get_str = Time.duration_str (tm () -. start)
 
 end
 
@@ -245,7 +247,8 @@ let io_copy input output =
     while true do
       let n = IO.input input s 0 size in
       if n = 0 then raise IO.No_more_input;
-      ignore & IO.really_output output s 0 n
+      let (_:int) = IO.really_output output s 0 n in
+      ()
     done
   with IO.No_more_input -> ()
 
