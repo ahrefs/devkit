@@ -12,7 +12,7 @@ let period n f =
 let timely period f =
   assert (period > 0.);
   let next = ref (Time.get () +. period) in
-  (fun () -> if Time.get () > !next then begin next := Time.get () +. period; f () end)
+  (fun () -> if Time.get () > !next then begin Std.finally (fun () -> next := Time.get () +. period) f () end)
 
 let strl f l = sprintf "[%s]" (String.concat ";" (List.map f l))
 let catmap f l = String.concat "" (List.map f l)
