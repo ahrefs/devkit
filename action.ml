@@ -397,3 +397,6 @@ let thread_run_periodic ~delay ?(now=false) f =
   end ()
   in
   ()
+
+let random_bytes n = String.init n (fun _ -> Char.chr (Random.int 256))
+let random_ascii n = String.init n (fun _ -> Char.chr (Char.code '!' + Random.int (Char.code '~' - Char.code '!' + 1)))
