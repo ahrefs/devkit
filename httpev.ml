@@ -26,6 +26,7 @@ type config =
     events : Ev.event_base;
     name : string;
     max_request_size : int;
+    auth : (string * string * string) option;
   }
 
 let default = 
@@ -38,26 +39,10 @@ let default =
     events = Ev.Global.base;
     name = "HTTP server";
     max_request_size = 16 * 1024;
+    auth = None;
   }
 
-type encoding = Gzip | Identity
-
-type request = { addr : Unix.sockaddr;
-                 url : string; (* path and arguments *)
-                 path : string;
-                 args : (string * string) list;
-                 conn : Time.t; (* time when client connected *)
-                 recv : Time.t; (* time when client request was fully read *)
-                 meth : [`GET | `POST | `HEAD ];
-                 headers : (string * string) list;
-                 body : string;
-                 version : int * int; (* client HTTP version *)
-                 id : int; (* request id *)
-                 socket : Unix.file_descr;
-                 line : string; (** request line *)
-                 mutable blocking : unit IO.output option; (* hack for forked childs *)
-                 encoding : encoding;
-                 }
+include Httpev_common
 
 (** server state *)
 type server = {
@@ -66,6 +51,7 @@ type server = {
   mutable errors : int;
   reqs : (int,request) Hashtbl.t;
   config : config;
+  digest_auth : Digest_auth.t option;
 }
 
 type partial_body = {
@@ -86,29 +72,6 @@ type client = {
   mutable req : request_state;
   server : server;
 }
-
-let show_method = function
-  | `GET -> "GET"
-  | `POST -> "POST"
-  | `HEAD -> "HEAD"
-
-let show_client_addr req =
-  let orig = Nix.show_addr req.addr in
-  match req.addr with
-  | Unix.ADDR_INET (addr,_) when addr = Unix.inet_addr_loopback -> (try List.assoc "x-real-ip" req.headers with Not_found -> orig)
-  | _ -> orig
-
-let client_addr req = match req.addr with Unix.ADDR_INET (addr,port) -> addr, port | _ -> assert false
-
-let show_request req =
-  sprintf "#%d %s time %.4f (recv %.4f) %s %s%s"
-    req.id
-    (show_client_addr req)
-    (Time.get () -. req.conn)
-    (req.recv -. req.conn)
-    (show_method req.meth)
-    (Exn.default "" (List.assoc "host") req.headers)
-    req.url
 
 let show_socket_error fd =
   try 
@@ -506,7 +469,15 @@ let handle_request c body answer =
   try
     match req.version with
     | (1,_) ->
-        answer c.server req (send_reply_user c req.encoding)
+      let auth = match c.server.digest_auth with
+      | Some auth -> Digest_auth.check auth req
+      | None -> `Ok
+      in
+      let k = send_reply_user c req.encoding in
+      begin match auth with
+      | `Unauthorized header -> k (`Unauthorized, [header], "Unauthorized")
+      | `Ok -> answer c.server req k
+      end
     | _ ->
       log #info "version %u.%u not supported from %s" (fst req.version) (snd req.version) (show_request req);
       send_reply c `Version_not_supported "HTTP/1.0 is supported"
@@ -611,7 +582,12 @@ let start_listen config =
   Tcp.listen ~name:config.name ~backlog:config.backlog config.ip config.port
 
 let setup_fd fd config answer =
-  let server = { total = 0; active = 0; errors = 0; reqs = Hashtbl.create 10; config; } in
+  let digest_auth =
+    match config.auth with
+    | Some (realm,user,password) -> Some (Digest_auth.init ~realm ~user ~password ())
+    | None -> None
+  in
+  let server = { total = 0; active = 0; errors = 0; reqs = Hashtbl.create 10; config; digest_auth; } in
   Async.setup_periodic_timer_wait config.events (Time.minutes 1) begin fun () ->
     let now = Time.now () in
     server.reqs >> Hashtbl.iter begin fun _ req ->

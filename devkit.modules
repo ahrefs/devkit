@@ -22,6 +22,8 @@ Stre
 ExtArg
 Factor
 Httpev
+Httpev_common
+Digest_auth
 Async
 HtmlStream
 Php_serialize
