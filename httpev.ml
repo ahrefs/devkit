@@ -147,7 +147,7 @@ let acceptable_encoding headers =
     else Exn.fail "not acceptable : %S" str
   | None -> Identity
 
-let make_request c { line1; parsed_headers=headers; buf; _ } =
+let make_request_exn c { line1; parsed_headers=headers; buf; _ } =
   match Pcre.split ~rex:space line1 with
   | [meth;url;version] ->
     if url.[0] <> '/' then (* abs_path *)
@@ -189,15 +189,14 @@ let make_request c { line1; parsed_headers=headers; buf; _ } =
     }
   | _ -> failed RequestLine line1
 
-let extract_headers data =
+let extract_header s =
   let open String in
-  match nsplit data "\r\n" with
+  try let (n,v) = split s ":" in lowercase (strip n), strip v with _ -> failed Header s
+
+let extract_headers data =
+  match String.nsplit data "\r\n" with
   | [] -> failed Split data
-  | line1::xs -> 
-    let headers = List.map (fun s ->
-      try let (n,v) = split s ":" in lowercase (strip n), strip v with _ -> failed Header s) xs
-    in
-    line1, headers
+  | line1::xs -> line1, List.map extract_header xs
 
 let is_body_ready { line1; content_length; parsed_headers=_; buf; } final =
   match content_length, Buffer.contents buf with
@@ -409,8 +408,6 @@ let send_reply_async c encoding (code,hdrs,body) =
   with
   | exn -> abort c exn "send_reply_async"
 
-let send_reply c code body = send_reply_async c Identity (code,[],body)
-
 let send_reply_blocking c (code,hdrs) =
   match code with
   | `No_reply -> finish c
@@ -442,27 +439,23 @@ let send_reply_user c encoding (code,hdrs,body) =
   | false ->
     send_reply_async c encoding (code,hdrs,body)
 
-let send_error c exn =
-  let (http_error,msg) = match exn with
-  | Parse (what,msg) ->
-    let error = match what with
-    | Url | RequestLine | Header | Split | Version | Extra -> `Bad_request
-    | Method -> `Not_implemented
-    | NotAcceptable -> `Not_acceptable
-    in
-    error, msg
-  | Failure s -> `Bad_request, s
-  | exn -> `Bad_request, Exn.str exn
+let make_error = function
+| Parse (what,msg) ->
+  let error = match what with
+  | Url | RequestLine | Header | Split | Version | Extra -> `Bad_request
+  | Method -> `Not_implemented
+  | NotAcceptable -> `Not_acceptable
   in
-  log #warn "error for %s : %s" (show_client c) msg;
-  send_reply c http_error ""
+  error, msg
+| Failure s -> `Bad_request, s
+| exn -> `Bad_request, Exn.str exn
 
 let send_reply_limit c n =
   log #info "request too large from %s : %s" (show_client c) (Action.bytes_string n);
-  send_reply c `Request_too_large  "request entity too large"
+  send_reply_async c Identity (`Request_too_large,[],"request entity too large")
 
 let handle_request c body answer =
-  let req = make_request c body in
+  let req = make_request_exn c body in
   Hashtbl.replace c.server.reqs req.id req;
   c.req <- Ready req;
   try
@@ -479,11 +472,11 @@ let handle_request c body answer =
       end
     | _ ->
       log #info "version %u.%u not supported from %s" (fst req.version) (snd req.version) (show_request req);
-      send_reply c `Version_not_supported "HTTP/1.0 is supported"
+      send_reply_async c Identity (`Version_not_supported,[],"HTTP/1.0 is supported")
   with exn ->
     log #error ~exn "answer %s" & show_request req;
     match req.blocking with
-    | None -> send_reply c `Not_found "Not found"
+    | None -> send_reply_async c Identity (`Not_found,[],"Not found")
     | Some _ -> Exn.suppress teardown c.fd
 
 let rec process_chunk c ev answer data final =
@@ -524,7 +517,11 @@ let handle_client c answer =
       match Async.read_available ~limit:c.server.config.max_request_size fd with
       | `Limit s -> Ev.del ev; send_reply_limit c (String.length s)
       | `Chunk (data,final) -> process_chunk c ev answer data final
-    with exn -> Ev.del ev; send_error c exn
+    with exn ->
+      Ev.del ev;
+      let (http_error,msg) = make_error exn in
+      log #warn "error for %s : %s" (show_client c) msg;
+      send_reply_async c Identity (http_error,[],"")
   end
 
 module Tcp = struct
@@ -577,6 +574,13 @@ let handle events fd k =
 
 end
 
+let check_hung_requests server =
+  let now = Time.now () in
+  server.reqs |> Hashtbl.iter begin fun _ req ->
+    if req.recv -. now > Time.minutes 30 then
+      log #warn "request takes too much time to process : %s" (show_request req)
+  end
+
 let start_listen config =
   Tcp.listen ~name:config.name ~backlog:config.backlog config.ip config.port
 
@@ -587,13 +591,7 @@ let setup_fd fd config answer =
     | None -> None
   in
   let server = { total = 0; active = 0; errors = 0; reqs = Hashtbl.create 10; config; digest_auth; } in
-  Async.setup_periodic_timer_wait config.events (Time.minutes 1) begin fun () ->
-    let now = Time.now () in
-    server.reqs >> Hashtbl.iter begin fun _ req ->
-      if req.recv -. now > Time.minutes 30 then
-        log #warn "request takes too much time to process : %s" (show_request req)
-    end
-  end;
+  Async.setup_periodic_timer_wait config.events (Time.minutes 1) (fun () -> check_hung_requests server);
   Tcp.handle config.events fd (fun (fd,sockaddr) ->
     INC server.total;
     let req_id = server.total in
@@ -652,7 +650,7 @@ struct
   *)
   let array name =
     let name = name ^ "[]" in
-    T.req.args >> List.filter (fun (name',_) -> name = name') >> List.map snd
+    T.req.args |> List.filter (fun (name',_) -> name = name') |> List.map snd
 end
 
 (** Buffers all output *)
@@ -696,8 +694,166 @@ let header_referer req =
   try find_header req "Referer" with _ -> try find_header req "Referrer" with _ -> ""
 
 let log_access_apache ch code size req =
-  begin try
+  try
+    let now = Time.now () in
     fprintf ch "%s - - [%s] %S %d %dB . %S %S %.3f %s\n%!"
-      (show_client_addr req) (Time.to_string & Unix.time()) req.line code size
-      (header_referer req) (header_safe req "user-agent") (Time.get () -. req.conn) (header_safe req "host")
-  with exn -> log #warn ~exn "access log : %s" & show_request req end
+      (show_client_addr req) (Time.to_string now) req.line code size
+      (header_referer req) (header_safe req "user-agent") (now -. req.conn) (header_safe req "host")
+  with exn ->
+    log #warn ~exn "access log : %s" @@ show_request req
+
+(** {2 Lwt support} *)
+
+let default_timeout = 30.
+let timeout thread = Lwt_unix.with_timeout default_timeout (fun () -> thread)
+
+let send_reply c cout (code,hdrs,body) =
+  (* filter headers *)
+  let hdrs = hdrs |> List.filter begin fun (k,_) ->
+    let open Stre in
+    let forbidden =
+      (iequal k "content-length") || (* httpev will calculate *)
+      (iequal k "connection") ||
+      (iequal k "content-encoding") (* none of the user's business *)
+    in
+    not forbidden
+  end
+  in
+  (* possibly apply encoding *)
+  let (hdrs,body) =
+    (* TODO do not apply encoding to application/gzip *)
+    match code, c.req with
+    | `Ok, Ready { encoding=Gzip; _ } when String.length body > 128 -> ("Content-Encoding", "gzip") :: hdrs, Gzip_io.string body
+    | _ -> hdrs, body
+  in
+  let hdrs = ("Content-Length", string_of_int (String.length body)) :: hdrs in
+  (* do not transfer body for HEAD requests *)
+  let body = match c.req with Ready { meth = `HEAD; _ } -> "" | _ -> body in
+  let headers = make_request_headers code hdrs in
+  if c.server.config.debug then
+    log #info "will answer to %s with %d+%d bytes"
+      (show_peer c)
+      (String.length headers)
+      (String.length body);
+  Lwt_io.write cout headers >> Lwt_io.write cout body >> Lwt_io.flush cout
+
+let handle_request_lwt c req answer =
+  match req.version with
+  | (1,_) ->
+    let auth = match c.server.digest_auth with
+    | Some auth -> Digest_auth.check auth req
+    | None -> `Ok
+    in
+    begin match auth with
+    | `Unauthorized header -> Lwt.return (`Unauthorized, [header], "Unauthorized")
+    | `Ok ->
+      try_lwt 
+        answer c.server req
+      with exn ->
+        log #error ~exn "answer %s" @@ show_request req;
+        Lwt.return (`Not_found,[],"Not found")
+    end
+  | _ ->
+    log #info "version %u.%u not supported from %s" (fst req.version) (snd req.version) (show_request req);
+    Lwt.return (`Version_not_supported,[],"HTTP/1.0 is supported")
+
+let handle_client_lwt client cin answer =
+  (* TODO client.server.config.max_request_size *)
+  let rec read_headers acc =
+    match_lwt Lwt_io.read_line cin with
+    | "" -> Lwt.return acc
+    | s -> read_headers (extract_header s :: acc)
+  in
+  lwt line1 = Lwt_io.read_line cin in
+  lwt headers = read_headers [] in
+  let content_length = get_content_length headers in
+  (** TODO transfer-encoding *)
+  if List.mem_assoc "transfer-encoding" headers then Exn.fail "Transfer-Encoding not supported";
+  lwt data =
+    match content_length with
+    | None -> Lwt.return ""
+    | Some n ->
+      let s = Bytes.create n in
+      lwt () = Lwt_io.read_into_exactly cin s 0 n in
+      Lwt.return s
+  in
+  (* TODO check that no extra bytes arrive *)
+  let body = { line1; parsed_headers=headers; content_length; buf = Buffer.create (String.length data); } in
+  client.req <- Body body;
+  Buffer.add_string body.buf data;
+  let req = make_request_exn client body in
+  client.req <- Ready req;
+  Hashtbl.replace client.server.reqs req.id req;
+  try_lwt
+    handle_request_lwt client req answer
+  finally
+    Hashtbl.remove client.server.reqs req.id;
+    Lwt.return ()
+
+let handle_lwt fd k =
+  while_lwt not !Daemon.should_exit do
+    match_lwt Exn_lwt.map Lwt_unix.accept fd with
+    | `Exn exn -> log #warn ~exn "accept"; Lwt.return ()
+    | `Ok (fd,addr as peer) ->
+      let task =
+        try_lwt k peer
+        with exn -> log #warn ~exn "accepted (%s)" (Nix.show_addr addr); Lwt.return ()
+        finally
+          Lwt_unix.(Exn.suppress (shutdown fd) SHUTDOWN_ALL);
+          Lwt_unix.close fd
+      in
+      Lwt.ignore_result task; (* "fork" processing *)
+      Lwt.return ()
+  done
+
+let setup_fd_lwt fd config answer =
+  let digest_auth =
+    match config.auth with
+    | Some (realm,user,password) -> Some (Digest_auth.init ~realm ~user ~password ())
+    | None -> None
+  in
+  let server = { total = 0; active = 0; errors = 0; reqs = Hashtbl.create 10; config; digest_auth; } in
+  Lwt.ignore_result begin
+    while_lwt true do
+      lwt () = Lwt_unix.sleep @@ Time.minutes 1 in
+      Lwt.wrap1 check_hung_requests server
+    done
+  end;
+  handle_lwt fd begin fun (fd,sockaddr) ->
+    INC server.total;
+    INC server.active;
+    let error = lazy (INC server.errors) in
+    let req_id = server.total in
+    let client =
+      (* used only in show_socket_error *)
+      { fd = Lwt_unix.unix_file_descr fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 0); }
+    in
+    if config.debug then log #info "accepted %s" (Nix.show_addr sockaddr);
+    let cin = Lwt_io.(of_fd ~close:Lwt.return ~mode:input fd) in
+    let cout = Lwt_io.(of_fd ~close:Lwt.return ~mode:output fd) in
+    lwt reply = 
+      try_lwt
+        handle_client_lwt client cin answer
+      with exn ->
+        !!error;
+        let (http_error,msg) = make_error exn in
+        log #warn "error for %s : %s" (show_client client) msg;
+        Lwt.return (http_error,[],"")
+    in
+    try_lwt
+      send_reply client cout reply
+    with exn ->
+      !!error;
+      log #warn ~exn "send_reply %s" (show_client client);
+      Lwt.return ()
+    finally
+      DEC server.active;
+      Lwt.return ()
+  end
+
+let setup_lwt config answer =
+  let fd = Lwt_unix.of_unix_file_descr ~blocking:false @@ start_listen config in
+  setup_fd_lwt fd config answer
+
+let server_lwt config answer =
+  Lwt_main.run @@ setup_lwt config answer

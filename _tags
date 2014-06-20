@@ -8,7 +8,7 @@ true: annot, debug, thread, package(threads), warn_A, warn_e, warn(-35-41-44)
 "netcgi_ext.ml": package(netcgi2)
 <gzip_*.ml>: package(zip)
 "varz_html.ml" or "netcgi_ext.ml" or "httpev.ml": package(tyxml)
-"httpev.ml": package(event), package(netstring), syntax_camlp4o, package(camlp4.macro)
+"httpev.ml": package(event), package(netstring), syntax_camlp4o, package(camlp4.macro), package(lwt.syntax)
 "prelude.ml": syntax_camlp4o, package(camlp4.macro), dversion
 "async.ml" or "nix.ml" or "parallel.mli": package(event)
 <*.{top,byte,native}>: package(extlib), package(pcre), package(zip), package(event), package(curl), package(netstring),\
