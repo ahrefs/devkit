@@ -4,9 +4,9 @@ open Printf
 ;;
 
 let dversion =
-  if Sys.ocaml_version >= "4.01" then [A"-DOCAML401"]
-  else if Sys.ocaml_version >= "4.00" then [A"-DOCAML400"]
-  else []
+  if Sys.ocaml_version >= "4.01" then Some "-DOCAML401"
+  else if Sys.ocaml_version >= "4.00" then Some "-DOCAML400"
+  else None
 ;;
 
 dispatch begin function
@@ -23,12 +23,17 @@ dispatch begin function
     flag ["thread"; "doc"; "ocaml"] (S[A"-thread"]);
     flag ["thread"; "link"; "ocaml"] (S[A"-thread"]);
 
-    flag ["ocaml"; "doc"] (S[A"-short-functors"; A"-sort"; A"-m"; A"A"; A"-hide-warnings"]);
-    flag ["ocaml"; "pp"; "pa_macro"] (S[A"Camlp4MacroParser.cmo"]);
-    flag ["ocaml"; "pp"; "dversion"] (S dversion);
-    flag ["compile"; "ocaml"; "native"; "asm"] & atomize ["-S"];
+    begin match dversion with
+    | Some define -> flag ["ocaml"; "compile"; "dversion"] (S[A"-ppopt"; A define]);
+    | None -> ()
+    end;
 
-    pflag ["compile"; "ocaml"] "warn" (fun s -> atomize ["-w";s]);
+    flag ["ocaml"; "compile"; "syntax_camlp4o"] (S[A"-syntax"; A"camlp4o"]);
+    flag ["ocaml"; "ocamldep"; "syntax_camlp4o"] (S[A"-syntax"; A"camlp4o"]);
+    flag ["ocaml"; "doc"; "syntax_camlp4o"] (S[A"-syntax"; A"camlp4o"]);
+
+    flag ["ocaml"; "doc"] (S[A"-short-functors"; A"-sort"; A"-m"; A"A"; A"-hide-warnings"]);
+    flag ["compile"; "ocaml"; "native"; "asm"] & atomize ["-S"];
 
     ()
  
