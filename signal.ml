@@ -1,12 +1,12 @@
-(**
-  Signal handling via signalfd
-*)
+(** Signal handling *)
 
 open ExtLib
 module U = ExtUnix.Specific
 module Ev = Async.Ev
 
 let log = Log.from "signal"
+
+(** {2 libevent + signalfd} *)
 
 type t = { ev : Ev.event; fd : Unix.file_descr; h : (int, (int -> unit)) Hashtbl.t; mutable active : bool; }
 
@@ -53,3 +53,11 @@ let handle_reload t f = handle t [Sys.sighup]
     log #info "Received signal %i (reload)..." n;
     (try f () with exn -> log #warn ~exn "Signal.handle_reload");
     log #info "Signal handler done.")
+
+(** {2 Lwt} *)
+
+let lwt_handle sigs f =
+  sigs |> List.iter (fun signo -> let (_:Lwt_unix.signal_handler_id) = Lwt_unix.on_signal signo (fun (_:int) -> f ()) in ())
+
+let lwt_handle_exit = lwt_handle [Sys.sigterm; Sys.sigint]
+let lwt_handle_reload = lwt_handle [Sys.sighup]
