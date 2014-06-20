@@ -276,12 +276,11 @@ type reply_status =
   | `Not_implemented
   | `Service_unavailable
   | `Version_not_supported
-  | `No_reply
   | `Custom of string ]
 
-type reply = reply_status * (string * string) list * string
+type extended_reply_status = [ reply_status | `No_reply ]
 
-exception No_reply
+type 'status reply = 'status * (string * string) list * string
 
 let status_code : reply_status -> int = function
   | `Ok -> 200
@@ -304,9 +303,7 @@ let status_code : reply_status -> int = function
 
   | `Custom _ -> 999
 
-  | `No_reply -> 0
-
-let http_reply_exn : reply_status -> string = function
+let show_http_reply : reply_status -> string = function
   | `Ok -> "HTTP/1.0 200 OK"
 
   | `Moved -> "HTTP/1.0 301 Moved Permanently"
@@ -326,8 +323,6 @@ let http_reply_exn : reply_status -> string = function
   | `Version_not_supported -> "HTTP/1.0 505 HTTP Version Not Supported"
 
   | `Custom s -> s
-
-  | `No_reply -> raise No_reply
 
 (** Wait until [fd] becomes readable and close it (for eventfd-backed notifications) *)
 let wait base fd k =
@@ -380,16 +375,19 @@ let set_blocking req =
   req.blocking <- Some io;
   io
 
-let make_request_headers_exn code hdrs =
+let make_request_headers code hdrs =
   let b = Buffer.create 1024 in
   let put s = Buffer.add_string b s; Buffer.add_string b "\r\n" in
-  put (http_reply_exn code);
+  put (show_http_reply code);
   List.iter (fun (n,v) -> bprintf b "%s: %s\r\n" n v) hdrs;
   put "Connection: close";
   put "";
   Buffer.contents b
 
 let send_reply_async c encoding (code,hdrs,body) =
+  match (code : extended_reply_status) with
+  | `No_reply -> finish c
+  | #reply_status as code ->
   try
     (* possibly apply encoding *)
     let (hdrs,body) =
@@ -401,7 +399,7 @@ let send_reply_async c encoding (code,hdrs,body) =
     let hdrs = ("Content-Length", string_of_int (String.length body)) :: hdrs in
     (* do not transfer body for HEAD requests *)
     let body = match c.req with Ready { meth = `HEAD; _ } -> "" | _ -> body in
-    let headers = make_request_headers_exn code hdrs in
+    let headers = make_request_headers code hdrs in
     if c.server.config.debug then
       log #info "will answer to %s with %d+%d bytes"
         (show_peer c)
@@ -409,17 +407,18 @@ let send_reply_async c encoding (code,hdrs,body) =
         (String.length body);
     write_reply c [headers;body]
   with
-  | No_reply -> finish c
-  | exn -> abort c exn "send_reply"
+  | exn -> abort c exn "send_reply_async"
 
 let send_reply c code body = send_reply_async c Identity (code,[],body)
 
 let send_reply_blocking c (code,hdrs) =
-  try
-    write_reply_blocking c (make_request_headers_exn code hdrs)
-  with
-  | No_reply -> finish c
-  | exn -> abort c exn "send_reply_blocking"; raise exn
+  match code with
+  | `No_reply -> finish c
+  | #reply_status as code ->
+    try
+      write_reply_blocking c @@ make_request_headers code hdrs
+    with
+      exn -> abort c exn "send_reply_blocking"; raise exn
 
 (* this function is called back by user to actually send data *)
 let send_reply_user c encoding (code,hdrs,body) =
