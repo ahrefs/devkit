@@ -279,7 +279,8 @@ type reply_status =
 
 type extended_reply_status = [ reply_status | `No_reply ]
 
-type 'status reply = 'status * (string * string) list * string
+type 'status reply' = 'status * (string * string) list * string
+type reply = extended_reply_status reply'
 
 let status_code : reply_status -> int = function
   | `Ok -> 200
@@ -384,9 +385,6 @@ let make_request_headers code hdrs =
   Buffer.contents b
 
 let send_reply_async c encoding (code,hdrs,body) =
-  match (code : extended_reply_status) with
-  | `No_reply -> finish c
-  | #reply_status as code ->
   try
     (* possibly apply encoding *)
     let (hdrs,body) =
@@ -409,16 +407,16 @@ let send_reply_async c encoding (code,hdrs,body) =
   | exn -> abort c exn "send_reply_async"
 
 let send_reply_blocking c (code,hdrs) =
-  match code with
-  | `No_reply -> finish c
-  | #reply_status as code ->
-    try
-      write_reply_blocking c @@ make_request_headers code hdrs
-    with
-      exn -> abort c exn "send_reply_blocking"; raise exn
+  try
+    write_reply_blocking c @@ make_request_headers code hdrs
+  with
+    exn -> abort c exn "send_reply_blocking"; raise exn
 
 (* this function is called back by user to actually send data *)
 let send_reply_user c encoding (code,hdrs,body) =
+  match code with
+  | `No_reply -> finish c
+  | #reply_status as code ->
   let blocking = match c.req with Ready x -> Option.is_some x.blocking | _ -> false in
   (* filter headers *)
   let hdrs = hdrs |> List.filter begin fun (k,_) ->
@@ -701,6 +699,11 @@ let log_access_apache ch code size req =
       (header_referer req) (header_safe req "user-agent") (now -. req.conn) (header_safe req "host")
   with exn ->
     log #warn ~exn "access log : %s" @@ show_request req
+
+let log_status_apache ch status size req =
+  match status with
+  | `No_reply -> () (* ignore *)
+  | #reply_status as code -> log_access_apache ch (status_code code) size req
 
 (** {2 Lwt support} *)
 
