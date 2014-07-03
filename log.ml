@@ -145,7 +145,7 @@ let set_filter = State.set_filter
 type 'a pr = ?exn:exn -> ?lines:bool -> ?backtrace:bool -> ?saved_backtrace:string list -> ('a, unit, string, unit) format4 -> 'a
 
 class logger facil =
-let perform output_line =
+let make_s output_line =
   let output = function
   | true ->
       fun facil s ->
@@ -159,22 +159,42 @@ let perform output_line =
     output lines facil (s ^ " : exn " ^ Exn.str exn ^ (if bt = [] then " (no backtrace)" else ""));
     List.iter (fun line -> output_line facil ("    " ^ line)) bt
   in
-  fun ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace fmt ->
+  fun ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace s ->
     try State.rotate ();
     match exn, backtrace, saved_backtrace with
-    | Some exn, false, _ -> ksprintf (fun s -> output lines facil (s ^ " : exn " ^ Exn.str exn)) fmt
-    | Some exn, true, None -> ksprintf (print_bt lines exn (Exn.get_backtrace ())) fmt
-    | Some exn, true, Some bt -> ksprintf (print_bt lines exn bt) fmt
-    | None, _, _ -> ksprintf (output lines facil) fmt
+    | Some exn, false, _ -> output lines facil (s ^ " : exn " ^ Exn.str exn)
+    | Some exn, true, None -> print_bt lines exn (Exn.get_backtrace ()) s
+    | Some exn, true, Some bt -> print_bt lines exn bt s
+    | None, _, _ -> output lines facil s
     with exn ->
-      ksprintf (fun s -> output_line facil (sprintf "LOG FAILED : %S with message %S" (Exn.str exn) s)) fmt
+      output_line facil (sprintf "LOG FAILED : %S with message %S" (Exn.str exn) s)
 in
+let make output ?exn ?lines ?backtrace ?saved_backtrace fmt =
+  ksprintf (fun s -> output ?exn ?lines ?backtrace ?saved_backtrace s) fmt
+in
+let debug_s = make_s debug_s in
+let warn_s = make_s warn_s in
+let info_s = make_s info_s in
+let error_s = make_s error_s in
+let put_s level = make_s (put_s level) in
 object
-method debug : 'a. 'a pr = perform debug_s
-method warn : 'a. 'a pr = perform warn_s
-method info : 'a. 'a pr = perform info_s
-method error : 'a. 'a pr = perform error_s
-method put : 'a. Logger.level -> 'a pr = fun level -> perform (put_s level)
+method debug_s = debug_s
+method warn_s = warn_s
+method info_s = info_s
+method error_s = error_s
+method put_s = put_s
+
+(* expecting direct inlining to be faster but it is not o_O
+method debug : 'a. 'a pr =
+  fun ?exn ?lines ?backtrace ?saved_backtrace fmt ->
+  ksprintf (fun s -> debug_s ?exn ?lines ?backtrace ?saved_backtrace s) fmt
+*)
+method debug : 'a. 'a pr = make debug_s
+method warn : 'a. 'a pr = make warn_s
+method info : 'a. 'a pr = make info_s
+method error : 'a. 'a pr = make error_s
+method put : 'a. Logger.level -> 'a pr = fun level -> make (put_s level)
+
 method allow (level:Logger.level) = Logger.set_filter facil level
 method level : Logger.level = Logger.get_level facil
 method name = facil.Logger.name
