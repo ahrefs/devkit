@@ -87,10 +87,10 @@ let duration_str ?cut t =
   if t < 1. then sprintf "%.4f secs" t
   else if t < 10. then sprintf "%.2f secs" t
   else 
-  loop (int_of_float t) [] factors >> List.combine names >> List.rev >>
-  List.dropwhile (fun (_,x) -> x = 0) >>
-  (match cut with Some n -> List.take n | None -> id) >>
-  List.map (fun (n,x) -> sprintf "%u %s" x n) >> String.concat " "
+  loop (int_of_float t) [] factors |> List.combine names |> List.rev |>
+  List.dropwhile (fun (_,x) -> x = 0) |>
+  (match cut with Some n -> List.take n | None -> id) |>
+  List.map (fun (n,x) -> sprintf "%u %s" x n) |> String.concat " "
 
 (* 1m10s *)
 let compact_duration ?(full=false) ?cut t =
@@ -105,19 +105,23 @@ let compact_duration ?(full=false) ?cut t =
   else if t < 1. then sprintf "%.0fms" (t *. 1_000.)
   else if t < 10. then sprintf "%.2gs" t
   else 
-  loop (int_of_float t) [] factors >> List.combine names >>
-  (if full then id else List.dropwhile (fun (_,x) -> x = 0)) >>
-  List.rev >>
-  List.dropwhile (fun (_,x) -> x = 0) >>
-  (match cut with Some n -> List.take n | None -> id) >>
-  List.map (fun (n,x) -> sprintf "%u%s" x n) >> String.concat ""
+  loop (int_of_float t) [] factors |> List.combine names |>
+  (if full then id else List.dropwhile (fun (_,x) -> x = 0)) |>
+  List.rev |>
+  List.dropwhile (fun (_,x) -> x = 0) |>
+  (match cut with Some n -> List.take n | None -> id) |>
+  List.map (fun (n,x) -> sprintf "%u%s" x n) |> String.concat ""
 
 (** parse compact_duration representation (except for fractional seconds) *)
 let of_compact_duration s = Devkit_ragel.parse_compact_duration s
 (* TODO ms ns not parsed *)
 
-let minutes x = float & 60 * x
-let hours x = minutes & 60 * x
-let days x = hours & 24 * x
+let minutes x = float @@ 60 * x
+let hours x = minutes @@ 60 * x
+let days x = hours @@ 24 * x
 let seconds x = float x
+let msec x = float @@ 1000 * x
 
+let int x = int_of_float x
+let to_sec = int
+let to_ms x = int_of_float @@ 1000. *. x
