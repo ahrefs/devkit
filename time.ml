@@ -120,7 +120,9 @@ let minutes x = float @@ 60 * x
 let hours x = minutes @@ 60 * x
 let days x = hours @@ 24 * x
 let seconds x = float x
-let msec x = float @@ 1000 * x
+
+(** convert milliseconds to Time.t *)
+let msec x = float x /. 1000.
 
 let int x = int_of_float x
 let to_sec = int
