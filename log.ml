@@ -142,6 +142,13 @@ include State.M
 let facility = State.facility
 let set_filter = State.set_filter
 
+(**
+  param [lines]: whether to split multiline message as separate log lines (default [true])
+
+  param [backtrace]: whether to show backtrace (default is [true] if [exn] is given and backtrace recording is enabled)
+
+  param [saved_backtrace]: supply backtrace to show instead of using [Printexc.get_backtrace]
+*)
 type 'a pr = ?exn:exn -> ?lines:bool -> ?backtrace:bool -> ?saved_backtrace:string list -> ('a, unit, string, unit) format4 -> 'a
 
 class logger facil =
@@ -159,13 +166,18 @@ let make_s output_line =
     output lines facil (s ^ " : exn " ^ Exn.str exn ^ (if bt = [] then " (no backtrace)" else ""));
     List.iter (fun line -> output_line facil ("    " ^ line)) bt
   in
-  fun ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace s ->
-    try State.rotate ();
-    match exn, backtrace, saved_backtrace with
-    | Some exn, false, _ -> output lines facil (s ^ " : exn " ^ Exn.str exn)
-    | Some exn, true, None -> print_bt lines exn (Exn.get_backtrace ()) s
-    | Some exn, true, Some bt -> print_bt lines exn bt s
-    | None, _, _ -> output lines facil s
+  fun ?exn ?(lines=true) ?backtrace ?saved_backtrace s ->
+    try
+      State.rotate ();
+      match exn with
+      | None -> output lines facil s
+      | Some exn ->
+      match saved_backtrace with
+      | Some bt -> print_bt lines exn bt s
+      | None ->
+      match Option.default (Printexc.backtrace_status ()) backtrace with
+      | true -> print_bt lines exn (Exn.get_backtrace ()) s
+      | false -> output lines facil (s ^ " : exn " ^ Exn.str exn)
     with exn ->
       output_line facil (sprintf "LOG FAILED : %S with message %S" (Exn.str exn) s)
 in
