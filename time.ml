@@ -60,10 +60,33 @@ let to_string ?(gmt=false) ?(ms=false) f =
 let gmt_string = to_string ~gmt:true ~ms:false
 let gmt_string_ms = to_string ~gmt:true ~ms:true
 
-let date_to_string ?(gmt=false) f =
-  let t = (if gmt then Unix.gmtime else Unix.localtime) f in
-  sprintf "%04u-%02u-%02u" (1900 + t.Unix.tm_year) (t.Unix.tm_mon+1) t.Unix.tm_mday
-let date_gmt_string = date_to_string ~gmt:true
+let format_date_w3 t =
+  let open Unix in
+  sprintf "%04u-%02u-%02u" (1900 + t.tm_year) (t.tm_mon+1) t.tm_mday
+
+let format_date8 t =
+  let open Unix in
+  sprintf "%04u%02u%02u" (1900 + t.tm_year) (t.tm_mon+1) t.tm_mday
+
+let format_date8h t =
+  let open Unix in
+  sprintf "%04u%02u%02u%02u" (1900 + t.tm_year) (t.tm_mon+1) t.tm_mday t.tm_hour
+
+let format_date8hm t =
+  let open Unix in
+  sprintf "%04u%02u%02u%02u%02u" (1900 + t.tm_year) (t.tm_mon+1) t.tm_mday t.tm_hour t.tm_min
+
+let date_w3_gmt_string = format_date_w3 $ Unix.gmtime
+let date_w3_string = format_date_w3 $ Unix.localtime
+
+let date8_gmt_string = format_date8 $ Unix.gmtime
+let date8_string = format_date8 $ Unix.localtime
+
+let date8hm_gmt_string = format_date8hm $ Unix.gmtime
+let date8hm_string = format_date8hm $ Unix.localtime
+
+let date8h_gmt_string = format_date8h $ Unix.gmtime
+let date8h_string = format_date8h $ Unix.localtime
 
 (** unix timestamp to RFC-2822 date
     Example: Tue, 15 Nov 1994 12:45:26 GMT *)
