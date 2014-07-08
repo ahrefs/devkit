@@ -10,15 +10,23 @@ type t = float
 let get = Unix.gettimeofday
 let now = Unix.gettimeofday
 
+let unsafe_digit n = Char.unsafe_chr (Char.code '0' + n)
+let put_2d s ofs n =
+  Bytes.unsafe_set s ofs (unsafe_digit (n / 10));
+  Bytes.unsafe_set s (ofs+1) (unsafe_digit (n mod 10))
+let replace_year_2014 s year =
+  if year <> 2014 then
+  begin
+    if year >= 2010 && year < 2020 then
+      Bytes.unsafe_set s 3 (unsafe_digit (year mod 10))
+    else
+      Bytes.unsafe_blit (if year >= 1000 then string_of_int year else sprintf "%04u" year) 0 s 0 4
+  end
+
 let fast_to_string =
   (* "%04u-%02u-%02uT%02u:%02u:%02u%s" *)
   let template = "2014-__-__T__:__:__" in
   let template_z = template ^ "Z" in
-  let digit n = Char.unsafe_chr (Char.code '0' + n) in
-  let put s ofs n =
-    String.unsafe_set s ofs (digit (n / 10));
-    String.unsafe_set s (ofs+1) (digit (n mod 10))
-  in
   let last_time = ref 0 in
   let last_gmt = ref true in
   let last_s = ref "1970-01-01T00:00:00Z" in
@@ -28,22 +36,16 @@ let fast_to_string =
     else
     let open Unix in
     let t = (if gmt then gmtime else localtime) f in
-    let s = String.copy (if gmt then template_z else template) in
-    let year = 1900 + t.tm_year in
-    if year <> 2014 then
-    begin
-      if year >= 2010 && year < 2020 then
-        String.unsafe_set s 3 (digit (year mod 10))
-      else
-        String.unsafe_blit (string_of_int year) 0 s 0 4;
-    end;
-    put s 5 (t.tm_mon+1);
-    put s 8 t.tm_mday;
-    put s 11 t.tm_hour;
-    put s 14 t.tm_min;
-    put s 17 t.tm_sec;
+    let s = Bytes.of_string (if gmt then template_z else template) in
+    replace_year_2014 s (t.tm_year + 1900);
+    put_2d s 5 (t.tm_mon+1);
+    put_2d s 8 t.tm_mday;
+    put_2d s 11 t.tm_hour;
+    put_2d s 14 t.tm_min;
+    put_2d s 17 t.tm_sec;
     last_time := seconds;
     last_gmt := gmt;
+    let s = Bytes.unsafe_to_string s in
     last_s := s;
     s
 
@@ -60,21 +62,52 @@ let to_string ?(gmt=false) ?(ms=false) f =
 let gmt_string = to_string ~gmt:true ~ms:false
 let gmt_string_ms = to_string ~gmt:true ~ms:true
 
-let format_date_w3 t =
-  let open Unix in
-  sprintf "%04u-%02u-%02u" (1900 + t.tm_year) (t.tm_mon+1) t.tm_mday
+(** YYYY-MM-DD *)
+let format_date_w3 =
+  let template = "2014-__-__" in
+  fun t ->
+    let open Unix in
+    let s = Bytes.of_string template in
+    replace_year_2014 s (t.tm_year + 1900);
+    put_2d s 5 (t.tm_mon+1);
+    put_2d s 8 t.tm_mday;
+    Bytes.unsafe_to_string s
 
-let format_date8 t =
-  let open Unix in
-  sprintf "%04u%02u%02u" (1900 + t.tm_year) (t.tm_mon+1) t.tm_mday
+(** YYYYMMDD *)
+let format_date8 =
+  let template = "2014____" in
+  fun t ->
+    let open Unix in
+    let s = Bytes.of_string template in
+    replace_year_2014 s (t.tm_year + 1900);
+    put_2d s 4 (t.tm_mon+1);
+    put_2d s 6 t.tm_mday;
+    Bytes.unsafe_to_string s
 
-let format_date8h t =
-  let open Unix in
-  sprintf "%04u%02u%02u%02u" (1900 + t.tm_year) (t.tm_mon+1) t.tm_mday t.tm_hour
+(** YYYYMMDDhh *)
+let format_date8h =
+  let template = "2014______" in
+  fun t ->
+    let open Unix in
+    let s = Bytes.of_string template in
+    replace_year_2014 s (t.tm_year + 1900);
+    put_2d s 4 (t.tm_mon+1);
+    put_2d s 6 t.tm_mday;
+    put_2d s 8 t.tm_hour;
+    Bytes.unsafe_to_string s
 
-let format_date8hm t =
-  let open Unix in
-  sprintf "%04u%02u%02u%02u%02u" (1900 + t.tm_year) (t.tm_mon+1) t.tm_mday t.tm_hour t.tm_min
+(** YYYYMMDDhhmm *)
+let format_date8hm =
+  let template = "2014________" in
+  fun t ->
+    let open Unix in
+    let s = Bytes.of_string template in
+    replace_year_2014 s (t.tm_year + 1900);
+    put_2d s 4 (t.tm_mon+1);
+    put_2d s 6 t.tm_mday;
+    put_2d s 8 t.tm_hour;
+    put_2d s 10 t.tm_min;
+    Bytes.unsafe_to_string s
 
 let date_w3_gmt_string = format_date_w3 $ Unix.gmtime
 let date_w3_string = format_date_w3 $ Unix.localtime
