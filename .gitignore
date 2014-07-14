@@ -2,3 +2,6 @@
 /devkit.docdir
 /*.byte
 /*.native
+
+.*.sw[a-z]
+.exrc
