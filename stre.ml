@@ -22,6 +22,30 @@ let nsplitc str sep = List.rev (nsplitc_rev str sep)
 
 let countc s c = String.fold_left (fun acc c' -> if c = c' then acc+1 else acc) 0 s
 
+(** split by delimiter
+  @raise Not_found if [sep] is not found in [str] *)
+let splitc str sep =
+  let p = String.index str sep in
+  String.sub str 0 p, String.sub str (p+1) (String.length str - p - 1)
+
+(** split by delimiter from the right
+  @raise Not_found if [sep] is not found in [str] *)
+let rsplitc str sep =
+  let p = String.rindex str sep in
+  String.sub str 0 p, String.sub str (p+1) (String.length str - p - 1)
+
+(** [before s sep]
+  @return substring from the beginning of [s] to the delimiter [sep] or the original string if delimiter is not present.
+  e.g. [before "a.b.c" "." -> "a"]
+*)
+let before s sep = try String.sub s 0 (String.find s sep) with ExtString.Invalid_string -> s
+
+(** @return substring from the delimiter [sep] to the end of string [s] or the original string if delimiter is not present.
+  e.g. [after "a.b.c" "." -> "b.c"]
+  invariant: [before s sep ^ sep ^ after s sep = s]
+  *)
+let after s sep = try String.(let i = find s sep + length sep in sub s i (length s - i)) with ExtString.Invalid_string -> s
+
 (** remove prefix from string if present *)
 let drop_prefix s pre = if String.starts_with s pre then String.slice s ~first:(String.length pre) else s
 let drop_suffix s suf = if String.ends_with s suf then String.slice ~last:(String.length s - String.length suf) s else s
@@ -121,6 +145,8 @@ let find_prefix s1 s2 =
   let min_len = min (String.length s1) (String.length s2) in
   while !i < min_len && s1.[!i] = s2.[!i] do incr i done;
   !i
+
+let common_prefix = find_prefix
 
 let shorten limit s =
   let limit = max limit 24 in

@@ -124,6 +124,31 @@ let () = test "Cache.SizeLimited" begin fun () ->
   iter none 1000 2000;
 end
 
+let () = test "Stre.splitc" begin fun () ->
+  let t = assert_equal ~printer:(fun (a,b) -> sprintf "(%S,%S)" a b) in
+  t ("a","b") (Stre.splitc "a.b" '.');
+  t ("ab","") (Stre.splitc "ab." '.');
+  t ("","ab") (Stre.splitc ".ab" '.');
+  t ("","a.b") (Stre.splitc ".a.b" '.');
+  t ("a","b") (Stre.rsplitc "a.b" '.');
+  t ("ab","") (Stre.rsplitc "ab." '.');
+  t ("","ab") (Stre.rsplitc ".ab" '.');
+  t (".a","b") (Stre.rsplitc ".a.b" '.');
+  t ("a.b","") (Stre.rsplitc "a.b." '.');
+end
+
+let () = test "Stre.before" begin fun () ->
+  let t = assert_equal ~printer:id in
+  t "" (Stre.before "abc" "");
+  t "" (Stre.before "abc" "a");
+  t "ab" (Stre.before "abc" "c");
+  t "abc" (Stre.before "abc" "d");
+  t "abc" (Stre.after "abc" "");
+  t "bc" (Stre.after"abc" "a");
+  t "" (Stre.after "abc" "c");
+  t "abc" (Stre.after "abc" "d");
+end
+
 let () = test "Stre.by_words" begin fun () ->
   let t = let n = ref 0 in fun x -> assert_bool (sprintf "testcase %d" !n) x; incr n in
   let f a l = t (Stre.split Stre.by_words a = l) in
