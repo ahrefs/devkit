@@ -235,9 +235,11 @@ let perform ?name f x =
       false
 
 let log ?name f x = let (_:bool) = perform ?name f x in ()
+let log_do ?name f = log ?name f ()
 
 let log_thread ?name f x =
   Thread.create (fun () -> log ?name f x) ()
+let log_thread_do ?name f = log_thread ?name f ()
 
 (** Copy all data from [input] to [output] *)
 let io_copy input output =
