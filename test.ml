@@ -272,6 +272,18 @@ let () = test "Action.partition" begin fun () ->
   done;
 end
 
+let () = test "Action.list_count_uniq" begin fun () ->
+  let t l r =
+    let open Action in
+    let rr = (List.sort @@ list_count_uniq l) in
+    assert_equal ~msg:(sprintf "list_count_uniq %s" (strl (fun x -> "\"" ^ x ^ "\"") l)) r rr
+  in
+  t [] [];
+  t [""] [("", 1)];
+  t ["1"; "2"; "3"] [("1", 1); ("2", 1); ("3", 1)];
+  t ["a"; "bb"; "a"; "c"; "c"; "a"; "c"; "c"] [("a", 3); ("bb", 1); ("c", 4)];
+end
+
 let () = test "Enum.align" begin fun () ->
   let e1 = List.enum [1;3;6;] in
   let e2 = List.enum [2;4;5;7;8;] in
