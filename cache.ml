@@ -166,11 +166,9 @@ module Count : sig
   val enum : 'a t -> ('a * int) Enum.t
   val iter : 'a t -> ('a -> int -> unit) -> unit
   val fold : 'a t -> ('a -> int -> 'b -> 'b) -> 'b -> 'b
-  (** number of times given element was seen *)
-  val count : 'a t -> 'a -> int
+  val count : 'a t -> 'a -> int (** number of times given element was seen *)
   val count_all : 'a t -> int
-  (** number of distinct elements *)
-  val size : 'a t -> int
+  val size : 'a t -> int (** number of distinct elements *)
   val show : 'a t -> ?sep:string -> ('a -> string) -> string
   val show_sorted : 'a t -> ?limit:int -> ?sep:string -> ('a -> string) -> string
   val stats : 'a t -> ?cmp:('a -> 'a -> int) -> ('a -> string) -> string

@@ -49,23 +49,6 @@ let list_random = function
   | [] -> None
   | l -> Some (list_random_exn l)
 
-let list_count_uniq l =
-  let h = Hashtbl.create 16 in
-  let rec loop = function
-    | [] -> ()
-    | x :: xs ->
-      let () =
-        try
-          let c = Hashtbl.find h x in
-          Hashtbl.replace h x (succ c)
-        with
-          Not_found -> Hashtbl.add h x 1
-      in
-      loop xs
-  in
-  loop l;
-  Hashtbl.fold (fun item count acc -> (item, count) :: acc) h []
-
 let array_random_exn a = a.(Random.int (Array.length a))
 let array_random = function [||] -> None | a -> Some (array_random_exn a)
 
