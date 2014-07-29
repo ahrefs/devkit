@@ -166,7 +166,7 @@ let compact_duration ?(full=false) ?cut t =
   List.rev |>
   List.dropwhile (fun (_,x) -> x = 0) |>
   (match cut with Some n -> List.take n | None -> id) |>
-  List.map (fun (n,x) -> sprintf "%u%s" x n) |> String.concat ""
+  List.mapi (fun i (n,x) -> sprintf (if i = 0 then "%u%s" else "%02u%s") x n) |> String.concat ""
 
 (** parse compact_duration representation (except for fractional seconds) *)
 let of_compact_duration s = Devkit_ragel.parse_compact_duration s

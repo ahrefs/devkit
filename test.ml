@@ -241,6 +241,8 @@ let () = test "Time.compact_duration" begin fun () ->
   t 10. "10";
   t 70. "70";
   t 70. "1m10";
+  tt 61. "1m01s";
+  t 61. "1m1s";
   tt 7200. "2h";
   t 7200. "2h0s";
   t 7200. "1h60m";
@@ -248,6 +250,8 @@ let () = test "Time.compact_duration" begin fun () ->
   t 7200. "7200s";
   t 7200. "1h3600s";
   t 7200. "1h0m3600s";
+  t 7200. "01h0m3600s";
+  t 7200. "1h00m3600s";
   t 7200. "1h30m1800s";
   t 7201. "90m1801s";
   t 7201.01 "90m1801.01s";
