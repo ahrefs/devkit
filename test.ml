@@ -146,7 +146,7 @@ let () = test "Stre.before" begin fun () ->
   t "abc" (Stre.after "abc" "");
   t "bc" (Stre.after"abc" "a");
   t "" (Stre.after "abc" "c");
-  t "abc" (Stre.after "abc" "d");
+  t "" (Stre.after "abc" "d");
   let invariant s sub =
     let a = Stre.before s sub in
     let b = Stre.after s sub in

@@ -36,15 +36,21 @@ let rsplitc str sep =
 
 (** [before s sep]
   @return substring from the beginning of [s] to the delimiter [sep] or the original string if delimiter is not present.
+  NB [before s "" -> ""]
   e.g. [before "a.b.c" "." -> "a"]
 *)
 let before s sep = try String.sub s 0 (String.find s sep) with ExtString.Invalid_string -> s
 
-(** @return substring from the delimiter [sep] to the end of string [s] or the original string if delimiter is not present.
+(** @return substring from the delimiter [sep] to the end of string [s] or the empty string if delimiter is not present.
   e.g. [after "a.b.c" "." -> "b.c"]
-  invariant: [before s sep ^ sep ^ after s sep = s]
+  NB [after s "" -> s]
+  invariant:
+    if [s] contains [sep] then [before s sep ^ sep ^ after s sep = s] else [before s sep ^ after s sep = s]
+  or put it another way:
+    say [a = before s sep] and [b = after s sep] then
+    [before (a ^ sep ^ b) sep = a] and [after (a ^ sep ^ b) sep = b]
   *)
-let after s sep = try String.(let i = find s sep + length sep in sub s i (length s - i)) with ExtString.Invalid_string -> s
+let after s sep = try String.(let i = find s sep + length sep in sub s i (length s - i)) with ExtString.Invalid_string -> ""
 
 (** remove prefix from string if present *)
 let drop_prefix s pre = if String.starts_with s pre then String.slice s ~first:(String.length pre) else s
