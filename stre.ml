@@ -55,13 +55,7 @@ let after s sep = try String.(let i = find s sep + length sep in sub s i (length
 (** @return [(before s sep, after s sep)]
   [divide s sep] is equal to [String.split] but doesn't throw if [sep] is not a substring of [s]
 *)
-let divide s sep =
-  let open String in
-  try
-    let i = find s sep in
-    sub s 0 i, sub s (i + length sep) (length s - i - length sep)
-  with
-    ExtString.Invalid_string -> s, ""
+let divide s sep = try String.split s sep with Invalid_string -> s, ""
 
 (** remove prefix from string if present *)
 let drop_prefix s pre = if String.starts_with s pre then String.slice s ~first:(String.length pre) else s
