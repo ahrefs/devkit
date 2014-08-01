@@ -63,3 +63,8 @@ let tuck l x = l := x :: !l
 let round f =
   let bot = floor f in
   if f -. bot < 0.5 then bot else bot +. 1.
+
+let call_me_maybe f x =
+  match f with
+  | None -> ()
+  | Some f -> f x
