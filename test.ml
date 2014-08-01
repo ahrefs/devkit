@@ -147,6 +147,18 @@ let () = test "Stre.before" begin fun () ->
   t "bc" (Stre.after"abc" "a");
   t "" (Stre.after "abc" "c");
   t "abc" (Stre.after "abc" "d");
+  let invariant s sub =
+    let a = Stre.before s sub in
+    let b = Stre.after s sub in
+    t ~msg:(sprintf "invariant1 %S %S" s sub) s (a ^ (if String.exists s sub then sub else "")  ^ b);
+    t ~msg:(sprintf "invariant2a %S %S" s sub) a (Stre.before (a ^ sub ^ b) sub);
+    t ~msg:(sprintf "invariant2b %S %S" s sub) b (Stre.after (a ^ sub ^ b) sub);
+  in
+  invariant "abc" "a";
+  invariant "abc" "b";
+  invariant "abc" "c";
+  invariant "abc" "d";
+  invariant "abc" "";
 end
 
 let () = test "Stre.by_words" begin fun () ->
