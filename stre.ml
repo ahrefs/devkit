@@ -52,6 +52,17 @@ let before s sep = try String.sub s 0 (String.find s sep) with ExtString.Invalid
   *)
 let after s sep = try String.(let i = find s sep + length sep in sub s i (length s - i)) with ExtString.Invalid_string -> ""
 
+(** @return [(before s sep, after s sep)]
+  [divide s sep] is equal to [String.split] but doesn't throw if [sep] is not a substring of [s]
+*)
+let divide s sep =
+  let open String in
+  try
+    let i = find s sep in
+    sub s 0 i, sub s (i + length sep) (length s - i - length sep)
+  with
+    ExtString.Invalid_string -> s, ""
+
 (** remove prefix from string if present *)
 let drop_prefix s pre = if String.starts_with s pre then String.slice s ~first:(String.length pre) else s
 let drop_suffix s suf = if String.ends_with s suf then String.slice ~last:(String.length s - String.length suf) s else s
@@ -146,6 +157,7 @@ let unescaped s =
 
 let rev = String.implode $ List.rev $ String.explode
 
+(** deprecated in favor of [common_prefix] *)
 let find_prefix s1 s2 =
   let i = ref 0 in
   let min_len = min (String.length s1) (String.length s2) in
