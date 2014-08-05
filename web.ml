@@ -622,6 +622,7 @@ type http_action =
 | `DELETE
 ]
 
+(* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
 let http_do ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (action:http_action) url =
   let open Curl in
   let post ?req h ct body =
@@ -630,8 +631,6 @@ let http_do ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (action:
     set_postfields h body;
     set_postfieldsize h (String.length body);
     set_httpheader h ["Content-Type: "^ct];
-    (* disable sending Expect header, our server doesn't support it *)
-(*       set_httpheader h ["Expect: "]; *)
   in
   let setup h =
     begin match action with
