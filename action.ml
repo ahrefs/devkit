@@ -336,8 +336,8 @@ let count_bytes_to count out =
 
 let count_bytes out = let count = ref 0L in count_bytes_to count out
 
-let bench count f =
-  Gc.compact ();
+let bench ?(compact=Gc.compact) count f =
+  compact ();
   let t = new timer in
   let st = Gc.quick_stat () in
   let res = Exn.map (fun () -> for i = 1 to count do f () done) () in
@@ -349,11 +349,11 @@ let bench count f =
   in
   sprintf "%s, elapsed %s, %.2f/sec : %s" (gc_diff st st2) (Time.duration_str elapsed) (speed count elapsed) res
 
-let run_bench count l =
+let run_bench ?compact count l =
   let max_len = List.fold_left (fun acc (name,_) -> max acc (String.length name)) 0 l in
   let align s = String.make (max 0 (max_len - String.length s)) ' ' ^ s in
   printfn "run_bench %d cases (count %d)" (List.length l) count;
-  List.iter (fun (name,f) -> printfn "%s : %s" (align name) (bench count f)) l
+  List.iter (fun (name,f) -> printfn "%s : %s" (align name) (bench ?compact count f)) l
 
 (* sorting DynArray *)
 
