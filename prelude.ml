@@ -68,3 +68,19 @@ let call_me_maybe f x =
   match f with
   | None -> ()
   | Some f -> f x
+
+class poll_engine = object
+inherit Lwt_engine.poll_based
+method poll fds timeout =
+(*
+  let show = Action.strl (fun (fd,i,o) -> sprintf "%d%s%s" (U.int_of_file_descr fd) (if i then "r" else "") (if o then "w" else "")) in
+  log #info "lwt poll %f %s" timeout (show fds);
+*)
+  let fds = List.map (fun (fd,i,o) -> fd, U.Poll.((if i then pollin else none) + (if o then pollout else none))) fds in
+  let l  = U.poll (Array.of_list fds) timeout |> List.map (fun (fd,f) -> fd, U.Poll.(is_set f pollin), U.Poll.(is_set f pollout)) in
+(*   log #info "lwt poll done %s" (show l); *)
+  l
+end
+
+let () =
+  Lwt_engine.set (new poll_engine)
