@@ -183,3 +183,6 @@ let msec x = float x /. 1000.
 let int x = int_of_float x
 let to_sec = int
 let to_ms x = int_of_float @@ 1000. *. x
+
+let ago t = now () -. t
+let ago_str = duration_str $ ago
