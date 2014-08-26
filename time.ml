@@ -109,6 +109,14 @@ let format_date8hm =
     put_2d s 10 t.tm_min;
     Bytes.unsafe_to_string s
 
+(** MMDD *)
+let format_date4 t =
+  let open Unix in
+  let s = Bytes.create 4 in
+  put_2d s 0 (t.tm_mon+1);
+  put_2d s 2 t.tm_mday;
+  Bytes.unsafe_to_string s
+
 let date_w3_gmt_string = format_date_w3 $ Unix.gmtime
 let date_w3_string = format_date_w3 $ Unix.localtime
 
@@ -120,6 +128,9 @@ let date8hm_string = format_date8hm $ Unix.localtime
 
 let date8h_gmt_string = format_date8h $ Unix.gmtime
 let date8h_string = format_date8h $ Unix.localtime
+
+let date4_gmt_string = format_date4 $ Unix.gmtime
+let date4_string = format_date4 $ Unix.localtime
 
 (** unix timestamp to RFC-2822 date
     Example: Tue, 15 Nov 1994 12:45:26 GMT *)
