@@ -78,31 +78,24 @@ let array_iter_rev f a = for i = Array.length a - 1 downto 0 do f (Array.unsafe_
      )
    done
 
-(** [partition l n] splits [l] into [n] chunks *)
-let partition l n =
+(** [partition l n] splits [l] into [n] chunks, preserves the order of the elements *)
+let partition n l =
   assert (n >= 0);
-  if n < 2 then [| l |] else
-  let a = Array.make n [] in
-  ExtList.List.iteri (fun i x -> let i = i mod n in a.(i) <- x :: a.(i)) l;
-  a
+  if n <= 1 then [l] else
+  let c = List.length l / n in
+  let rec loop acc uneven rest idx =
+    if idx <= 1 then rest::acc else
+    let d = (uneven + n - 1) / n in
+    let xs, ys = List.split_nth (c + d) rest in
+    loop (xs::acc) (uneven - d) ys (idx - 1)
+  in
+  List.rev @@ loop [] (List.length l mod n) l n
 
-let unpartition a =
-  match a with
-  | [| l |] -> l
-  | _ ->
-  let a = Array.map List.rev a in
-  let l = ref [] in
-  let more = ref true in
-  while !more do
-    more := false;
-    for i = 0 to Array.length a - 1 do
-      match a.(i) with
-      | [] -> ()
-      | x::xs -> more := true; a.(i) <- xs; l := x :: !l
-    done;
-  done;
-  assert (Array.for_all ((=)[]) a);
-  List.rev !l
+let unpartition = List.flatten
+
+(** extract sublist from a list
+ for example [slice 1 3 \[0;1;2;3;4\]] will return [\[1;2;3\]] *)
+let slice b e = List.take (e - b + 1) $ List.drop b
 
 let file_lines_exn file =
   Control.with_open_in_txt file begin fun ch ->
