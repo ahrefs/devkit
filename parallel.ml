@@ -91,7 +91,7 @@ let worker (execute : task -> result) =
       begin try
         loop ()
       with exn ->
-        log #error ~exn ~backtrace:true "Paraller.worker aborting on uncaught exception"
+        log #error ~exn ~backtrace:true "Parallel.worker aborting on uncaught exception"
       end;
       close_in_noerr input;
       close_out_noerr output;
