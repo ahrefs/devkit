@@ -78,8 +78,34 @@ let array_iter_rev f a = for i = Array.length a - 1 downto 0 do f (Array.unsafe_
      )
    done
 
-(** [partition l n] splits [l] into [n] chunks, preserves the order of the elements *)
+(** [partition n l] splits [l] into [n] chunks, does not preserve the order of the elements *)
 let partition n l =
+  assert (n >= 0);
+  if n < 2 then [| l |] else
+  let a = Array.make n [] in
+  ExtList.List.iteri (fun i x -> let i = i mod n in a.(i) <- x :: a.(i)) l;
+  a
+
+let unpartition a =
+  match a with
+  | [| l |] -> l
+  | _ ->
+  let a = Array.map List.rev a in
+  let l = ref [] in
+  let more = ref true in
+  while !more do
+    more := false;
+    for i = 0 to Array.length a - 1 do
+      match a.(i) with
+      | [] -> ()
+      | x::xs -> more := true; a.(i) <- xs; l := x :: !l
+    done;
+  done;
+  assert (Array.for_all ((=)[]) a);
+  List.rev !l
+
+(** [stable_partition l n] splits [l] into [n] chunks, preserves the order of the elements *)
+let stable_partition n l =
   assert (n >= 0);
   if n <= 1 then [l] else
   let c = List.length l / n in
@@ -91,7 +117,7 @@ let partition n l =
   in
   List.rev @@ loop [] (List.length l mod n) l n
 
-let unpartition = List.flatten
+let stable_unpartition = List.flatten
 
 (** extract sublist from a list
  for example [slice 1 3 \[0;1;2;3;4\]] will return [\[1;2;3\]] *)

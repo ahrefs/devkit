@@ -275,10 +275,10 @@ let () = test "Time.compact_duration" begin fun () ->
   tt 5356800. "62d";
 end
 
-let () = test "Action.partition" begin fun () ->
+let () = test "Action.stable_partition" begin fun () ->
   let t l n result =
     let open Action in
-    assert_equal ~msg:(sprintf "partition %d" n) ~printer:(strl (strl string_of_int)) result (partition n l)
+    assert_equal ~msg:(sprintf "stable_partition %d" n) ~printer:(strl (strl string_of_int)) result (stable_partition n l)
   in
   t [] 0 [[]];
   t [] 1 [[]];
@@ -290,6 +290,7 @@ let () = test "Action.partition" begin fun () ->
   t [1;1;1;2;2;2;3;3;3;4;4;4;5;5;6;6] 6 [[1;1;1];[2;2;2];[3;3;3];[4;4;4];[5;5];[6;6]];
   let t l n =
     let open Action in
+    assert_equal ~msg:(sprintf "stable_partition %d" n) ~printer:(strl string_of_int) l (stable_unpartition @@ stable_partition n l);
     assert_equal ~msg:(sprintf "partition %d" n) ~printer:(strl string_of_int) l (unpartition @@ partition n l)
   in
   t [1;2;3] 0;

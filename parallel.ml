@@ -305,7 +305,7 @@ let join_exn t = match join t with `Ok x -> x | `Exn exn -> raise exn
 let map f a = Array.map join_exn @@ Array.map (detach f) a
 let mapn ?(n=8) f l =
   assert (n > 0);
-  Action.partition n l |> Array.of_list |> map (List.map @@ Exn.map f) |> Array.to_list |> Action.unpartition
+  Action.partition n l |> map (List.map @@ Exn.map f) |> Action.unpartition
 end
 
 let run_forks (type t) (f : t -> unit) l =
