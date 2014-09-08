@@ -61,13 +61,11 @@ let divide s sep = try String.split s sep with Invalid_string -> s, ""
 let drop_prefix s pre = if String.starts_with s pre then String.slice s ~first:(String.length pre) else s
 let drop_suffix s suf = if String.ends_with s suf then String.slice ~last:(String.length s - String.length suf) s else s
 
-(*
 let replace_all ~str ~sub ~by =
   Str.global_substitute (Str.regexp_string sub) (fun _ -> by) str
-*)
 
 let qreplace str sub by =
-  Pcre.qreplace ~rex:(Pcre.regexp & Pcre.quote sub) ~templ:by str
+  Pcre.qreplace ~rex:(Pcre.regexp @@ Pcre.quote sub) ~templ:by str
 
 (** contents of the first submatch *)
 let extract rex str = 

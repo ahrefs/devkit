@@ -61,6 +61,23 @@ let positive_int = make_arg (test_int (fun x -> x > 0))
 
 let usage_header = sprintf "Usage: %s [options]\nOptions are:" Sys.argv.(0)
 
+let align ?(sep="#") args =
+  let open ExtString in
+  let convert ~sub ~by (a, b, doc) =
+    let (doc:doc) =
+      try
+        if doc = "" || doc.[0] = ' ' then doc else
+        let (left, right) = String.split doc by in
+        (Stre.replace_all ~str:left ~sub ~by) ^ " " ^ right
+      with Invalid_string -> doc
+    in
+    (a, b, doc)
+  in
+  args |>
+  List.map (convert ~sub:" " ~by:sep) |>
+  align |>
+  List.map (convert ~sub:sep ~by:" ")
+
 let parse ?f args =
   let f = Option.default (fun s -> Exn.fail "unrecognized argument %S, try \"-help\"" s) f in
   parse (align args) f usage_header
