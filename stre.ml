@@ -3,9 +3,8 @@
 open Prelude
 open ExtLib
 
-(* NOTE use possessive quantifiers in by_words and by_space, otherwise stack overflow WILL happen on long inputs *)
-let by_words = Pcre.regexp ~flags:[`UTF8] "(?:[^\\pL\\pN.])++"
-let by_space = Pcre.regexp "\\s++"
+let by_words = Pcre.regexp ~flags:[`UTF8] "[^\\pL\\pN.]+"
+let by_space = Pcre.regexp "\\s+"
 let by_lines = Pcre.regexp "\\r?\\n"
 let split rex str = match Pcre.split ~rex str with ""::l -> l | l -> l
 
