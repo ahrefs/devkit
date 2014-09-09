@@ -168,6 +168,9 @@ let () = test "Stre.by_words" begin fun () ->
   f ("a" ^ String.make 10 '_' ^ "b") ["a"; "b"];
   f ("a" ^ String.make 1024 ' ' ^ "b") ["a"; "b"];
   f ("a" ^ String.make 10240 ' ' ^ "b") ["a"; "b"];
+  f "проверка unicode!  www.ahrefs.com:работает " [ "проверка"; "unicode"; "www.ahrefs.com"; "работает"; ];
+  let make sep n s = String.concat sep @@ List.make n s in
+  f (make " " 10 @@ make "" 10240 "\239\191\189") [];
 end
 
 let () = test "ThreadPool" begin fun () ->
