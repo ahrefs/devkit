@@ -710,13 +710,19 @@ let log_status_apache ch status size req =
 let default_timeout = 30.
 let timeout thread = Lwt_unix.with_timeout default_timeout (fun () -> thread)
 
-let send_reply c cout (code,hdrs,body) =
+let send_reply c cout reply =
+  (* repack *)
+  let (code,hdrs,body) = match reply with
+  | `Body (code,hdrs,s) -> code, hdrs, `Body s
+  | `Chunks (code,hdrs,gen) -> code, hdrs, `Chunks gen
+  in
   (* filter headers *)
   let hdrs = hdrs |> List.filter begin fun (k,_) ->
     let open Stre in
     let forbidden =
       (iequal k "content-length") || (* httpev will calculate *)
       (iequal k "connection") ||
+      (iequal k "transfer-encoding") ||
       (iequal k "content-encoding") (* none of the user's business *)
     in
     not forbidden
@@ -725,22 +731,47 @@ let send_reply c cout (code,hdrs,body) =
   (* possibly apply encoding *)
   let (hdrs,body) =
     (* TODO do not apply encoding to application/gzip *)
-    match code, c.req with
-    | `Ok, Ready { encoding=Gzip; _ } when String.length body > 128 -> ("Content-Encoding", "gzip") :: hdrs, Gzip_io.string body
+    (* TODO gzip + chunked? *)
+    match body, code, c.req with
+    | `Body s, `Ok, Ready { encoding=Gzip; _ } when String.length s > 128 -> ("Content-Encoding", "gzip")::hdrs, `Body (Gzip_io.string s)
     | _ -> hdrs, body
   in
-  let hdrs = ("Content-Length", string_of_int (String.length body)) :: hdrs in
+  let hdrs = match body with
+  | `Body s -> ("Content-Length", string_of_int (String.length s)) :: hdrs
+  | `Chunks _ -> ("Transfer-Encoding", "chunked") :: hdrs
+  in
   (* do not transfer body for HEAD requests *)
-  let body = match c.req with Ready { meth = `HEAD; _ } -> "" | _ -> body in
+  let body = match c.req with Ready { meth = `HEAD; _ } -> `Body "" | _ -> body in
   let headers = make_request_headers code hdrs in
   if c.server.config.debug then
-    log #info "will answer to %s with %d+%d bytes"
+    log #info "will answer to %s with %d+%s bytes"
       (show_peer c)
       (String.length headers)
-      (String.length body);
-  Lwt_io.write cout headers >> Lwt_io.write cout body >> Lwt_io.flush cout
+      (match body with `Body s -> sprintf "%d" (String.length s) | `Chunks _ -> "...");
+  lwt () = Lwt_io.write cout headers in
+  lwt () =
+    match body with
+    | `Body s -> Lwt_io.write cout s
+    | `Chunks gen ->
+      let push = function
+      | "" -> Lwt.return ()
+      | s ->
+        lwt () = Lwt_io.write cout (sprintf "%x\r\n" (String.length s)) in
+        lwt () = Lwt_io.write cout s in
+        Lwt_io.write cout "\r\n"
+      in
+      try_lwt
+        lwt () = gen push in
+        Lwt_io.write cout "0\r\n\r\n"
+      with exn ->
+        (* do not write trailer on error - let the peer notice the breakage *)
+        log #warn ~exn "generate failed";
+        Lwt.return ()
+  in
+  Lwt_io.flush cout
 
 let handle_request_lwt c req answer =
+  let return x = Lwt.return @@ `Body x in
   match req.version with
   | (1,_) ->
     let auth = match c.server.digest_auth with
@@ -748,17 +779,17 @@ let handle_request_lwt c req answer =
     | None -> `Ok
     in
     begin match auth with
-    | `Unauthorized header -> Lwt.return (`Unauthorized, [header], "Unauthorized")
+    | `Unauthorized header -> return (`Unauthorized, [header], "Unauthorized")
     | `Ok ->
       try_lwt 
         answer c.server req
       with exn ->
         log #error ~exn "answer %s" @@ show_request req;
-        Lwt.return (`Not_found,[],"Not found")
+        return (`Not_found,[],"Not found")
     end
   | _ ->
     log #info "version %u.%u not supported from %s" (fst req.version) (snd req.version) (show_request req);
-    Lwt.return (`Version_not_supported,[],"HTTP/1.0 is supported")
+    return (`Version_not_supported,[],"HTTP/1.0 is supported")
 
 let handle_client_lwt client cin answer =
   (* TODO client.server.config.max_request_size *)
@@ -841,7 +872,7 @@ let setup_fd_lwt fd config answer =
         !!error;
         let (http_error,msg) = make_error exn in
         log #warn "error for %s : %s" (show_client client) msg;
-        Lwt.return (http_error,[],"")
+        Lwt.return @@ `Body (http_error,[],"")
     in
     try_lwt
       send_reply client cout reply
