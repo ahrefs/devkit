@@ -1,4 +1,4 @@
-true: annot, debug, thread, package(threads), warn_A, warn_e, warn(-35-41-44)
+true: bin_annot, annot, debug, thread, package(threads), warn_A, warn_e, warn(-35-41-44)
 <*.ml{,i}>: package(extlib), package(pcre), package(bytes)
 "web.ml": package(netstring), package(curl), package(xmlm)
 "exn.ml": package(curl), package(xmlm)
