@@ -1,0 +1,24 @@
+opam-version: "1"
+maintainer: "igor@ahrefs.com"
+build: [
+  [make]
+  [make "install"]
+]
+remove: [
+  ["ocamlfind" "remove" "devkit"]
+]
+depends: [
+  "ocamlfind"
+  "extlib" {>="1.6.1"}
+  "ounit"
+  "camlzip"
+  "ocaml-event"
+  "ocurl" {>= "0.7.2"}
+  "ocamlnet"
+  "tyxml" {>= "3.2.0"}
+  "pcre-ocaml"
+  "extunix"
+  "xmlm"
+  "lwt" {>="2.4.5"}
+  "base-bytes"
+]

@@ -1,7 +1,10 @@
 Dependencies
 ============
 
-aptitude install libevent-dev libcurl4-gnutls-dev libpcre3-dev zlib1g-dev
+  aptitude install libevent-dev libcurl4-gnutls-dev libpcre3-dev zlib1g-dev
 
-opam install "ocamlfind" "extlib" "ounit" "camlzip" "ocaml-event" "ocurl" "ocamlnet" "tyxml.3.1.1" "pcre-ocaml" "extunix" "xmlm" "lwt" "base-bytes"
-opam pin tyxml 3.1.1
+For updating ragel-generated code :
+
+  aptitude install ragel
+
+For OCaml dependencies see `opam/opam`
