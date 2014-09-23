@@ -675,7 +675,7 @@ let serve_text req ?status text =
 
 let serve_html req html =
   serve_io req "text/html" (fun out -> 
-    Xhtml.P.print ~output:(IO.nwrite out) html)
+    Html5.P.print ~output:(IO.nwrite out) html)
 
 let run ?(ip=Unix.inet_addr_loopback) port answer =
   server { default with ip = ip; port = port } answer

@@ -1,5 +1,5 @@
 
-open Xhtml.M
+open Html5.M
 open ExtLib
 
 open Prelude
@@ -37,11 +37,13 @@ let to_html () =
     [t (sprintf "%u varz" (Varz.controls () >> Enum.count))];
 *)
   div
-      [form ~action:(uri_of_string "") ~a:[a_method `Post]
-      (p
-      (Varz.controls () >> List.map (fun (k,v) -> 
-        spn "nvp" [spn "name" [t k]; spn "value" [user_input k v]; br ()])))
+      [form ~a:[a_method `Post; a_action (uri_of_string "")]
       [
+        p
+          (Varz.controls () |> List.map (fun (k,v) -> 
+            spn "nvp" [spn "name" [t k];
+            spn "value" [user_input k v];
+            br ()]));
         div [
           input ~a:[a_name "submit"; a_value "1"; a_input_type `Hidden] ();
           input ~a:[a_value "Submit"; a_input_type `Submit] ();]
@@ -50,7 +52,8 @@ let to_html () =
 
 let to_html_doc () =
   document "Varz" [
-    style ~contenttype:"text/css" (List.map t [
+    style
+    (List.map t [
       ".nvp .name {font-weight:bold;padding-right:2em;}";
       ".nvp .value {}";
       ".nvp .value input {width:10em;}";
