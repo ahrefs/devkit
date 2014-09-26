@@ -70,6 +70,23 @@ let align f e1 e2 =
   in
   from next
 
+let join ?(left=false) ?(right=false) ?(multi=true) f e1 e2 =
+  let found = ref false in
+  let rec next () =
+    let found' = !found in
+    found := false;
+    match peek e1, peek e2 with
+    | None, None -> raise No_more_elements
+    | Some _, None as res -> junk e1; if left && not found' then res else next ()
+    | None, Some _ as res -> junk e2; if right then res else raise No_more_elements
+    | Some x, Some y as res ->
+      match f x y with
+      | n when n < 0 -> junk e1; if left && not found' then Some x, None else next ()
+      | n when n > 0 -> junk e2; if right then None, Some y else next ()
+      | _ -> if not multi then junk e1; junk e2; found := multi; res
+  in
+  from next
+
 let merge f e1 e2 =
   let next () =
     match peek e1, peek e2 with

@@ -322,6 +322,23 @@ let () = test "Enum.group_assoc" begin fun () ->
     (List.of_enum & Enum.group_assoc (=) (+) 0 & List.enum []);
 end
 
+let () = test "Enum.join" @@ fun () ->
+  let printer = Action.strl (uncurry @@ (sprintf "%s, %s" $$ Option.map_default string_of_int "NONE")) in
+  let t ?left ?right ?multi e1 e2 expect =
+    Enum.join ?left ?right ?multi compare (List.enum e1) (List.enum e2) |> List.of_enum |>
+    OUnit.assert_equal ~printer expect
+  in
+  t ~left:true ~right:true [1;2;3;4;] [0;2;4;8;] [ None, Some 0; Some 1, None; Some 2, Some 2; Some 3, None; Some 4, Some 4; None, Some 8; ];
+  t ~left:true ~right:true [0;1;2;3;] [4;5;6;7;] [ Some 0, None; Some 1, None; Some 2, None; Some 3, None; None, Some 4; None, Some 5; None, Some 6; None, Some 7; ];
+  t ~left:true ~right:true [4;5;6;7;] [0;1;2;3;] [ None, Some 0; None, Some 1; None, Some 2; None, Some 3; Some 4, None; Some 5, None; Some 6, None; Some 7, None; ];
+  t ~left:true ~right:true [0;1;2;3;] [0;3;] [ Some 0, Some 0; Some 1, None; Some 2, None; Some 3, Some 3; ];
+  t ~left:true ~right:true [1;] [0;1;1;1;2;] [ None, Some 0; Some 1, Some 1; Some 1, Some 1; Some 1, Some 1; None, Some 2; ];
+  t ~left:true ~right:true [1;] [0;1;1;] [ None, Some 0; Some 1, Some 1; Some 1, Some 1; ];
+  t ~left:true ~right:true [1;2;] [0;1;1;] [ None, Some 0; Some 1, Some 1; Some 1, Some 1; Some 2, None; ];
+  t ~left:true ~right:true ~multi:true [1;2;] [2;2;3;] [ Some 1, None; Some 2, Some 2; Some 2, Some 2; None, Some 3; ];
+  t ~left:true ~right:true ~multi:false [1;2;] [2;2;3;] [ Some 1, None; Some 2, Some 2; None, Some 2; None, Some 3; ];
+  ()
+
 let () = test "Enum.uniq" begin fun () ->
   OUnit.assert_equal ~msg:"1" ~printer:(Action.strl id)
     ["ds"; "dsa"; "ds"; ]
