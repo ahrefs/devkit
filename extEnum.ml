@@ -87,6 +87,23 @@ let join ?(left=false) ?(right=false) ?(multi=true) f e1 e2 =
   in
   from next
 
+let join_assoc ?(left=false) ?(right=false) ?(multi=true) f e1 e2 =
+  let found = ref false in
+  let rec next () =
+    let found' = !found in
+    found := false;
+    match peek e1, peek e2 with
+    | None, None -> raise No_more_elements
+    | Some (k, x), None -> junk e1; if left && not found' then k, Some x, None else next ()
+    | None, Some (k, y) -> junk e2; if right then k, None, Some y else raise No_more_elements
+    | Some (kx, x), Some (ky, y) ->
+      match f kx ky with
+      | n when n < 0 -> junk e1; if left && not found' then kx, Some x, None else next ()
+      | n when n > 0 -> junk e2; if right then ky, None, Some y else next ()
+      | _ -> if not multi then junk e1; junk e2; found := multi; kx, Some x, Some y
+  in
+  from next
+
 let merge f e1 e2 =
   let next () =
     match peek e1, peek e2 with
