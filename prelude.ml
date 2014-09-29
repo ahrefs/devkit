@@ -48,11 +48,15 @@ sig
   type t
   val inj : T.t -> t
   val proj : t -> T.t
+  val inj_list : T.t list -> t list
+  val proj_list : t list -> T.t list
 end =
 struct
   type t = T.t
   let inj = id
   let proj = id
+  let inj_list = id
+  let proj_list = id
 end
 
 let cons x y = x :: y
