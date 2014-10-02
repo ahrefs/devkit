@@ -22,6 +22,9 @@ let nsplitc str sep = List.rev (nsplitc_rev str sep)
 
 let countc s c = String.fold_left (fun acc c' -> if c = c' then acc+1 else acc) 0 s
 
+(** check if [sub] belongs to [s] *)
+let contains s sub = try let _:int = String.find s sub in true with ExtString.Invalid_string -> false
+
 (** split by delimiter
   @raise Not_found if [sep] is not found in [str] *)
 let splitc str sep =
