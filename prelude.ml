@@ -73,7 +73,10 @@ let call_me_maybe f x =
   | None -> ()
   | Some f -> f x
 
-class poll_engine = object
+class poll_engine =
+let readmask = U.Poll.(pollin + pollerr + pollhup + pollpri + pollrdhup) in
+let writemask = U.Poll.(pollout + pollerr + pollhup) in
+object
 inherit Lwt_engine.poll_based
 method poll fds timeout =
 (*
@@ -81,7 +84,7 @@ method poll fds timeout =
   log #info "lwt poll %f %s" timeout (show fds);
 *)
   let fds = List.map (fun (fd,i,o) -> fd, U.Poll.((if i then pollin else none) + (if o then pollout else none))) fds in
-  let l  = U.poll (Array.of_list fds) timeout |> List.map (fun (fd,f) -> fd, U.Poll.(is_set f pollin), U.Poll.(is_set f pollout)) in
+  let l = U.poll (Array.of_list fds) timeout |> List.map (fun (fd,f) -> fd, U.Poll.is_inter f readmask, U.Poll.is_inter f writemask) in
 (*   log #info "lwt poll done %s" (show l); *)
   l
 end
