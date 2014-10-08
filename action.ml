@@ -14,6 +14,14 @@ let timely period f =
   let next = ref (Time.get () +. period) in
   (fun () -> if Time.get () > !next then begin Std.finally (fun () -> next := Time.get () +. period) f () end)
 
+let timely_counter period f =
+  let cnt = ref 0 in
+  let logger = timely period (fun () -> f !cnt) in
+  fun () -> begin
+    incr cnt;
+    logger ();
+  end
+
 let catmap ?(sep="") f l = String.concat sep (List.map f l)
 let strl f l = sprintf "[%s]" @@ catmap ~sep:";" f l
 
