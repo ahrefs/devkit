@@ -288,6 +288,7 @@ let compare2 f g (a,b) (a',b') =
   match f a a' with
   | 0 -> g b b'
   | x -> x
+let compare_fst f (a,_) (a',_) = f a a'
 
 let hexdump str =
   let buf = Buffer.create 80 and num = ref 0 in
