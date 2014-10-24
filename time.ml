@@ -161,23 +161,26 @@ let duration_str ?cut t =
 
 (* 1m10s *)
 let compact_duration ?(full=false) ?cut t =
-  let factors = [60; 60; 24; ] in
-  let names = ["s"; "m"; "h"; "d"; ] in
-  let rec loop t acc = function
-  | [] -> List.rev (t::acc)
-  | n::tl -> loop (t/n) (t mod n :: acc) tl
-  in
-  if t < 0.000_01 then sprintf "%.0fns" (t *. 1_000_000_000.)
-  else if t < 0.01 then sprintf "%.2gms" (t *. 1_000.)
-  else if t < 1. then sprintf "%.0fms" (t *. 1_000.)
-  else if t < 10. then sprintf "%.2gs" t
-  else 
-  loop (int_of_float t) [] factors |> List.combine names |>
-  (if full then id else List.dropwhile (fun (_,x) -> x = 0)) |>
-  List.rev |>
-  List.dropwhile (fun (_,x) -> x = 0) |>
-  (match cut with Some n -> List.take n | None -> id) |>
-  List.mapi (fun i (n,x) -> sprintf (if i = 0 then "%u%s" else "%02u%s") x n) |> String.concat ""
+  let prefix, t = if t < 0. then "-", (0. -. t) else "", t in
+  prefix ^ begin
+    let factors = [60; 60; 24; ] in
+    let names = ["s"; "m"; "h"; "d"; ] in
+    let rec loop t acc = function
+    | [] -> List.rev (t::acc)
+    | n::tl -> loop (t/n) (t mod n :: acc) tl
+    in
+    if t < 0.000_01 then sprintf "%.0fns" (t *. 1_000_000_000.)
+    else if t < 0.01 then sprintf "%.2gms" (t *. 1_000.)
+    else if t < 1. then sprintf "%.0fms" (t *. 1_000.)
+    else if t < 10. then sprintf "%.2gs" t
+    else 
+    loop (int_of_float t) [] factors |> List.combine names |>
+    (if full then id else List.dropwhile (fun (_,x) -> x = 0)) |>
+    List.rev |>
+    List.dropwhile (fun (_,x) -> x = 0) |>
+    (match cut with Some n -> List.take n | None -> id) |>
+    List.mapi (fun i (n,x) -> sprintf (if i = 0 then "%u%s" else "%02u%s") x n) |> String.concat ""
+  end
 
 (** parse compact_duration representation (except for fractional seconds) *)
 let of_compact_duration s = Devkit_ragel.parse_compact_duration s
