@@ -274,12 +274,8 @@ let () = test "Time.compact_duration" begin fun () ->
   t 7201.1 "90m1801.1s";
   t 7200.1 "2h0.1s";
   t 0.8 "0.8s";
-  t (-1.) "-1s";
-  t (-86461.1) "-1d1m1.1s";
-  t (-7200.) "-1h30m1800s";
 (*   tt 0.8 "800ms"; *)
   tt 5356800. "62d";
-  tt (-55555.) "-15h25m55s";
 end
 
 let () = test "Action.stable_partition" begin fun () ->
