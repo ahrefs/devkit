@@ -35,3 +35,9 @@ let string s =
   let out = output (IO.output_string ()) in
   IO.nwrite out s;
   IO.close_out out
+
+let to_string s =
+  let inp = input (IO.input_string s) in
+  let res = IO.nread inp max_int in
+  IO.close_in inp;
+  res
