@@ -38,6 +38,12 @@ let string s =
 
 let to_string s =
   let inp = input (IO.input_string s) in
-  let res = IO.nread inp max_int in
-  IO.close_in inp;
-  res
+  let out = IO.output_string () in
+  try
+    while true do
+      IO.write out (IO.read inp)
+    done;
+    assert false
+  with IO.No_more_input ->
+    IO.close_in inp;
+    IO.close_out out
