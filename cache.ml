@@ -313,15 +313,21 @@ type ('a,'b) t
 val create : unit -> ('a,'b) t
 val add : ('a,'b) t -> 'a -> 'b -> unit
 val get : ('a,'b) t -> 'a -> 'b list
+val set : ('a,'b) t -> 'a -> 'b list -> unit
 val enum : ('a,'b) t -> ('a * 'b list) Enum.t
 val clear : ('a, 'b) t -> unit
+val count_keys : ('a, 'b) t -> int
+val count_all : ('a, 'b) t -> int
 end = struct
 type ('a,'b) t = ('a,'b list) Hashtbl.t
 let create () = Hashtbl.create 16
 let get h k = try Hashtbl.find h k with Not_found -> []
+let set = Hashtbl.replace
 let add h k v = Hashtbl.replace h k (v::get h k)
 let enum = Hashtbl.enum
 let clear = Hashtbl.clear
+let count_keys = Hashtbl.length
+let count_all h = Hashtbl.fold (fun _ l acc -> acc + List.length l) h 0
 end
 
 class ['a] cache (cb : ('a list -> unit)) ~limit =
