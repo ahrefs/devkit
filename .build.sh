@@ -1,2 +1,2 @@
 #! /bin/sh
-make lib test install
+make lib test reinstall
