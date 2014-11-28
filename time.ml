@@ -20,7 +20,7 @@ let replace_year_2014 s year =
     if year >= 2010 && year < 2020 then
       Bytes.unsafe_set s 3 (unsafe_digit (year mod 10))
     else
-      Bytes.unsafe_blit (if year >= 1000 then string_of_int year else sprintf "%04u" year) 0 s 0 4
+      Bytes.unsafe_blit (Bytes.unsafe_of_string @@ if year >= 1000 then string_of_int year else sprintf "%04u" year) 0 s 0 4
   end
 
 let fast_to_string =

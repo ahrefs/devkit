@@ -21,14 +21,14 @@ let buffer_size = 1024
 
 type in_channel =
   { in_chan: IO.input;
-    in_buffer: string;
+    in_buffer: bytes;
     mutable in_pos: int;
     mutable in_avail: int;
     mutable in_eof: bool;
     in_stream: Zlib.stream;
     mutable in_size: int32;
     mutable in_crc: int32;
-    char_buffer: string }
+    char_buffer: bytes }
 
 let open_in ic =
   (* Superficial parsing of header *)
@@ -66,19 +66,19 @@ let open_in ic =
     raise(Error("premature end of input, not a gzip stream"))
   end;
   { in_chan = ic;
-    in_buffer = String.create buffer_size;
+    in_buffer = Bytes.create buffer_size;
     in_pos = 0;
     in_avail = 0;
     in_eof = false;
     in_stream = Zlib.inflate_init false;
     in_size = Int32.zero;
     in_crc = Int32.zero;
-    char_buffer = String.create 1 }
+    char_buffer = Bytes.create 1 }
 
 let read_byte iz =
   if iz.in_avail = 0 then begin
     let n = IO.input iz.in_chan iz.in_buffer 0
-                             (String.length iz.in_buffer) in
+                             (Bytes.length iz.in_buffer) in
     iz.in_pos <- 0;
     iz.in_avail <- n
   end;
@@ -98,12 +98,12 @@ let read_int32 iz =
                    (Int32.shift_left (Int32.of_int b4) 24)))
 
 let rec input iz buf pos len =
-  if pos < 0 || len < 0 || pos + len > String.length buf then
+  if pos < 0 || len < 0 || pos + len > Bytes.length buf then
     invalid_arg "Gzip_stream.input";
   if iz.in_eof then 0 else begin
     if iz.in_avail = 0 then begin
       let n = try IO.input iz.in_chan iz.in_buffer 0
-                               (String.length iz.in_buffer) 
+                               (Bytes.length iz.in_buffer) 
               with IO.No_more_input -> raise(Error("truncated stream"))
       in
       iz.in_pos <- 0;
@@ -180,22 +180,22 @@ let open_out ?(level = 6) oc =
   IO.write_byte oc 0;                     (* xflags *)
   IO.write_byte oc 0xFF;                  (* OS (unknown) *)
   { out_chan = oc;
-    out_buffer = String.create buffer_size;
+    out_buffer = Bytes.create buffer_size;
     out_pos = 0;
     out_avail = buffer_size;
     out_stream = Zlib.deflate_init level false;
     out_size = Int32.zero;
     out_crc = Int32.zero;
-    char_buffer = String.create 1 }
+    char_buffer = Bytes.create 1 }
 
 let rec output oz buf pos len =
-  if pos < 0 || len < 0 || pos + len > String.length buf then
+  if pos < 0 || len < 0 || pos + len > Bytes.length buf then
     invalid_arg "Gzip_stream.output";
   (* If output buffer is full, flush it *)
   if oz.out_avail = 0 then begin
     ignore (IO.really_output oz.out_chan oz.out_buffer 0 oz.out_pos);
     oz.out_pos <- 0;
-    oz.out_avail <- String.length oz.out_buffer
+    oz.out_avail <- Bytes.length oz.out_buffer
   end;
   let (_, used_in, used_out) =
     try
@@ -211,7 +211,7 @@ let rec output oz buf pos len =
   if used_in < len then output oz buf (pos + used_in) (len - used_in)
 
 let output_char oz c =
-  oz.char_buffer.[0] <- c;
+  Bytes.set oz.char_buffer 0 c;
   output oz oz.char_buffer 0 1
 
 let output_byte oz b =
@@ -230,7 +230,7 @@ let flush oz =
     if oz.out_avail = 0 then begin
       ignore (IO.really_output oz.out_chan oz.out_buffer 0 oz.out_pos);
       oz.out_pos <- 0;
-      oz.out_avail <- String.length oz.out_buffer
+      oz.out_avail <- Bytes.length oz.out_buffer
     end;
     let (finished, _, used_out) =
       Zlib.deflate oz.out_stream oz.out_buffer 0 0
