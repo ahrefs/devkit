@@ -118,6 +118,22 @@ let setup_periodic_timer_wait events ?stop delay ?name f =
   let (_:Ev.event) = periodic_timer_wait events ?stop delay ?name f in
   ()
 
+(*
+(** Call [f] with [delay]-second pauses between invocations.
+    Set [stop] to [true] to stop the timer. 
+    NB do not [Ev.del] the event inside the [f] callback. *)
+let periodic_timer_0 stop first_delay delay ?(name="") f =
+  let rec loop () =
+    if not !stop then begin try f () with exn -> log #warn ~exn "periodic_timer %s" name end;
+    if not !stop then Ev.add timer (Some delay);
+  end;
+  if not !stop then Ev.add timer (Some first_delay);
+  timer
+
+let periodic_timer_now events ?(stop=ref false) delay ?name f = periodic_timer_0 events stop 0. delay ?name f
+let periodic_timer_wait events ?(stop=ref false) delay ?name f = periodic_timer_0 events stop delay delay ?name f
+*)
+
 module Peer = struct
 
 type t = { events : Ev.event_base; read : Ev.event; write : Ev.event; timeout : float option; fd : Unix.file_descr; addr : Unix.sockaddr; err : (unit -> unit); }
