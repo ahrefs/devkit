@@ -1,5 +1,7 @@
 (** Useful shortcuts *)
 
+open ExtLib
+
 module U = ExtUnix.Specific
 module Enum = ExtEnum
 
