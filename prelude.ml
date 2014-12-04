@@ -70,6 +70,8 @@ let round f =
   let bot = floor f in
   if f -. bot < 0.5 then bot else bot +. 1.
 
+let atoi name v = try int_of_string v with _ -> Exn.fail "%s %S not integer" name v
+
 let call_me_maybe f x =
   match f with
   | None -> ()
