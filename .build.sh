@@ -12,4 +12,4 @@ opam uninstall devkit
 opam upgrade
 opam install --deps-only devkit
 
-make lib test
+make distclean lib test

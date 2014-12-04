@@ -43,3 +43,5 @@ reinstall:
 
 clean:
 		ocamlbuild -clean
+
+distclean: clean
