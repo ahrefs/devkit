@@ -33,6 +33,7 @@ let (>>) = (|>)
 let (&) = (@@)
 
 external id : 'a -> 'a = "%identity"
+external identity : 'a -> 'a = "%identity"
 let flip f x y = f y x
 let some x = Some x
 let const x = fun () -> x
