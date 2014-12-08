@@ -134,12 +134,11 @@ let stop ?wait t =
   in
   log #info "Stopping %d workers%s" (List.length t.running) (gone ());
   t.alive <- false;
-  let l = List.map (fun {cin;cout;pid} ->
-    close_in_noerr cin;
-    close_out_noerr cout;
-    begin try kill pid Sys.sigterm with exn -> log #warn ~exn "Worker PID %d lost (SIGTERM)" pid end;
-    pid) t.running
-  in
+  let l = t.running |> List.map (fun {cin;cout;pid;} -> close_in_noerr cin; close_out_noerr cout; pid) in
+  Nix.sleep 0.1; (* let idle workers detect EOF and exit peacefully (frequent io-in-signal-handler deadlock problem) *)
+  l |> List.iter begin fun pid ->
+    try kill pid Sys.sigterm with exn -> log #warn ~exn "Worker PID %d lost (SIGTERM)" pid
+  end;
   reap_loop wait l
 
 let perform t e finish =
