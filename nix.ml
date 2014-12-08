@@ -76,7 +76,7 @@ let restart f x = let rec loop () = try f x with Unix.Unix_error (EINTR,_,_) -> 
 *)
 let handle_sig_exit_with ~exit fin =
   List.iter
-    (fun signal -> Sys.set_signal signal (Sys.Signal_handle 
+    (fun signal -> Sys.set_signal signal (Sys.Signal_handle
       (fun _signo ->
 (*         Log.self #info "Received signal %i (exit)..." n; *)
         (try fin () with exn -> Log.self #warn ~exn "handle_sig_exit");
@@ -89,8 +89,8 @@ let handle_sig_exit_with ~exit fin =
 *)
 let handle_sig_reload_with fin =
   List.iter
-    (fun signal -> Sys.set_signal signal (Sys.Signal_handle 
-      (fun _signo -> 
+    (fun signal -> Sys.set_signal signal (Sys.Signal_handle
+      (fun _signo ->
 (*         Log.self #info "Received signal %i (reload)..." n;  *)
         (try fin () with exn -> Log.self #warn ~exn "handle_sig_reload");
 (*         Log.self #info "Signal handler done." *)
@@ -154,7 +154,7 @@ let open_process_in cmd =
   close in_write;
   inchan, pid
 
-let close_process_in (cin,pid) = 
+let close_process_in (cin,pid) =
   close_in cin;
   restart (waitpid []) pid
 
@@ -241,7 +241,7 @@ let find_mount path =
   let mount = ref ("","",[]) in
   let bound x = let (_,b,_) = x in b in
   mounts () >>
-  List.iter (fun (_,bind,_ as part) -> 
+  List.iter (fun (_,bind,_ as part) ->
     if String.starts_with path bind && String.length bind > String.length (bound !mount) then
       mount := part);
   assert (bound !mount <> "");

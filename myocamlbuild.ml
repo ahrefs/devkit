@@ -36,6 +36,6 @@ dispatch begin function
     flag ["compile"; "ocaml"; "native"; "asm"] & atomize ["-S"];
 
     ()
- 
+
 | _ -> ()
 end

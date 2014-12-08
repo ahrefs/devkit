@@ -2,7 +2,7 @@
 
 let input io =
   let iz = Gzip_stream.open_in io in
-  IO.create_in 
+  IO.create_in
     ~read:(fun () -> Gzip_stream.input_char iz)
     ~input:(Gzip_stream.input iz)
     ~close:(fun () -> Gzip_stream.close_in iz)

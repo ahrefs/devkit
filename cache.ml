@@ -23,16 +23,16 @@ module TimeLimited(E: sig type t end) = struct
 
   type t = { limit : Int64.t; mutex : Mutex.t; mutable m : M.t; }
 
-  let private_refresh m = 
-    let cur = current () in 
+  let private_refresh m =
+    let cur = current () in
     if (try fst (M.min_elt m) <= cur with _ -> false)
     then M.filter (fun (l,_) -> l > cur) m
     else m
 
   let create limit = { limit = fixed limit; mutex = Mutex.create (); m = M.empty }
-  let add t x = 
-    let key = Int64.add t.limit (current ()) in 
-    locked t.mutex (fun () -> t.m <- M.add (key, x) (private_refresh t.m)); 
+  let add t x =
+    let key = Int64.add t.limit (current ()) in
+    locked t.mutex (fun () -> t.m <- M.add (key, x) (private_refresh t.m));
     key
 
   let on_key key = fun (k,_) -> k = key
@@ -86,7 +86,7 @@ module TimeLimited2(E: Set.OrderedType)
     end
 
   let create limit = { limit = fixed limit; next = 0L; lock = Lock.create (); m = M.empty }
- 
+
   let add t x =
     let expire = Int64.add t.limit (current ()) in
     (* FIXME replace not add *)
@@ -111,16 +111,16 @@ module SizeLimited : sig
 
   (** The type of the key assigned to each value in the cache *)
   type key = private int
-  
+
   val key : int -> key
 
-  (** 
-    [create size dummy] creates new empty cache. 
+  (**
+    [create size dummy] creates new empty cache.
     [size] is the number of last entries to remember.
   *)
   val create : int -> 'a t
 
-  val add : 'a t -> 'a -> key  
+  val add : 'a t -> 'a -> key
   val get : 'a t -> key -> 'a option
   val random : 'a t -> 'a option
 
@@ -297,7 +297,7 @@ end = struct
   let get = Hashtbl.find
   let try_get = Hashtbl.find_option
   let del h k =
-    try 
+    try
       let v = Hashtbl.find h k in
       Hashtbl.remove h k; v
     with

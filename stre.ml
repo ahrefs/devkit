@@ -68,7 +68,7 @@ let qreplace str sub by =
   Pcre.qreplace ~rex:(Pcre.regexp @@ Pcre.quote sub) ~templ:by str
 
 (** contents of the first submatch *)
-let extract rex str = 
+let extract rex str =
   try
     Some (Pcre.extract ~rex ~full_match:false str).(0)
   with
@@ -104,19 +104,19 @@ let enum_matches rex s =
   try
     Pcre.exec_all ~rex s >> Array.enum
   with
-    _ -> Enum.empty () 
+    _ -> Enum.empty ()
 
 let enum_extract rex s = enum_matches rex s >> Enum.map (flip Pcre.get_substring 1)
 
-let erase_dots s = 
+let erase_dots s =
   let rec erase = parser
   | [< ''\''; t >] -> erase t
   | [< ''0'..'9' as d; t >] -> after_digit d t
   | [< ''.'; t=dots >] -> [< '' '; erase t >]
   | [< 'c; t >] -> [< 'c; erase t >]
   | [< >] -> [< >]
-  and after_digit d1 = parser 
-  | [< ''.'; t >] -> 
+  and after_digit d1 = parser
+  | [< ''.'; t >] ->
     begin match Stream.peek t with
     | Some ('0'..'9') -> [< 'd1; ''.'; erase t >]
     | _ -> [< 'd1; '' '; erase t >]
@@ -144,7 +144,7 @@ let is_digit = function
 let is_alnum c = is_alpha c || is_digit c
 end
 
-let unescaped s = 
+let unescaped s =
   try Scanf.sscanf ("\""^s^"\"") "%S%!" (fun a -> a)  with  _ -> (Exn.fail "Stre.unescaped : Wry input %s" s)
 
 let rev = String.implode $ List.rev $ String.explode

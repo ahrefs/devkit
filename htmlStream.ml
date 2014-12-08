@@ -11,12 +11,12 @@ module Raw = New(struct type t = string end)
 
 type elem = Tag of (string * (string * Raw.t) list) | Text of Raw.t | Close of string
 
-module Parser = struct 
+module Parser = struct
 
 let eq : char -> char -> bool = (=)
 let neq : char -> char -> bool = (<>)
-let is_ident = function 
-  | 'a'..'z' | 'A'..'Z' | '0'..'9' | '_' | '-' | ':' -> true 
+let is_ident = function
+  | 'a'..'z' | 'A'..'Z' | '0'..'9' | '_' | '-' | ':' -> true
   | _ -> false
 let is_ws c = Char.code c <= 32
 let is_literal = function
@@ -66,7 +66,7 @@ let rec parse = parser
       match Stream.peek strm with
       | Some c when f c -> Stream.junk strm; Buffer.add_char b c; loop ()
       | None -> Buffer.contents b
-      | _ -> Buffer.contents b 
+      | _ -> Buffer.contents b
     in loop ()
   (** @return everything till [delim] (consumed but not included) *)
   and till delim strm =
@@ -74,7 +74,7 @@ let rec parse = parser
     let rec loop () =
       let c = Stream.next strm in
       if c = delim then () else (Buffer.add_char b c; loop ())
-    in 
+    in
     begin try loop () with Stream.Failure -> () end;
     Buffer.contents b
   (** skip all that match [f] *)
@@ -115,7 +115,7 @@ let show_raw = show_raw '"'
 
 let rec show_stream = parser
   | [< 'c; t >] -> Printf.printf "-> %c\n%!" c; [< 'c; show_stream t >]
-  | [< >] -> [< >] 
+  | [< >] -> [< >]
 
 let dump_debug = Stream.iter (print_endline $ show_raw) $ parse $ Stream.of_string
 
@@ -125,7 +125,7 @@ let tag name ?(a=[]) = function
     begin try List.for_all (fun (k,v) -> assert (not & String.contains v ' '); List.mem v (List.assoc k !!attrs)) a with Not_found -> false end
   | _ -> false
 
-let close name = function Close name' when name = name' -> true | _ -> false 
+let close name = function Close name' when name = name' -> true | _ -> false
 
 let to_text = function
   | Tag _ -> None

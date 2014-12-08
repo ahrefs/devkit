@@ -5,7 +5,7 @@ open Printf
 
 open Prelude
 
-let period n f = 
+let period n f =
   let count = ref 0 in
   (fun () -> incr count; if !count mod n = 0 then f !count)
 
@@ -188,7 +188,7 @@ let chunk n l =
     | None -> List.rev !chunks
     | _ -> get_chunk e; loop e
   in
-  loop (List.enum l) 
+  loop (List.enum l)
 
 (** [chunk_e e n] splits [e] into chunks of [n] elements each (except the last which can be shorter) *)
 let chunk_e n e =
@@ -197,7 +197,7 @@ let chunk_e n e =
   Enum.from (fun () ->
     let i = ref n in
     if Enum.is_empty e then fin () else
-    Enum.from (fun () -> match !i with 
+    Enum.from (fun () -> match !i with
       | 0 -> fin ()
       | _ -> decr i; match Enum.get e with None -> fin () | Some x -> x))
 
@@ -235,7 +235,7 @@ let run main =
 
 end
 
-class timer = 
+class timer =
 let tm = Unix.gettimeofday  in
 object
 
@@ -300,7 +300,7 @@ let hexdump str =
           bprintf buf "%08x|  " !num;
           num := !num + 16;
           let rec bytes pos = function
-            | [] -> 
+            | [] ->
                 blanks pos
             | x :: l ->
                 if pos = 8 then Buffer.add_char buf ' ';
@@ -341,8 +341,8 @@ let gc_show name f x =
 
 let gc_settings () =
   let gc = Gc.get () in
-  sprintf "minor %s incr %s major %d%% compact %d%% policy %d" 
-    (caml_words gc.Gc.minor_heap_size) 
+  sprintf "minor %s incr %s major %d%% compact %d%% policy %d"
+    (caml_words gc.Gc.minor_heap_size)
     (caml_words gc.Gc.major_heap_increment)
     gc.Gc.space_overhead
     gc.Gc.max_overhead

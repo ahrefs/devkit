@@ -19,7 +19,7 @@ let make_url_args = String.concat "&" $ List.map (fun (k, v) -> k ^ "=" ^ urlenc
 (** Minimum strictness, Neturl will fail on malformed parameters in url *)
 let url_get_args url =
   try
-    String.split url "?" >> snd >> flip String.nsplit "&" >> 
+    String.split url "?" >> snd >> flip String.nsplit "&" >>
       List.filter_map (fun s -> try String.split s "=" >> apply2 urldecode >> some with _ -> None)
   with
     _ -> []
@@ -89,7 +89,7 @@ let stream_match_next f s =
 
 (** scan stream while predicate holds @return list of matching elements *)
 let stream_extract_while f s =
-  let rec loop acc = 
+  let rec loop acc =
     match Stream.peek s with
     | Some x when f x -> Stream.junk s; loop (x::acc)
     | _ -> List.rev acc
@@ -124,16 +124,16 @@ include T
 module Provider = struct
 
   (** url, smth, title, snippet *)
-  type entry = string * string option * string * string 
+  type entry = string * string option * string * string
 
   (**  @return total estimate, organic entries and ads
 
   raises exn on error *)
   type extract_full = string -> int * entry array * entry array
 
-  type t = { 
-    request : ?num:int -> string -> string; 
-    extract : string -> string Enum.t; 
+  type t = {
+    request : ?num:int -> string -> string;
+    extract : string -> string Enum.t;
     extract_full : extract_full;
   }
 
@@ -154,7 +154,7 @@ let get_results ?(debug=false) ~parse_url s' =
   let total = ref 0 in
   begin try
     let rec search = parser
-    | [< 'x when tag "td" x; t >] -> 
+    | [< 'x when tag "td" x; t >] ->
       begin match Stream.peek t with
       | Some x when tag "div" ~a:["id","subform_ctrl"] x -> Stream.junk t; stream_skip any_tag t; make_text & stream_extract_while any_text t
       | _ -> search t
@@ -190,7 +190,7 @@ let get_results ?(debug=false) ~parse_url s' =
         | Tag (_,l) -> List.assoc "href" l
         | _ -> assert false in
         if debug then log #info "href %s" href;
-        let href = if String.starts_with href "/url?" then 
+        let href = if String.starts_with href "/url?" then
             try List.assoc "q" (url_get_args href) with exn -> Exn.fail ~exn "url?q="
           else
             href
@@ -345,7 +345,7 @@ let get_ads2 ~debug ~parse_url s =
           |]
           s
         with
-        | [| href; t |] -> 
+        | [| href; t |] ->
           pt "found";
           acc := (parse_url href,Some adurl,make_text h,t) :: !acc;
           pt "got ad";
@@ -406,7 +406,7 @@ end (* Google *)
 
   let parse_rss s =
     let xml = Xmlm.make_input ~strip:true (`String (0,s)) in
-    let rec skip () = 
+    let rec skip () =
       match Xmlm.peek xml with
       | `Dtd _ -> ignore & Xmlm.input xml; skip ()
       | _ -> () in
@@ -428,8 +428,8 @@ end (* Google *)
       | "title", [`D s] -> title := s; `U
       | "channel", l -> `L (List.filter_map (function (`R x) -> Some x | _ -> None) l)
       | "rss",[x] -> x
-      | "rss",l -> 
-          log #warn "bad rss (%d)" (List.length l); 
+      | "rss",l ->
+          log #warn "bad rss (%d)" (List.length l);
           begin try List.find (function `L _ -> true | _ -> false) l with _ -> `U end
       | _ -> (*log #warn "unrec : %s" s;*) `U) xml
     with
@@ -489,7 +489,7 @@ end (* Google *)
         stream_find ~limit:10 (tag "h3") s;
         let h = stream_extract_till (Close "h3") s in
         Stream.junk s;
-        begin try 
+        begin try
           stream_next (tag "span" ~a:["class","sb_adsD"]) s; stream_skip_till (Close "span") s; Stream.junk s;
         with Not_found -> ()
         end;
@@ -520,7 +520,7 @@ end (* Google *)
     let re = Pcre.regexp ~flags:[`CASELESS] "<div class=\"sb_tlst\"><h3><a href=\"([^\"]+)\"" in
     { extract = Stre.enum_extract re;
       request = (fun ?(num=50) q ->
-        sprintf "http://www.bing.com/search?q=%s&count=%u%s" 
+        sprintf "http://www.bing.com/search?q=%s&count=%u%s"
           (urlencode q) num (match lang with None -> "" | Some s -> "&setmkt=" ^ s));
       extract_full = bing_html;
     }
@@ -573,9 +573,9 @@ let http_get_io_exn ?(setup=ignore) ?(check=curl_ok) url out =
       Curl.set_url h url;
       curl_default_setup h;
       setup h;
-      Curl.set_writefunction h (fun s -> 
-        try 
-          match check h with 
+      Curl.set_writefunction h (fun s ->
+        try
+          match check h with
           | false -> 0
           | true -> IO.nwrite out s; String.length s
         with exn -> inner := Some exn; 0);
@@ -587,7 +587,7 @@ let http_get_io_exn ?(setup=ignore) ?(check=curl_ok) url out =
 let http_get_io url ?(verbose=true) ?setup out =
   try
     http_get_io_exn url ?setup out
-  with 
+  with
   | Curl.CurlException(Curl.CURLE_WRITE_ERROR,_,_) -> ()
   | exn -> if verbose then Log.main #warn ~exn "http_get_io(%s)" url else ()
 

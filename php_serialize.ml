@@ -1,5 +1,5 @@
-(** 
-  PHP serialization 
+(**
+  PHP serialization
   http://php.net/manual/en/function.serialize.php
 *)
 
@@ -49,7 +49,7 @@ let check x y = if x <> y then failwith (Printf.sprintf "Php_serialize failed : 
 let rec parse_one = parser
   | [< ''a'; '':'; n=number; '':'; ''{'; a=parse_array; ''}' >] -> ignore n;(*check n (List.length a);*) a
   | [< ''b'; '':'; n=number; '';' >] -> B (0 <> n)
-  | [< ''d'; '':'; f=parse_float_semi; >] -> F f 
+  | [< ''d'; '':'; f=parse_float_semi; >] -> F f
   | [< n=parse_int >] -> I n
   | [< s=parse_str >] -> S s
   | [< ''N'; '';' >] -> N
@@ -84,11 +84,11 @@ let stream_show stream =
   Printf.sprintf "Position %u : %s" (Stream.count stream) tail
 
 let parse ?(full=true) stream =
-  try 
+  try
     let r = parse_one stream in
     if full then Stream.empty stream;
     r
-  with 
+  with
   | Stream.Error _ | Stream.Failure -> failwith (stream_show stream)
 
 let parse_string = parse $ Stream.of_string
@@ -179,7 +179,7 @@ let show out v =
   in
   put v
 
-let show_s v = 
+let show_s v =
   let out = IO.output_string () in
   show out v;
   IO.close_out out

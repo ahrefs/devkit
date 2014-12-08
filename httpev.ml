@@ -29,7 +29,7 @@ type config =
     auth : (string * string * string) option;
   }
 
-let default = 
+let default =
   {
     ip = Unix.inet_addr_loopback;
     port = 8080;
@@ -74,7 +74,7 @@ type client = {
 }
 
 let show_socket_error fd =
-  try 
+  try
     match Unix.getsockopt_int fd Unix.SO_ERROR with
     | 0 -> ""
     | n -> sprintf ", socket error %d" n
@@ -152,7 +152,7 @@ let make_request_exn c { line1; parsed_headers=headers; buf; _ } =
   | [meth;url;version] ->
     if url.[0] <> '/' then (* abs_path *)
       failed Url url;
-    let version = 
+    let version =
       try
         Scanf.sscanf version "HTTP/%u.%u" (fun ma mi -> ma,mi)
       with
@@ -243,7 +243,7 @@ let write_f c (data,ack) ev fd _flags =
         let ack = ack + len in
         if ack = String.length s then
           loop xs 0
-        else 
+        else
           loop l ack
       with
       | Unix.Unix_error (Unix.EAGAIN,_,_) -> (l,ack)
@@ -253,14 +253,14 @@ let write_f c (data,ack) ev fd _flags =
     data := l;
     ack := a
   with
-  exn -> 
+  exn ->
     INC c.server.errors;
     finish ();
     match c.server.config.log_epipe, exn with
     | false, Unix.Unix_error (Unix.EPIPE,_,_) -> ()
     | _ -> log #warn ~exn "write_f %s" (show_client c)
 
-type reply_status = 
+type reply_status =
   [ `Ok
   | `Found
   | `Moved
@@ -560,7 +560,7 @@ let handle events fd k =
       | Unix_error(EMFILE,_,_) ->
         let tm = 2. in
         log #error "disable listening socket for %s " (Time.duration_str tm);
-        Ev.del ev; 
+        Ev.del ev;
         let timer = Ev.create () in
         Ev.set_timer events timer ~persist:false (fun () ->
           Ev.del timer; log #info "reenabling listening socket"; setup ());
@@ -618,7 +618,7 @@ let cache_yes t = [header "Last-Modified" (Time.to_rfc2822 t)]
 (*
 let answer st url =
   match url with
-  | "/test" -> 
+  | "/test" ->
     let body = sprintf "answer %s\n%s" url (String.create 102400) in
     `Ok,[],answer
   | _ -> not_found
@@ -627,7 +627,7 @@ let () =
   server (Unix.ADDR_INET (Unix.inet_addr_any, 8081)) answer
 *)
 
-(** {2 Utilities} 
+(** {2 Utilities}
   mimic {!Netcgi_ext} interface
 *)
 
@@ -670,11 +670,11 @@ let serve_gzip_io req ?status f =
   serve_io req ?status "application/gzip" (fun io ->
     Control.with_output (Gzip_io.output io) f)
 
-let serve_text req ?status text = 
+let serve_text req ?status text =
   serve req ?status "text/plain" text
 
 let serve_html req html =
-  serve_io req "text/html" (fun out -> 
+  serve_io req "text/html" (fun out ->
     Html5.P.print ~output:(IO.nwrite out) html)
 
 let run ?(ip=Unix.inet_addr_loopback) port answer =
@@ -781,7 +781,7 @@ let handle_request_lwt c req answer =
     begin match auth with
     | `Unauthorized header -> return (`Unauthorized, [header], "Unauthorized")
     | `Ok ->
-      try_lwt 
+      try_lwt
         answer c.server req
       with exn ->
         log #error ~exn "answer %s" @@ show_request req;
@@ -865,7 +865,7 @@ let setup_fd_lwt fd config answer =
     if config.debug then log #info "accepted %s" (Nix.show_addr sockaddr);
     let cin = Lwt_io.(of_fd ~close:Lwt.return ~mode:input fd) in
     let cout = Lwt_io.(of_fd ~close:Lwt.return ~mode:output fd) in
-    lwt reply = 
+    lwt reply =
       try_lwt
         handle_client_lwt client cin answer
       with exn ->

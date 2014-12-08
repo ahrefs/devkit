@@ -153,7 +153,7 @@ let duration_str ?cut t =
   in
   if t < 1. then sprintf "%.4f secs" t
   else if t < 10. then sprintf "%.2f secs" t
-  else 
+  else
   loop (int_of_float t) [] factors |> List.combine names |> List.rev |>
   List.dropwhile (fun (_,x) -> x = 0) |>
   (match cut with Some n -> List.take n | None -> id) |>
@@ -171,7 +171,7 @@ let compact_duration ?(full=false) ?cut t =
   else if t < 0.01 then sprintf "%.2gms" (t *. 1_000.)
   else if t < 1. then sprintf "%.0fms" (t *. 1_000.)
   else if t < 10. then sprintf "%.2gs" t
-  else 
+  else
   loop (int_of_float t) [] factors |> List.combine names |>
   (if full then id else List.dropwhile (fun (_,x) -> x = 0)) |>
   List.rev |>

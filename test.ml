@@ -37,14 +37,14 @@ let test_search p s =
 let () = test "HtmlStream" begin fun () ->
   Printexc.record_backtrace true;
   let module HS = HtmlStream in
-  let (==>) s s' = 
+  let (==>) s s' =
   try
     let s'' = Control.wrapped_output (IO.output_string ()) (fun io -> Stream.iter (IO.nwrite io $ HS.show_raw') (HS.parse (Stream.of_string s))) in
     if s' = s'' then () else
       failwith (sprintf "%s ==> %s (got %s)" s s' s'')
-  with 
+  with
   | Failure s -> assert_failure s
-  | exn -> assert_failure (sprintf "%s ==> %s (exn %s)\n%s" s s' (Exn.str exn) (Printexc.get_backtrace ())) 
+  | exn -> assert_failure (sprintf "%s ==> %s (exn %s)\n%s" s s' (Exn.str exn) (Printexc.get_backtrace ()))
   in
   "<q>dsds<qq>" ==> "<q>dsds<qq>";
   "<>" ==> "<>";
@@ -360,7 +360,7 @@ let () = test "Enum.iter_while" begin fun () ->
   OUnit.assert_equal ~printer:(Action.strl string_of_int) [6;7] (List.of_enum e)
 end
 
-let tests () = 
+let tests () =
   let (_:test_results) = run_test_tt_main ("devkit" >::: List.rev !tests) in
   ()
 

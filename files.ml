@@ -16,7 +16,7 @@ let iter_names dirname f =
       | "." | ".." -> ()
       | name ->
         let path = Filename.concat path name in
-        match try Some (Unix.openfile path [Unix.O_RDONLY] 0) with _ -> None with 
+        match try Some (Unix.openfile path [Unix.O_RDONLY] 0) with _ -> None with
         | None -> ()
         | Some fd ->
           bracket fd (Exn.suppress Unix.close) (fun fd ->

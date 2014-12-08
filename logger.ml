@@ -60,17 +60,17 @@ struct
     | false -> ()
     | true ->
       let this = (level,str) in
-      if !last = this then 
+      if !last = this then
         incr n
       else
       begin
         if !n <> 0 then
         begin
-         T.output (sprintf 
+         T.output (sprintf
           "last message repeated %u times, suppressed\n" !n);
           n := 0
         end;
-        last := this; 
+        last := this;
         T.output (T.format level facil str);
       end
 

@@ -1,5 +1,5 @@
-(** 
-  Varz 
+(**
+  Varz
 
   TODO locking, grouping
 *)
@@ -33,7 +33,7 @@ let set_control name x =
   try let c = Hashtbl.find controls name in c#sets x
   with _ -> false
 
-let values () = Hashtbl.enum values >> Enum.map (fun (k,v) -> k,v#gets) >> List.of_enum >> 
+let values () = Hashtbl.enum values >> Enum.map (fun (k,v) -> k,v#gets) >> List.of_enum >>
   List.sort ~cmp:(fun (x,_) (y,_) -> compare x y)
 let controls () = Hashtbl.enum controls >> Enum.map (fun (k,v) -> k,v#gets) >> List.of_enum >>
   List.sort ~cmp:(fun (x,_) (y,_) -> compare x y)
@@ -68,7 +68,7 @@ initializer
 
 end
 
-(** Exponential Weighted Moving Average 
+(** Exponential Weighted Moving Average
   (smooth) 0.05 < alpha < 0.15 (dynamic)
 *)
 class ewma alpha name =
@@ -143,7 +143,7 @@ initializer
 
 end
 
-let store () = 
+let store () =
   let _vl = values () and cl = controls () in
   Marshal.to_string cl []
 
@@ -159,7 +159,7 @@ let cpu_time = fun_time_value "CPU time" Sys.time
 let gc_heap = fun_value "Heap" begin fun () ->
     let st = Gc.quick_stat () in
     sprintf "%s (max %s, chunks %d)"
-        (caml_words st.Gc.heap_words) 
+        (caml_words st.Gc.heap_words)
         (caml_words st.Gc.top_heap_words)
         st.Gc.heap_chunks
     end
@@ -174,8 +174,8 @@ let gc_ctrs = fun_value "Counters(mi,pr,ma)" (fun () ->
 let gc_coll = fun_value "Collections(mv,ma,mi)" (fun () ->
     let st = Gc.quick_stat () in
     sprintf "%u %u %u"
-        st.Gc.compactions 
-        st.Gc.major_collections 
+        st.Gc.compactions
+        st.Gc.major_collections
         st.Gc.minor_collections)
 
 let uptime =

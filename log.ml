@@ -1,5 +1,5 @@
-(** 
-  Global ready-to-use logger 
+(**
+  Global ready-to-use logger
 
   TODO interface to manage State
 *)
@@ -48,7 +48,7 @@ module State = struct
     with
       Not_found ->
         let x = { Logger.name = name; show = Logger.int_level !default_level } in
-        Hashtbl.add all name x; 
+        Hashtbl.add all name x;
         x
 
   let set_filter ?name level =
@@ -56,7 +56,7 @@ module State = struct
     | None -> default_level := level; Hashtbl.iter (fun _ x -> Logger.set_filter x level) all
     | Some name -> Logger.set_filter (facility name) level
 
-  let output_ch ch = 
+  let output_ch ch =
     fun str -> try output_string ch str; flush ch with _ -> () (* logging never fails, most probably ENOSPC *)
 
   let format_simple level facil msg =

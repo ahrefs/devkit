@@ -10,7 +10,7 @@ let describe t name = function
   | s when s.[0] = ' ' -> sprintf "<%s>%s" t s
   | s -> s
 
-let make_arg x = 
+let make_arg x =
   fun name var desc ->
   "-"^name,
   x#store var,
@@ -85,15 +85,15 @@ let parse ?f args =
 let usage args = Arg.usage (align args) usage_header
 
 (*
-  "-"^name, 
-  Arg.Set_int var, 
+  "-"^name,
+  Arg.Set_int var,
   sprintf "%s (default: %i)" (describe "int" name desc) !var
 *)
 
 (*
 let arg_str name ?desc var =
-  "-"^name, 
-  Arg.Set_string var, 
+  "-"^name,
+  Arg.Set_string var,
   sprintf "%s (default: %s)" (describe "string" name desc) !var
 *)
 

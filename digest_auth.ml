@@ -18,17 +18,17 @@ type digest_request = {
 
 module Parse = struct (* awful *)
 
-let appendlst lst elem = 
+let appendlst lst elem =
    lst := List.append !lst [elem]
 
 let appendstr str elem =
   str := ((!str) ^ elem)
 
-let lowparse elem curstr curlist = 
+let lowparse elem curstr curlist =
   if elem = ',' then begin
     if (String.length !curstr) > 0 then begin
     appendlst curlist !curstr ; end;
-    curstr:=""; 
+    curstr:="";
   end else if (elem <>  ' ')&&(elem <> '"')&&(elem<>'\n')&&(elem<>'\r') then appendstr curstr (Char.escaped elem)
 
 let make_tuple a b = (a,b)
@@ -86,7 +86,7 @@ let check t req =
     t.index <- t.index + 1;
   end;
   let nonce = hash [Unix.string_of_inet_addr @@ client_ip req; string_of_float t.stamp; string_of_int t.index] in
-  try 
+  try
      let dig = List.assoc "authorization" req.headers |> Parse.digest_request_from_string in
      match dig.nonce = nonce with
      | false -> raise Not_found

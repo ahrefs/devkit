@@ -35,7 +35,7 @@ let open_in ic =
   begin try
     let id1 = IO.read_byte ic in
     let id2 = IO.read_byte ic in
-    if id1 <> 0x1F || id2 <> 0x8B then 
+    if id1 <> 0x1F || id2 <> 0x8B then
       raise(Error("bad magic number, not a gzip file"));
     let cm = IO.read_byte ic in
     if cm <> 8 then
@@ -103,7 +103,7 @@ let rec input iz buf pos len =
   if iz.in_eof then 0 else begin
     if iz.in_avail = 0 then begin
       let n = try IO.input iz.in_chan iz.in_buffer 0
-                               (Bytes.length iz.in_buffer) 
+                               (Bytes.length iz.in_buffer)
               with IO.No_more_input -> raise(Error("truncated stream"))
       in
       iz.in_pos <- 0;
@@ -123,7 +123,7 @@ let rec input iz buf pos len =
       try
         let crc = read_int32 iz in
         let size = read_int32 iz in
-        if iz.in_crc <> crc then 
+        if iz.in_crc <> crc then
           raise(Error("CRC mismatch, data corrupted"));
         if iz.in_size <> size then
           raise(Error("size mismatch, data corrupted"));

@@ -74,7 +74,7 @@ let encode_data input_data =
 
   while (!handled_count < Array.length input_data) do
     let m = ref max_int in
-    Array.iter 
+    Array.iter
       (fun c ->
 	if c >= !n && c < !m then
 	  m := c)
@@ -99,11 +99,11 @@ let encode_data input_data =
 	    let k = ref base in
 	    (try
 	      while true do
-		let t = 
+		let t =
 		  if !k <= !bias then tmin
 		  else if !k >= !bias + tmax then tmax
 		  else !k - !bias in
-		if !q < t then 
+		if !q < t then
 		  raise Exit;
 		out (encode_digit (t + ((!q - t) mod (base - t))));
 		q := (!q - t) / (base - t);
@@ -204,7 +204,7 @@ let split domain =
 let join = String.concat "."
 
 let need_encoding s =
-  let l = 
+  let l =
     String.length s in
   try
     for i = 0 to pred l do

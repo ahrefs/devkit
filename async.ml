@@ -96,7 +96,7 @@ let read_buf base ?ev ?timeout buf fd err k =
 let read_n base ?ev ?timeout n fd err k = read_buf base ?ev ?timeout (Bytes.create n) fd err k
 
 (** Call [f] with [delay]-second pauses between invocations.
-    Set [stop] to [true] to stop the timer. 
+    Set [stop] to [true] to stop the timer.
     NB do not [Ev.del] the event inside the [f] callback. *)
 let periodic_timer_0 events stop first_delay delay ?(name="") f =
   let timer = Ev.create () in
@@ -120,7 +120,7 @@ let setup_periodic_timer_wait events ?stop delay ?name f =
 
 (*
 (** Call [f] with [delay]-second pauses between invocations.
-    Set [stop] to [true] to stop the timer. 
+    Set [stop] to [true] to stop the timer.
     NB do not [Ev.del] the event inside the [f] callback. *)
 let periodic_timer_0 stop first_delay delay ?(name="") f =
   let rec loop () =
@@ -205,7 +205,7 @@ let send p ?timeout buf k =
   later 0
 (*
   match try Some (write_some p.fd buf 0 len) with exn -> error ~exn p "send"; None with
-  | Some n when n = len -> k () 
+  | Some n when n = len -> k ()
   | Some n -> later n
   | None -> ()
 *)

@@ -111,17 +111,17 @@ open Unix
 let stop ?wait t =
   let reap l =
     List.filter_map (fun pid ->
-    try 
-      if pid = fst (waitpid [WNOHANG] pid) then None (* exited *) else Some pid 
-    with 
+    try
+      if pid = fst (waitpid [WNOHANG] pid) then None (* exited *) else Some pid
+    with
     | Unix_error (ECHILD,_,_) -> None (* exited *)
     | exn -> log #warn ~exn "Worker PID %d lost (wait)" pid; None) l
   in
   let hard_kill l =
-      List.iter (fun pid -> 
-      try 
-        kill pid Sys.sigkill; log #warn "Worker PID %d killed with SIGKILL" pid 
-      with 
+      List.iter (fun pid ->
+      try
+        kill pid Sys.sigkill; log #warn "Worker PID %d killed with SIGKILL" pid
+      with
       | Unix_error (ESRCH,_,_) -> ()
       | exn -> log #warn ~exn "Worker PID %d (SIGKILL)" pid) (reap l)
   in
@@ -160,7 +160,7 @@ let perform t e finish =
         let channels = List.map (fun fd -> List.find (fun w -> Unix.descr_of_in_channel w.cin = fd) t.running) r in
         let answers = List.filter_map (fun w ->
           let task = Enum.get e in
-          try 
+          try
             match try Some (Marshal.from_channel w.cin : result) with End_of_file -> None with
             | None ->
               log #warn "PID %d gone, what now?" w.pid;
@@ -168,7 +168,7 @@ let perform t e finish =
               decr workers;
               let fd = Unix.descr_of_in_channel w.cin in
               (* close and forget pipes of a dead child, do not reap zombie so that premature exit is visible in process list *)
-              t.running <- List.filter (fun w -> 
+              t.running <- List.filter (fun w ->
                 if Unix.descr_of_in_channel w.cin = fd
                 then begin close_in_noerr w.cin; close_out_noerr w.cout; false end
                 else true) t.running;
@@ -180,9 +180,9 @@ let perform t e finish =
               Marshal.to_channel w.cout (x : task) []; flush w.cout;
             end;
             Some answer
-          with 
+          with
           | exn -> log #warn ~exn "perform (from PID %d)" w.pid; decr workers; None)
-        channels 
+        channels
         in
         List.iter finish answers;
       done;
@@ -260,7 +260,7 @@ module ThreadPool = struct
       let (_:Thread.t) = Action.log_thread worker i in ()
     done
 
-  let status t = Printf.sprintf "queue %d threads %d of %d" 
+  let status t = Printf.sprintf "queue %d threads %d of %d"
                     (Mtq.length t.q) (atomic_get t.free) t.total
 
   let put t =

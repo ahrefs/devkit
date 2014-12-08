@@ -25,9 +25,9 @@ val map : ('a -> 'b) -> 'a array -> 'b array
 val mapn : ?n:int -> ('a -> 'b) -> 'a list -> 'b Exn.result list
 end
 
-module type WorkerT = sig 
-  type task 
-  type result 
+module type WorkerT = sig
+  type task
+  type result
 end
 
 module type Workers = sig
@@ -53,7 +53,7 @@ val perform : ('a,'b) t -> 'a Enum.t -> ('b -> unit) -> unit
 (** Thread workers *)
 module Threads(T:WorkerT) : Workers
   with type task = T.task
-   and type result = T.result 
+   and type result = T.result
 
 (** Forked workers *)
 module Forks(T:WorkerT) : Workers

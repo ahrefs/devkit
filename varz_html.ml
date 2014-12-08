@@ -24,7 +24,7 @@ let output_doc out heading x = output out (doc heading x)
 let output_html out h = XML.pretty_print ~preformatted ~no_break out (toelt h)
 *)
 
-let to_html () = 
+let to_html () =
   [
 (*
   p
@@ -40,7 +40,7 @@ let to_html () =
       [form ~a:[a_method `Post; a_action (uri_of_string "")]
       [
         p
-          (Varz.controls () |> List.map (fun (k,v) -> 
+          (Varz.controls () |> List.map (fun (k,v) ->
             spn "nvp" [spn "name" [t k];
             spn "value" [user_input k v];
             br ()]));
@@ -66,7 +66,7 @@ let to_html_doc () =
 
   let () =
   match Arg.get "submit" with
-  | Some "1" -> 
+  | Some "1" ->
     Varz.controls () >> List.iter (fun (k,v) ->
       Option.may (fun set -> if set <> v then ignore (Varz.set_control k set)) (Arg.get k))
   | _ -> ()
