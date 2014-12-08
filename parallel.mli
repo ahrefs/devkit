@@ -7,8 +7,10 @@ val invoke : ('a -> 'b) -> 'a -> unit -> 'b
   Does not wait for children to finish - returns immediately. *)
 val launch_forks : ('a -> unit) -> 'a list -> unit
 
-(** Launch forks for each element of the list and wait for all workers to finish. Pass exit signals to the workers. *)
-val run_forks : ('a -> unit) -> 'a list -> unit
+(** Launch forks for each element of the list or the specified number of [workers] if given and wait for all
+  workers to finish. Pass exit signals to the workers, see {!Forks.stop} for the description of [wait] parameter.
+*)
+val run_forks : ?wait:int -> ?workers:int -> ('a -> unit) -> 'a list -> unit
 
 (** Same as [run_forks] but do not fork for one worker *)
 val run_forks' : ('a -> unit) -> 'a list -> unit

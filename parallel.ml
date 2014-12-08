@@ -307,7 +307,7 @@ let mapn ?(n=8) f l =
   Action.partition n l |> map (List.map @@ Exn.map f) |> Action.unpartition
 end
 
-let run_forks (type t) (f : t -> unit) l =
+let run_forks ?wait ?workers (type t) (f : t -> unit) l =
   let module Worker = struct type task = t type result = unit end in
   let module W = Forks(Worker) in
   let worker x =
@@ -315,9 +315,10 @@ let run_forks (type t) (f : t -> unit) l =
     Nix.handle_sig_exit_with ~exit:false (fun () -> Daemon.should_exit := true);
     f x
   in
-  let proc = W.create worker (List.length l) in
-  Nix.handle_sig_exit_with ~exit:true (fun () -> W.stop proc);
-  W.perform proc (List.enum & List.map id l) id
+  let proc = W.create worker (match workers with Some n -> assert (n > 0); n | None -> List.length l) in
+  Nix.handle_sig_exit_with ~exit:true (fun () -> W.stop ?wait proc); (* FIXME: output in signal handler *)
+  W.perform proc (List.enum l) id;
+  W.stop proc
 
 let run_forks' f l =
   match l with
