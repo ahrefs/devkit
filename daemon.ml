@@ -31,7 +31,7 @@ let args =
     "-fg", Arg.Set foreground, " Stay in foreground";
   ]
 
-let manage ?(signals=[]) () =
+let manage () =
   match !managed with
   | true -> () (* be smart *)
   | false ->
@@ -70,14 +70,9 @@ let manage ?(signals=[]) () =
     log #info "run: %s" (String.concat " " (List.map quote (Array.to_list Sys.argv)));
     log #info "GC settings: %s" (Action.gc_settings ());
   end;
-  let find_sig_handler s = try List.assoc s signals with Not_found -> ignore in
-  let cust_sigusr1, cust_sigusr2 = find_sig_handler Sys.sigusr1, find_sig_handler Sys.sigusr2 in
   Sys.set_signal Sys.sigpipe Sys.Signal_ignore;
-  Sys.set_signal Sys.sigusr1 (Sys.Signal_handle (fun _ -> Log.reopen !logfile; cust_sigusr1 ()));
-  Sys.set_signal Sys.sigusr2 (Sys.Signal_handle (fun _ -> U.malloc_stats (); Action.gc_show "compact" Gc.compact (); cust_sigusr2 ()));
-  signals
-    |> List.filter (fun (s, _) -> Sys.(s <> sigpipe && s <> sigusr1 && s <> sigusr2))
-    |> List.iter (fun (s, h) -> Sys.set_signal s (Sys.Signal_handle (fun _ -> h ())));
+  Sys.set_signal Sys.sigusr1 (Sys.Signal_handle (fun _ -> Log.reopen !logfile));
+  Sys.set_signal Sys.sigusr2 (Sys.Signal_handle (fun _ -> U.malloc_stats (); Action.gc_show "compact" Gc.compact ()));
   Nix.handle_sig_exit_with ~exit:false (fun () -> should_exit := true);
   Nix.raise_limits ();
   managed := true;
