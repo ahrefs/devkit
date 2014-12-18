@@ -33,9 +33,9 @@ let set_control name x =
   try let c = Hashtbl.find controls name in c#sets x
   with _ -> false
 
-let values () = Hashtbl.enum values >> Enum.map (fun (k,v) -> k,v#gets) >> List.of_enum >>
+let values () = Hashtbl.enum values |> Enum.map (fun (k,v) -> k,v#gets) |> List.of_enum |>
   List.sort ~cmp:(fun (x,_) (y,_) -> compare x y)
-let controls () = Hashtbl.enum controls >> Enum.map (fun (k,v) -> k,v#gets) >> List.of_enum >>
+let controls () = Hashtbl.enum controls |> Enum.map (fun (k,v) -> k,v#gets) |> List.of_enum |>
   List.sort ~cmp:(fun (x,_) (y,_) -> compare x y)
 
 let value name =

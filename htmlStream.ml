@@ -122,7 +122,7 @@ let dump_debug = Stream.iter (print_endline $ show_raw) $ parse $ Stream.of_stri
 let tag name ?(a=[]) = function
   | Tag (name',attrs) when name = name' ->
     let attrs = lazy (List.map (fun (k,v) -> (k,String.nsplit (Raw.proj v) " ")) attrs) in
-    begin try List.for_all (fun (k,v) -> assert (not & String.contains v ' '); List.mem v (List.assoc k !!attrs)) a with Not_found -> false end
+    begin try List.for_all (fun (k,v) -> assert (not @@ String.contains v ' '); List.mem v (List.assoc k !!attrs)) a with Not_found -> false end
   | _ -> false
 
 let close name = function Close name' when name = name' -> true | _ -> false
@@ -134,4 +134,7 @@ let to_text = function
 
 (** extract text from the list elements *)
 (* let make_text l = wrapped_outs (fun out -> List.iter (Option.may (IO.nwrite out) $ Option.map Raw.proj $ to_text) l) *)
-let make_text l = List.enum l >> Enum.filter_map to_text >> Enum.map Raw.proj >> Enum.map String.strip >> List.of_enum >> String.concat " " >> Raw.inj
+let make_text l =
+  List.enum l |> Enum.filter_map to_text
+  |> Enum.map Raw.proj |> Enum.map String.strip
+  |> List.of_enum |> String.concat " " |> Raw.inj

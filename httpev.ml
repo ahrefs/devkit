@@ -88,8 +88,8 @@ let show_peer c =
 
 let show_client c =
   match c.req with
-  | Headers b -> sprintf "%s headers %s" (show_peer c) (Action.bytes_string & Buffer.length b)
-  | Body b -> sprintf "%s body %s" (show_peer c) (Action.bytes_string & Buffer.length b.buf)
+  | Headers b -> sprintf "%s headers %s" (show_peer c) (Action.bytes_string @@ Buffer.length b)
+  | Body b -> sprintf "%s body %s" (show_peer c) (Action.bytes_string @@ Buffer.length b.buf)
   | Ready req -> show_request req
 
 type ('a,'b) result = [ `Ok of 'a | `Error of 'b ]
@@ -171,7 +171,7 @@ let make_request_exn c { line1; parsed_headers=headers; buf; _ } =
     | `POST ->
       let args = decode_args args in
       let cont_type = try List.assoc "content-type" headers with _ -> "" in
-      if cont_type = "application/x-www-form-urlencoded" then List.append args & decode_args body else args
+      if cont_type = "application/x-www-form-urlencoded" then List.append args @@ decode_args body else args
     | `GET | `HEAD -> decode_args args
     in
     let encoding = try acceptable_encoding headers with Failure s -> failed NotAcceptable s in
@@ -472,7 +472,7 @@ let handle_request c body answer =
       log #info "version %u.%u not supported from %s" (fst req.version) (snd req.version) (show_request req);
       send_reply_async c Identity (`Version_not_supported,[],"HTTP/1.0 is supported")
   with exn ->
-    log #error ~exn "answer %s" & show_request req;
+    log #error ~exn "answer %s" @@ show_request req;
     match req.blocking with
     | None -> send_reply_async c Identity (`Not_found,[],"Not found")
     | Some _ -> Exn.suppress teardown c.fd

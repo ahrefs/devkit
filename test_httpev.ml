@@ -1,6 +1,5 @@
 (** Bare-bones httpev server example *)
 
-open Prelude
 open Printf
 
 let log = Httpev.Hidden.log
@@ -10,10 +9,10 @@ let http_handle _st req k_http =
   match req.Httpev.path with
   | "/hello" ->
     let name = Option.default "world" (Arg.get "name") in
-    k_http & Httpev.serve_text req (sprintf "Hello, %s!" name)
+    k_http @@ Httpev.serve_text req (sprintf "Hello, %s!" name)
   | _ ->
     log #warn "not found : %s" (Httpev.show_request req);
-    k_http & Httpev.not_found
+    k_http @@ Httpev.not_found
 
 let run http_port =
   let main () =

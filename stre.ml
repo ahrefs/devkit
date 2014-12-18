@@ -102,11 +102,11 @@ let iexists s sub =
 (** sequence of matches *)
 let enum_matches rex s =
   try
-    Pcre.exec_all ~rex s >> Array.enum
+    Pcre.exec_all ~rex s |> Array.enum
   with
     _ -> Enum.empty ()
 
-let enum_extract rex s = enum_matches rex s >> Enum.map (flip Pcre.get_substring 1)
+let enum_extract rex s = enum_matches rex s |> Enum.map (flip Pcre.get_substring 1)
 
 let erase_dots s =
   let rec erase = parser

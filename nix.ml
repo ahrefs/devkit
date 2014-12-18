@@ -162,10 +162,10 @@ end (* module UnixImpl *)
 
 (*
 let read_process_exn ?timeout cmd =
-  bracket (UnixImpl.open_process_in cmd) (ignore $ UnixImpl.close_process_in) & fun (cin, pid) ->
+  bracket (UnixImpl.open_process_in cmd) (ignore $ UnixImpl.close_process_in) @@ fun (cin, pid) ->
   let fd = Unix.descr_of_in_channel cin in
   Unix.set_nonblock fd;
-  bracket (Ev.init ()) Ev.free & fun base ->
+  bracket (Ev.init ()) Ev.free @@ fun base ->
   let ok = ref false in
   let b = Buffer.create 16 in
   let ev = Ev.create () in
@@ -223,24 +223,24 @@ let write_process_exn cmd data =
 let write_process cmd data = try write_process_exn cmd data; true with _ -> false
 
 let mounts () =
-  with_open_in_txt "/proc/mounts" & fun ch ->
-  Std.input_lines ch >>
+  with_open_in_txt "/proc/mounts" @@ fun ch ->
+  Std.input_lines ch |>
   Enum.filter_map (fun s ->
     match String.nsplit s " " with
     | ["rootfs";_;"rootfs";_;_;_] -> None
     | [dev;mount;_fs;opt;_;_] -> Some (dev, mount, String.nsplit opt ",")
-    | _ -> Exn.fail "bad mount : %s" s) >>
+    | _ -> Exn.fail "bad mount : %s" s) |>
   List.of_enum
 
 (** @param path must be normalized *)
 let find_mount path =
-  assert (not & Filename.is_relative path);
-  assert (not & String.exists path "//");
-  assert (not & String.exists path "/./");
-  assert (not & String.exists path "/../");
+  assert (not @@ Filename.is_relative path);
+  assert (not @@ String.exists path "//");
+  assert (not @@ String.exists path "/./");
+  assert (not @@ String.exists path "/../");
   let mount = ref ("","",[]) in
   let bound x = let (_,b,_) = x in b in
-  mounts () >>
+  mounts () |>
   List.iter (fun (_,bind,_ as part) ->
     if String.starts_with path bind && String.length bind > String.length (bound !mount) then
       mount := part);

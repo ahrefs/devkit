@@ -80,7 +80,7 @@ and parse_str_array acc = parser
   | [< >] -> List.rev acc
 
 let stream_show stream =
-  let tail = Stream.npeek 10 stream >> List.map (String.make 1) >> String.concat "" in
+  let tail = Stream.npeek 10 stream |> List.map (String.make 1) |> String.concat "" in
   Printf.sprintf "Position %u : %s" (Stream.count stream) tail
 
 let parse ?(full=true) stream =
@@ -140,10 +140,10 @@ let output out v =
   let rec put = function
     | AS a -> put_enum (List.length a) (fun (k,v) -> put_str k; put v) (List.enum a)
     | ES e -> put_enum (Enum.count e) (fun (k,v) -> put_str k; put v) e
-    | RS a -> put_enum (List.length a) (fun (k,v) -> put_str k; put v) (List.enum & List.rev a)
+    | RS a -> put_enum (List.length a) (fun (k,v) -> put_str k; put v) (List.enum @@ List.rev a)
     | AI a -> put_enum (List.length a) (fun (k,v) -> put_int k; put v) (List.enum a)
     | EI e -> put_enum (Enum.count e) (fun (k,v) -> put_int k; put v) e
-    | RI a -> put_enumi (List.length a) (fun i v -> put_int i; put v) (List.enum & List.rev a)
+    | RI a -> put_enumi (List.length a) (fun i v -> put_int i; put v) (List.enum @@ List.rev a)
     | I n -> put_int n
     | B b -> IO.printf out "b:%u;" (if b then 1 else 0)
     | F f -> IO.printf out "d:%g;" (if compare nan f = 0 then 0. else f)
@@ -167,10 +167,10 @@ let show out v =
   let rec put = function
     | AS a -> put_enum (fun (k,v) -> pr "%S : " k; put v) (List.enum a)
     | ES e -> put_enum (fun (k,v) -> pr "%S : " k; put v) e
-    | RS a -> put_enum (fun (k,v) -> pr "%S : " k; put v) (List.enum & List.rev a)
+    | RS a -> put_enum (fun (k,v) -> pr "%S : " k; put v) (List.enum @@ List.rev a)
     | AI a -> put_enum (fun (k,v) -> pr "%d : " k; put v) (List.enum a)
     | EI e -> put_enum (fun (k,v) -> pr "%d : " k; put v) e
-    | RI a -> put_enumi (fun i v -> pr "%d : " i; put v) (List.enum & List.rev a)
+    | RI a -> put_enumi (fun i v -> pr "%d : " i; put v) (List.enum @@ List.rev a)
     | I n -> pr "%d" n
     | B b -> pr "%B" b
     | F f -> pr "%g" f

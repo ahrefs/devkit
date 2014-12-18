@@ -2,8 +2,6 @@
 open Html5.M
 open ExtLib
 
-open Prelude
-
 let t = pcdata
 
 let user_input name data = input ~a:[a_input_type `Text; a_name name; a_value data] ()
@@ -28,13 +26,13 @@ let to_html () =
   [
 (*
   p
-    [t (sprintf "%u varz" (Varz.values () >> Enum.count))];
+    [t (sprintf "%u varz" (Varz.values () |> Enum.count))];
 *)
   p
-    (Varz.values () >> List.map (fun (k,v) -> spn "nvp" [spn "name" [t k]; spn "value" [t v]; br ()]));
+    (Varz.values () |> List.map (fun (k,v) -> spn "nvp" [spn "name" [t k]; spn "value" [t v]; br ()]));
 (*
   p
-    [t (sprintf "%u varz" (Varz.controls () >> Enum.count))];
+    [t (sprintf "%u varz" (Varz.controls () |> Enum.count))];
 *)
   div
       [form ~a:[a_method `Post; a_action (uri_of_string "")]
@@ -67,7 +65,7 @@ let to_html_doc () =
   let () =
   match Arg.get "submit" with
   | Some "1" ->
-    Varz.controls () >> List.iter (fun (k,v) ->
+    Varz.controls () |> List.iter (fun (k,v) ->
       Option.may (fun set -> if set <> v then ignore (Varz.set_control k set)) (Arg.get k))
   | _ -> ()
   in

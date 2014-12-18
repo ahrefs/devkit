@@ -11,7 +11,7 @@ let with_readdir dirname = bracket (Unix.opendir dirname) Unix.closedir
 let iter_names dirname f =
   let rec loop path rel =
   with_readdir path (fun d ->
-    enum_dir d >>
+    enum_dir d |>
     Enum.iter (function
       | "." | ".." -> ()
       | name ->
@@ -33,7 +33,7 @@ let iter_names dirname f =
 let iter_names_q dirname f =
   let rec loop path rel =
   with_readdir path (fun d ->
-    enum_dir d >>
+    enum_dir d |>
     Enum.iter (function
       | "." | ".." -> ()
       | name ->

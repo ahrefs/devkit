@@ -11,8 +11,8 @@ module TimeLimited(E: sig type t end) = struct
 
   type key = Int64.t
 
-  let fixed f = 10000. *. f >> Int64.of_float
-  let current () = Unix.gettimeofday () >> fixed
+  let fixed f = 10000. *. f |> Int64.of_float
+  let current () = Unix.gettimeofday () |> fixed
 
   module Value = struct
     type t = key * E.t
@@ -42,7 +42,7 @@ module TimeLimited(E: sig type t end) = struct
 
   let get t key =
     let found = locked t.mutex (fun () -> M.filter (on_key key) t.m) in
-    try M.choose found >> snd >> some with Not_found -> None
+    try M.choose found |> snd |> some with Not_found -> None
 
   let count t = locked t.mutex (fun () -> M.cardinal t.m)
 
@@ -65,8 +65,8 @@ module TimeLimited2(E: Set.OrderedType)
 
   type time = Int64.t
 
-  let fixed f = 10000. *. f >> Int64.of_float
-  let current () = Unix.gettimeofday () >> fixed
+  let fixed f = 10000. *. f |> Int64.of_float
+  let current () = Unix.gettimeofday () |> fixed
 
   module Value = struct
     type t = E.t * time
@@ -95,7 +95,7 @@ module TimeLimited2(E: Set.OrderedType)
   let get t v =
     (* lock is not needed *)
     let found = Lock.locked t.lock (fun () -> M.filter (fun (x,_) -> 0 = E.compare x v) t.m) in
-    try M.choose found >> some with Not_found -> None
+    try M.choose found |> some with Not_found -> None
 
   let count t = Lock.locked t.lock (fun () -> M.cardinal t.m)
 
@@ -190,17 +190,17 @@ end = struct
   let enum t = enum t
   let iter t k = iter k t
   let fold t f acc = Hashtbl.fold f t acc
-  let count t k = Option.default 0 & Hashtbl.find_option t k
+  let count t k = Option.default 0 @@ Hashtbl.find_option t k
   let count_all t = Hashtbl.fold (fun _ n acc -> acc + n) t 0
   let size = Hashtbl.length
-  let show t ?(sep=" ") f = enum t >>
-    List.of_enum >> List.sort ~cmp:(Action.compare_by fst) >>
-    List.map (fun (x,n) -> sprintf "%S: %u" (f x) n) >>
+  let show t ?(sep=" ") f = enum t |>
+    List.of_enum |> List.sort ~cmp:(Action.compare_by fst) |>
+    List.map (fun (x,n) -> sprintf "%S: %u" (f x) n) |>
     String.concat sep
-  let show_sorted t ?limit ?(sep="\n") f = enum t >>
-    List.of_enum >> List.sort ~cmp:(flip & Action.compare_by snd) >>
-    (match limit with None -> id | Some n -> List.take n) >>
-    List.map (fun (x,n) -> sprintf "%6d : %S" n (f x)) >>
+  let show_sorted t ?limit ?(sep="\n") f = enum t |>
+    List.of_enum |> List.sort ~cmp:(flip @@ Action.compare_by snd) |>
+    (match limit with None -> id | Some n -> List.take n) |>
+    List.map (fun (x,n) -> sprintf "%6d : %S" n (f x)) |>
     String.concat sep
   let stats t ?(cmp=compare) f =
     if Hashtbl.length t = 0 then
@@ -232,7 +232,7 @@ end = struct
       let limits = Array.init 10 (fun i -> total * (i + 1) / 10) in
       let cmp (x,_) (y,_) = compare (x:float) y in
       Array.sort cmp a;
-      let distrib = limits >> Array.map begin fun limit ->
+      let distrib = limits |> Array.map begin fun limit ->
         let (v,_) = Array.fold_left begin fun (found,sum) (v,n) ->
           let sum = sum + n in
           if found = None && limit <= sum then Some v, sum else (found,sum)
@@ -244,7 +244,7 @@ end = struct
       in
       distrib
   let show_distrib ?(sep="\n") t =
-    distrib t >> Array.mapi (fun i v -> sprintf "%d%% <= %f" ((i + 1) * 10) v) >> Array.to_list >> String.concat sep
+    distrib t |> Array.mapi (fun i v -> sprintf "%d%% <= %f" ((i + 1) * 10) v) |> Array.to_list |> String.concat sep
   let report t ?limit ?cmp ?(sep="\n") f =
     let data = show_sorted t ?limit ~sep f in
     let stats = stats t ?cmp f in

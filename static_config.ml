@@ -14,7 +14,7 @@ end = struct
 type t = string
 let make s =
   let open Stre.ASCII in
-  if s <> "" && is_alpha s.[0] && (List.for_all (fun c -> c = '_' || is_alnum c) & String.explode s) then
+  if s <> "" && is_alpha s.[0] && (List.for_all (fun c -> c = '_' || is_alnum c) @@ String.explode s) then
     s
   else
     fail "bad label %S" s
@@ -91,7 +91,7 @@ let read root s =
     | x::xs -> loop (Hashtbl.find g.groups x) xs
     | [] -> fail "bad key %S" k
     in
-    let o = loop root (List.map Label.make & Stre.nsplitc k '.') in
+    let o = loop root (List.map Label.make @@ Stre.nsplitc k '.') in
     o#load v
   in
   let store k v =
