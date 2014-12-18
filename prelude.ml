@@ -9,9 +9,7 @@ let ($) f g = fun x -> f (g x)
 let ($$) f g = fun x y -> f (g x) (g y)
 let (!!) = Lazy.force
 
-(** @deprecated in favor of [|>] *)
 let (>>) = (|>)
-(** @deprecated in favor of [\@\@] *)
 let (&) = (@@)
 
 external id : 'a -> 'a = "%identity"
