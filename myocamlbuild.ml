@@ -3,12 +3,6 @@ open Command
 open Printf
 ;;
 
-let dversion =
-  if Sys.ocaml_version >= "4.01" then Some "-DOCAML401"
-  else if Sys.ocaml_version >= "4.00" then Some "-DOCAML400"
-  else None
-;;
-
 dispatch begin function
 | After_rules ->
 
@@ -23,11 +17,9 @@ dispatch begin function
     flag ["thread"; "doc"; "ocaml"] (S[A"-thread"]);
     flag ["thread"; "link"; "ocaml"] (S[A"-thread"]);
 
-    begin match dversion with
-    | Some define -> flag ["ocaml"; "compile"; "dversion"] (S[A"-ppopt"; A define]);
-    | None -> ()
-    end;
+(*     flag ["ocaml"; "compile"; "dversion"] (S[A"-ppopt"; A dversion]); *)
 
+    flag ["ocaml"; "infer_interface"; "syntax_camlp4o"] (S[A"-syntax"; A"camlp4o"]);
     flag ["ocaml"; "compile"; "syntax_camlp4o"] (S[A"-syntax"; A"camlp4o"]);
     flag ["ocaml"; "ocamldep"; "syntax_camlp4o"] (S[A"-syntax"; A"camlp4o"]);
     flag ["ocaml"; "doc"; "syntax_camlp4o"] (S[A"-syntax"; A"camlp4o"]);

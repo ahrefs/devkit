@@ -9,7 +9,7 @@ true: bin_annot, annot, debug, thread, package(threads), warn_A, warn_e, warn(-3
 <gzip_*.ml>: package(zip)
 "varz_html.ml" or "netcgi_ext.ml" or "httpev.ml": package(tyxml)
 "httpev.ml": package(event), package(netstring), syntax_camlp4o, package(camlp4.macro), package(lwt.syntax)
-"prelude.ml": syntax_camlp4o, package(camlp4.macro), dversion
+#"prelude.ml": syntax_camlp4o, package(camlp4.macro), dversion
 "async.ml" or "nix.ml" or "parallel.ml" or "parallel.mli" or "signal.ml" or "test_httpev.ml": package(event)
 <*.{top,byte,native}>: package(extlib), package(pcre), package(zip), package(event), package(curl), package(netstring),\
   package(extunix), package(netcgi2), package(tyxml), package(xmlm), package(lwt.unix), package(bytes)
