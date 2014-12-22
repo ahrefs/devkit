@@ -17,13 +17,13 @@ gen: devkit_ragel.ml
 build: lib top build-test
 
 lib:
-		$(OCAMLBUILD) devkit.cma devkit.cmxa
+		$(OCAMLBUILD) $(BUILDFLAGS) devkit.cma devkit.cmxa
 
 top:
-		$(OCAMLBUILD) devkit.top
+		$(OCAMLBUILD) $(BUILDFLAGS) devkit.top
 
 build-test:
-		$(OCAMLBUILD) test.byte test.native
+		$(OCAMLBUILD) $(BUILDFLAGS) test.byte test.native
 
 test: build-test
 		_build/test.native

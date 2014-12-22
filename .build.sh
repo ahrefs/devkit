@@ -12,4 +12,4 @@ opam uninstall devkit
 opam upgrade
 opam install --deps-only devkit
 
-make distclean lib test
+make BUILDFLAGS="-tag warn_error_A" distclean lib test
