@@ -24,6 +24,7 @@ let timely_counter period f =
 
 let catmap ?(sep="") f l = String.concat sep (List.map f l)
 let strl f l = sprintf "[%s]" @@ catmap ~sep:";" f l
+let stra f a = sprintf "[|%s|]" @@ catmap ~sep:";" f @@ Array.to_list a
 
 let uniq p e =
   let h = Hashtbl.create 16 in
