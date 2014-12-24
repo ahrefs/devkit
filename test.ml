@@ -305,6 +305,23 @@ let () = test "Action.stable_partition" begin fun () ->
   done;
 end
 
+let () = test "Action.chunk" begin fun () ->
+  let t l n result =
+    let open Action in
+    let printer = strl (strl string_of_int) in
+    assert_equal ~msg:(sprintf "chunk %d" n) ~printer result (List.map List.rev @@ chunk n l);
+    assert_equal ~msg:(sprintf "chunk_a %d" n) ~printer result (List.map Array.to_list @@ chunk_a n @@ Array.of_list l);
+  in
+  t [] 1 [];
+  t [] 2 [];
+  t [] 3 [];
+  t [1] 1 [[1]];
+  t [1;2;3] 2 [[1;2];[3]];
+  t [1;2;3;4;5;6;7;8] 3 [[1;2;3];[4;5;6];[7;8]];
+  t [1;2;3;4;5;6] 3 [[1;2;3];[4;5;6]];
+  t [1;1;1;2;2;2;3;3;3;4;4;4;5;5;6;6] 6 [[1;1;1;2;2;2];[3;3;3;4;4;4];[5;5;6;6]];
+end
+
 let () = test "Enum.align" begin fun () ->
   let e1 = List.enum [1;3;6;] in
   let e2 = List.enum [2;4;5;7;8;] in

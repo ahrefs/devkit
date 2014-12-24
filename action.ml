@@ -173,7 +173,8 @@ let binary_search' arr cmp x =
 
 let binary_search a b c = Option.is_some @@ binary_search' a b c
 
-(* hm FIXME? *)
+(** [chunk n l] splits list [l] into chunks of [n] elements each (except the last which can be shorter).
+  NB the order in result is not specified FIXME? *)
 let chunk n l =
   assert (n > 0);
   let chunks = ref [] in
@@ -191,7 +192,8 @@ let chunk n l =
   in
   loop (List.enum l)
 
-(** [chunk_e e n] splits [e] into chunks of [n] elements each (except the last which can be shorter) *)
+(** [chunk_e n e] splits enum [e] into chunks of [n] elements each (except the last which can be shorter).
+  NB the order in result is not specified *)
 let chunk_e n e =
   assert (n > 0);
   let fin () = raise Enum.No_more_elements in
@@ -201,6 +203,15 @@ let chunk_e n e =
     Enum.from (fun () -> match !i with
       | 0 -> fin ()
       | _ -> decr i; match Enum.get e with None -> fin () | Some x -> x))
+
+(** [chunk_a n a] splits array [a] into chunks of [n] elements each (except the last which can be shorter), preserving
+  the order of elements, i.e. reverse operation is [Array.concat] *)
+let chunk_a n a =
+  assert (n > 0);
+  let chunks = Array.length a / n in
+  let last_n = Array.length a mod n in
+  let last = if last_n = 0 then 0 else 1 in
+  List.init (chunks + last) (fun i -> Array.sub a (i*n) (if i = chunks then last_n else n))
 
 (* FIXME *)
 
