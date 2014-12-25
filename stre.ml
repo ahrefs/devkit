@@ -164,3 +164,15 @@ let shorten limit s =
   else
     let limit = limit - 20 in
     Printf.sprintf "%s..[+%d bytes]..%s" (String.slice ~last:limit s) (String.length s - limit - 4) (String.slice ~first:(-4) s)
+
+let array_concat sep a =
+  match a with
+  | [||] -> ""
+  | _ ->
+    let b = Buffer.create ((String.length a.(0) + String.length sep) * Array.length a) in
+    Buffer.add_string b a.(0);
+    for i = 1 to Array.length a - 1 do
+      Buffer.add_string b sep;
+      Buffer.add_string b a.(i);
+    done;
+    Buffer.contents b
