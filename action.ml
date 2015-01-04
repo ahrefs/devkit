@@ -449,7 +449,7 @@ let random_bytes n = String.init n (fun _ -> Char.chr (Random.int 256))
 let random_ascii n = String.init n (fun _ -> Char.chr (Char.code '!' + Random.int (Char.code '~' - Char.code '!' + 1)))
 
 (** Parse memory size specification, accepts: MB KB 1MB 20gb *)
-let parse_byte_units s =
+let parse_bytes_unit s =
   let unit_of_string s =
     match Stre.drop_suffix (String.lowercase s) "b" with
     | "" -> 1
@@ -467,8 +467,8 @@ let parse_byte_units s =
       with
         exn -> Exn.fail ~exn "parse_unit: %S" s
 
-(** Pretty-print memory size in a way that can be parsed back by [parse_byte_units] *)
-let show_byte_units =
+(** Pretty-print memory size in a way that can be parsed back by [parse_bytes_unit] *)
+let show_bytes_unit =
   let rec loop n l =
     match l with
     | [] -> raise Not_found
