@@ -215,6 +215,7 @@ let chunk_a n a =
 
 (* FIXME *)
 
+(** short human-readable display for memory measures *)
 let bytes_string_f f = (* oh ugly *)
   let a = abs_float f in
   if a < 1024. then sprintf "%dB" (int_of_float f) else
@@ -446,3 +447,38 @@ let thread_run_periodic ~delay ?(now=false) f =
 
 let random_bytes n = String.init n (fun _ -> Char.chr (Random.int 256))
 let random_ascii n = String.init n (fun _ -> Char.chr (Char.code '!' + Random.int (Char.code '~' - Char.code '!' + 1)))
+
+(** Parse memory size specification, accepts: MB KB 1MB 20gb *)
+let parse_byte_units s =
+  let unit_of_string s =
+    match Stre.drop_suffix (String.lowercase s) "b" with
+    | "" -> 1
+    | "k" -> 1024
+    | "m" -> 1024 * 1024
+    | "g" -> 1024 * 1024 * 1024
+    | _ -> raise Not_found
+  in
+  try
+    unit_of_string s
+  with
+    Not_found ->
+      try
+        Scanf.sscanf s "%d%s%!" (fun n t -> assert (n <> 0); n * unit_of_string t)
+      with
+        exn -> Exn.fail ~exn "parse_unit: %S" s
+
+(** Pretty-print memory size in a way that can be parsed back by [parse_byte_units] *)
+let show_byte_units =
+  let rec loop n l =
+    match l with
+    | [] -> raise Not_found
+    | _::xs when n mod 1024 = 0 -> loop (n / 1024) xs
+    | x::_ when n = 1 -> sprintf "%sB" x
+    | x::_ -> sprintf "%d%s" n x
+  in
+  fun n ->
+    try
+      assert (n <> 0);
+      loop n ["";"K";"M";"G"]
+    with
+      exn -> Exn.fail ~exn "unparse_unit %d" n
