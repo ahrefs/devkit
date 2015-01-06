@@ -624,6 +624,7 @@ type http_action =
 | `POST of (string * string) (** content-type and body *)
 | `PUT of (string * string)
 | `DELETE
+| `CUSTOM of (string * string * string) (** request, content-type and body *)
 ]
 
 (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
@@ -643,20 +644,23 @@ let http_do ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (action:
     | `POST (ct,body) -> post h ct body
     | `PUT (ct,body) -> post ~req:"PUT" h ct body
     | `POST_FORM args -> post h "application/x-www-form-urlencoded" (make_url_args args)
+    | `CUSTOM (req,ct,body) -> post ~req h ct body
     end;
     if http_1_0 then set_httpversion h HTTP_VERSION_1_0;
     Option.may (set_timeout h) timeout;
     let () = setup h in
     ()
   in
-  if verbose then
-    begin match action with
+  if verbose then begin
+    let log_verb req ct body = log #info "%s %s %s %s" req url ct (Stre.shorten 64 body) in
+    match action with
     | `GET -> log #info "GET %s" url
     | `DELETE -> log #info "DELETE %s" url
-    | `POST (ct,body) -> log #info "POST %s %s %s" url ct (Stre.shorten 64 body)
-    | `PUT (ct,body) -> log #info "PUT %s %s %s" url ct (Stre.shorten 64 body)
+    | `POST (ct,body) -> log_verb "POST" ct body
+    | `PUT (ct,body) -> log_verb "PUT" ct body
     | `POST_FORM l -> log #info "POST %s %s" url (String.concat " " @@ List.map (fun (k,v) -> sprintf "%s=%S" k (Stre.shorten 64 v)) l)
-    end;
+    | `CUSTOM (req,ct,body) -> log_verb req ct body
+  end;
   match http_gets ~setup url with
   | `Ok (code, s) when code / 100 = 2 -> `Ok s
   | `Error code -> `Error (sprintf "(%d) %s" (errno code) (strerror code))
