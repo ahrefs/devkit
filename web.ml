@@ -618,7 +618,7 @@ let http_gets ?(setup=ignore) ?(check=(fun _ -> true)) ?(result=(fun _ _ -> ()))
       `Error code
   end
 
-type http_action =
+type http_action_old =
 [ `GET
 | `POST_FORM of (string * string) list
 | `POST of (string * string) (** content-type and body *)
@@ -627,8 +627,20 @@ type http_action =
 | `CUSTOM of (string * string * string) (** request, content-type and body *)
 ]
 
+type http_body =
+[ `Raw of string * string (** content-type and body *)
+| `Form of (string * string) list (* key value *)
+]
+
+type http_action =
+[ `GET
+| `POST
+| `PUT
+| `DELETE
+]
+
 (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
-let http_do ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (action:http_action) url =
+let http_do ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (action:http_action_old) url =
   let open Curl in
   let post ?req h ct body =
     set_post h true;
@@ -665,6 +677,52 @@ let http_do ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (action:
   | `Ok (code, s) when code / 100 = 2 -> `Ok s
   | `Error code -> `Error (sprintf "(%d) %s" (errno code) (strerror code))
   | `Ok (n, _) -> `Error (sprintf "http %d" n)
+
+(* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
+let http_request ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) ?body (action:http_action) url =
+  let open Curl in
+  let set_body h ct body =
+    set_httpheader h ["Content-Type: "^ct];
+    set_postfields h body;
+    set_postfieldsize h (String.length body)
+  in
+  let setup h =
+    begin match action with
+    | `GET -> ()
+    | `DELETE -> set_customrequest h "DELETE"
+    | `POST -> set_post h true
+    | `PUT -> set_post h true; set_customrequest h "PUT"
+    end;
+    begin match body with
+    | Some (`Form args) -> set_body h "application/x-www-form-urlencoded" (make_url_args args)
+    | Some (`Raw (ct,body)) -> set_body h ct body
+    | None -> ()
+    end;
+    if http_1_0 then set_httpversion h HTTP_VERSION_1_0;
+    Option.may (set_timeout h) timeout;
+    let () = setup h in
+    ()
+  in
+  if verbose then begin
+    let action = match action with `GET -> "GET" | `DELETE -> "DELETE" | `POST -> "POST" | `PUT -> "PUT" in
+    let body = match body with
+    | None -> ""
+    | Some (`Form args) -> String.concat " " @@ List.map (fun (k,v) -> sprintf "%s=%S" k (Stre.shorten 64 v)) args
+    | Some (`Raw (ct,body)) -> sprintf "%s %s" ct (Stre.shorten 64 body)
+    in
+    log #info "%s %s %s" action url body
+  end;
+  match http_gets ~setup url with
+  | `Ok (code, s) when code / 100 = 2 -> `Ok s
+  | `Error code -> `Error (sprintf "(%d) %s" (errno code) (strerror code))
+  | `Ok (n, _) -> `Error (sprintf "http %d" n)
+
+let http_query ?timeout ?verbose ?setup ?http_1_0 ?body (action:http_action) url =
+  let body = match body with Some (ct,s) -> Some (`Raw (ct,s)) | None -> None in
+  http_request ?timeout ?verbose ?setup ?http_1_0 ?body action url
+
+let http_submit ?timeout ?verbose ?setup ?http_1_0 ?(action=`POST) url args =
+  http_request ?timeout ?verbose ?setup ?http_1_0 ~body:(`Form args) action url
 
 (* http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html *)
 let string_of_http_code = function
