@@ -8,11 +8,18 @@ open Control
 
 let log = Log.self
 
+(** do not use *)
 let get_host = String.lowercase $ Neturl.url_host $ Neturl.parse_url
+
+(** percent-encode (convert space into %20) *)
 let rawurlencode = Netencoding.Url.encode ~plus:false
+(** percent-encode, but convert space into plus, not %20 *)
 let urlencode = Netencoding.Url.encode ~plus:true
+(** percent-decode (leave plus as is) *)
 let rawurldecode s = try Netencoding.Url.decode ~plus:false s with _ -> s
+(** percent-decode and convert plus into space *)
 let urldecode s = try Netencoding.Url.decode ~plus:true s with _ -> s
+
 let htmlencode = Netencoding.Html.encode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
 let htmldecode = Netencoding.Html.decode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
 let make_url_args = String.concat "&" $ List.map (fun (k, v) -> k ^ "=" ^ urlencode v)
