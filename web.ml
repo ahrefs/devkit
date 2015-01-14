@@ -11,7 +11,7 @@ let log = Log.self
 let get_host = String.lowercase $ Neturl.url_host $ Neturl.parse_url
 let rawurlencode = Netencoding.Url.encode ~plus:false
 let urlencode = Netencoding.Url.encode ~plus:true
-let urldecode s = try Netencoding.Url.decode s with _ -> s
+let urldecode ?plus s = try Netencoding.Url.decode ?plus s with _ -> s
 let htmlencode = Netencoding.Html.encode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
 let htmldecode = Netencoding.Html.decode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
 let make_url_args = String.concat "&" $ List.map (fun (k, v) -> k ^ "=" ^ urlencode v)
