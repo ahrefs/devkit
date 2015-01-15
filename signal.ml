@@ -61,3 +61,43 @@ let lwt_handle sigs f =
 
 let lwt_handle_exit = lwt_handle [Sys.sigterm; Sys.sigint]
 let lwt_handle_reload = lwt_handle [Sys.sighup]
+
+(** {2 generic registration} *)
+
+let install_sys signo f = Sys.set_signal signo (Sys.Signal_handle f)
+let install_libevent t signo f = handle t [signo] f
+let install_lwt signo f = lwt_handle [signo] (fun () -> f signo)
+
+let h = Hashtbl.create 10
+let verbose = ref false
+let do_install = ref install_sys
+
+let set sigs f =
+  List.iter (fun signo -> Hashtbl.replace h signo f; !do_install signo f) sigs
+
+let reinstall () = Hashtbl.iter !do_install h
+
+let wrap name f =
+  begin fun n ->
+    if !verbose then log #info "Received signal %i (%s)..." n name;
+    (try f () with exn -> if !verbose then log #warn ~exn "Signal handler failed");
+    if !verbose then log #info "Signal handler done.";
+  end
+
+let set_exit f = set [Sys.sigterm; Sys.sigint] (wrap "exit" f)
+let set_reload f = set [Sys.sighup] (wrap "reload" f)
+
+let setup_sys () =
+  verbose := false; (* potential deadlock *)
+  do_install := install_sys;
+  reinstall ()
+
+let setup_libevent t =
+  verbose := true;
+  do_install := (install_libevent t);
+  reinstall ()
+
+let setup_lwt () =
+  verbose := true;
+  do_install := install_lwt;
+  reinstall ()
