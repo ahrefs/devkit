@@ -56,8 +56,14 @@ let handle_reload t f = handle t [Sys.sighup]
 
 (** {2 Lwt} *)
 
+let h_lwt = Hashtbl.create 10
+
 let lwt_handle sigs f =
-  sigs |> List.iter (fun signo -> let (_:Lwt_unix.signal_handler_id) = Lwt_unix.on_signal signo (fun (_:int) -> f ()) in ())
+  sigs |> List.iter begin fun signo ->
+    Option.may Lwt_unix.disable_signal_handler @@ Hashtbl.find_option h_lwt signo;
+    let sig_id = Lwt_unix.on_signal signo (fun (_:int) -> f ()) in
+    Hashtbl.replace h_lwt signo sig_id
+  end
 
 let lwt_handle_exit = lwt_handle [Sys.sigterm; Sys.sigint]
 let lwt_handle_reload = lwt_handle [Sys.sighup]
