@@ -40,10 +40,13 @@ type t
 val create : (task -> result) -> int -> t
 (** [perform workers tasks f] distributes [tasks] to all [workers] in parallel,
     collecting results with [f] and returns when all [tasks] are finished *)
-val perform : t -> task Enum.t -> (result -> unit) -> unit
+val perform : t -> ?autoexit:bool -> task Enum.t -> (result -> unit) -> unit
 (** [stop ?wait workers] kills worker processes with SIGTERM
   is [wait] is specified it will wait for at most [wait] seconds before killing with SIGKILL,
-  otherwise it will wait indefinitely *)
+  otherwise it will wait indefinitely
+  @param autoexit determines whether workers will exit once there are no more tasks, it means [perform] shouldn't be called again
+    for this instance
+*)
 val stop : ?wait:int -> t -> unit
 end
 

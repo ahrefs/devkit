@@ -15,7 +15,7 @@ type task
 type result
 type t
 val create : (task -> result) -> int -> t
-val perform : t -> task Enum.t -> (result -> unit) -> unit
+val perform : t -> ?autoexit:bool -> task Enum.t -> (result -> unit) -> unit
 val stop : ?wait:int -> t -> unit
 end
 
@@ -40,7 +40,7 @@ let create f n =
   done;
   qi,qo,n
 
-let perform (qi,qo,n) e f =
+let perform (qi,qo,n) ?autoexit:_ e f =
   let active = ref 0 in
   for i = 1 to n do
     match Enum.get e with
@@ -63,7 +63,7 @@ struct
 
 type task = T.task
 type result = T.result
-type instance = { cin : in_channel; cout : out_channel; pid : int; }
+type instance = { mutable ch : (in_channel * out_channel) option; pid : int; }
 type t = { mutable running : instance list; execute : (task -> result); mutable alive : bool; mutable gone : int; }
 
 let worker (execute : task -> result) =
@@ -100,13 +100,18 @@ let worker (execute : task -> result) =
       Unix.close child_read; Unix.close child_write;
       let cout = Unix.out_channel_of_descr main_write in
       let cin = Unix.in_channel_of_descr main_read in
-      { cin; cout; pid; }
+      { ch = Some (cin, cout); pid; }
 
 let create execute n =
   let running = List.init n (fun _ -> worker execute) in
   { running; execute; alive=true; gone=0; }
 
 open Unix
+
+let close_ch w =
+  match w.ch with
+  | Some (cin,cout) -> w.ch <- None; close_in_noerr cin; close_out_noerr cout
+  | None -> ()
 
 let stop ?wait t =
   let reap l =
@@ -134,49 +139,57 @@ let stop ?wait t =
   in
   log #info "Stopping %d workers%s" (List.length t.running) (gone ());
   t.alive <- false;
-  let l = t.running |> List.map (fun {cin;cout;pid;} -> close_in_noerr cin; close_out_noerr cout; pid) in
+  let l = t.running |> List.map (fun w -> close_ch w; w.pid) in
   Nix.sleep 0.1; (* let idle workers detect EOF and exit peacefully (frequent io-in-signal-handler deadlock problem) *)
   l |> List.iter begin fun pid ->
     try kill pid Sys.sigterm with exn -> log #warn ~exn "Worker PID %d lost (SIGTERM)" pid
   end;
+  t.running <- [];
   reap_loop wait l
 
-let perform t e finish =
+let perform t ?(autoexit=false) e finish =
     match t.running with
     | [] -> Enum.iter (fun x -> finish (t.execute x)) e (* no workers *)
     | _ ->
       let workers = ref 0 in
       t.running |> List.iter begin fun w ->
+        match w.ch with
+        | None -> ()
+        | Some (_,cout) ->
         match Enum.get e with
         | None -> ()
-        | Some x -> incr workers; Marshal.to_channel w.cout (x : task) []; flush w.cout
+        | Some x -> incr workers; Marshal.to_channel cout (x : task) []; flush cout
       end;
 (*       Printf.printf "workers %u\n%!" !workers; *)
       while !workers > 0 && t.alive do
-        let fds = List.map (fun w -> Unix.descr_of_in_channel w.cin) t.running in
+        let fds = List.filter_map (function {ch=Some (cin,_); _} -> Some (Unix.descr_of_in_channel cin) | _ -> None) t.running in
         let (r,_,err) = Nix.restart (fun () -> Unix.select fds [] fds (-1.)) () in
         assert (err = []);
-        let channels = List.map (fun fd -> List.find (fun w -> Unix.descr_of_in_channel w.cin = fd) t.running) r in
+        let channels = r |> List.map (fun fd ->
+          t.running |> List.find (function {ch=Some (cin,_); _} -> Unix.descr_of_in_channel cin = fd | _ -> false))
+        in
         let answers = List.filter_map (fun w ->
+          match w.ch with
+          | None -> None
+          | Some (cin,cout) ->
           let task = Enum.get e in
           try
-            match try Some (Marshal.from_channel w.cin : result) with End_of_file -> None with
+            match try Some (Marshal.from_channel cin : result) with End_of_file -> None with
             | None ->
               log #warn "PID %d gone, what now?" w.pid;
               t.gone <- t.gone + 1;
               decr workers;
-              let fd = Unix.descr_of_in_channel w.cin in
-              (* close and forget pipes of a dead child, do not reap zombie so that premature exit is visible in process list *)
-              t.running <- List.filter (fun w ->
-                if Unix.descr_of_in_channel w.cin = fd
-                then begin close_in_noerr w.cin; close_out_noerr w.cout; false end
-                else true) t.running;
+              (* close pipes and forget dead child, do not reap zombie so that premature exit is visible in process list *)
+              close_ch w;
+              t.running <- List.filter (fun w' -> w'.pid <> w.pid) t.running;
               None
             | Some answer ->
             begin match task with
-            | None -> decr workers
+            | None ->
+              if autoexit then close_ch w;
+              decr workers
             | Some x ->
-              Marshal.to_channel w.cout (x : task) []; flush w.cout;
+              Marshal.to_channel cout (x : task) []; flush cout;
             end;
             Some answer
           with
@@ -317,7 +330,7 @@ let run_forks ?wait ?workers (type t) (f : t -> unit) l =
   in
   let proc = W.create worker (match workers with Some n -> assert (n > 0); n | None -> List.length l) in
   Nix.handle_sig_exit_with ~exit:true (fun () -> W.stop ?wait proc); (* FIXME: output in signal handler *)
-  W.perform proc (List.enum l) id;
+  W.perform ~autoexit:true proc (List.enum l) id;
   W.stop proc
 
 let run_forks' f l =
