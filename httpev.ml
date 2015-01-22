@@ -631,7 +631,19 @@ let () =
   mimic {!Netcgi_ext} interface
 *)
 
-module Args(T : sig val req : request end) =
+module Args(T : sig val req : request end) : sig
+  exception Bad of string
+  val get : string -> string option
+  (** Get optional parameter. @return None if parameter is missing *)
+  val str : string -> string
+  (** Get required parameter. @raise Bad if parameter is missing *)
+  val get_int : string -> int option
+  (** Get optional integer parameter *)
+  val int : ?default:int -> string -> int
+  (** Get integer parameter. @raise Bad if parameter is missing and no [default] provided *)
+  val array : string -> string list
+  (** @param name array name without brackets e.g. [array "x"] to extract [x] from /request?x[]=1&x[]=2 *)
+end =
 struct
   let arg name = List.assoc name T.req.args
   exception Bad of string
@@ -643,9 +655,6 @@ struct
     | None, None -> raise (Bad name)
     | None, Some n -> n
     | Some s, _ -> try int_of_string s with _ -> raise (Bad name)
-  (**
-    @param name array name without brackets e.g. [array "x"] to extract [x] from /request?x[]=1&x[]=2
-  *)
   let array name =
     let name = name ^ "[]" in
     T.req.args |> List.filter (fun (name',_) -> name = name') |> List.map snd
