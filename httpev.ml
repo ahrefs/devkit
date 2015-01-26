@@ -635,12 +635,14 @@ module Args(T : sig val req : request end) : sig
   exception Bad of string
   val get : string -> string option
   (** Get optional parameter. @return None if parameter is missing *)
-  val str : string -> string
-  (** Get required parameter. @raise Bad if parameter is missing *)
+  val str : ?default:string -> string -> string
+  (** Get required parameter. @raise Bad if parameter is missing and no [default] provided *)
   val get_int : string -> int option
   (** Get optional integer parameter *)
   val int : ?default:int -> string -> int
   (** Get integer parameter. @raise Bad if parameter is missing and no [default] provided *)
+  val float : ?default:float -> string -> float
+  val int64 : ?default:int64 -> string -> int64
   val array : string -> string list
   (** @param name array name without brackets e.g. [array "x"] to extract [x] from /request?x[]=1&x[]=2 *)
 end =
@@ -649,12 +651,15 @@ struct
   exception Bad of string
   let get = Exn.catch arg
   let get_int = Exn.catch (int_of_string $ arg)
-  let str name = match get name with Some s -> s | None -> raise (Bad name)
-  let int ?default name =
+  let make f ?default name =
     match get name, default with
     | None, None -> raise (Bad name)
-    | None, Some n -> n
-    | Some s, _ -> try int_of_string s with _ -> raise (Bad name)
+    | None, Some s -> s
+    | Some s, _ -> try f s with _ -> raise (Bad name)
+  let str = make id
+  let int64 = make Int64.of_string
+  let int = make int_of_string
+  let float = make float_of_string
   let array name =
     let name = name ^ "[]" in
     T.req.args |> List.filter (fun (name',_) -> name = name') |> List.map snd
