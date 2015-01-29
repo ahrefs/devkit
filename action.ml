@@ -360,7 +360,7 @@ let gc_settings () =
   let gc = Gc.get () in
   sprintf "minor %s incr %s major %d%% compact %d%% policy %d"
     (caml_words gc.Gc.minor_heap_size)
-    (caml_words gc.Gc.major_heap_increment)
+    (let n = gc.Gc.major_heap_increment in if n <= 1_000 then sprintf "%d%%" n else caml_words n)
     gc.Gc.space_overhead
     gc.Gc.max_overhead
     gc.Gc.allocation_policy
