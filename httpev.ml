@@ -841,6 +841,10 @@ let handle_client_lwt client cin answer =
 let handle_lwt fd k =
   while_lwt not !Daemon.should_exit do
     match_lwt Exn_lwt.map Lwt_unix.accept fd with
+    | `Exn (Unix.Unix_error (Unix.EMFILE,_,_)) ->
+      let pause = 2. in
+      log #error "too many open files, disabling accept for %s" (Time.duration_str pause);
+      Lwt_unix.sleep pause
     | `Exn exn -> log #warn ~exn "accept"; Lwt.return ()
     | `Ok (fd,addr as peer) ->
       let task =
