@@ -648,7 +648,7 @@ type http_action =
 ]
 
 (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
-let http_do ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (action:http_action_old) url =
+let http_do ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (action:http_action_old) url =
   let open Curl in
   let post ?req h ct body =
     set_post h true;
@@ -668,6 +668,7 @@ let http_do ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (action:
     end;
     if http_1_0 then set_httpversion h HTTP_VERSION_1_0;
     Option.may (set_timeout h) timeout;
+    Option.may (set_useragent h) ua;
     let () = setup h in
     ()
   in
@@ -687,7 +688,7 @@ let http_do ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (action:
   | `Ok (n, _) -> `Error (sprintf "http %d" n)
 
 (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
-let http_request ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) ?body (action:http_action) url =
+let http_request ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) ?body (action:http_action) url =
   let open Curl in
   let set_body h ct body =
     set_httpheader h ["Content-Type: "^ct];
@@ -708,6 +709,7 @@ let http_request ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) ?bo
     end;
     if http_1_0 then set_httpversion h HTTP_VERSION_1_0;
     Option.may (set_timeout h) timeout;
+    Option.may (set_useragent h) ua;
     let () = setup h in
     ()
   in
@@ -725,12 +727,12 @@ let http_request ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) ?bo
   | `Error code -> `Error (sprintf "(%d) %s" (errno code) (strerror code))
   | `Ok (n, _) -> `Error (sprintf "http %d" n)
 
-let http_query ?timeout ?verbose ?setup ?http_1_0 ?body (action:http_action) url =
+let http_query ?ua ?timeout ?verbose ?setup ?http_1_0 ?body (action:http_action) url =
   let body = match body with Some (ct,s) -> Some (`Raw (ct,s)) | None -> None in
-  http_request ?timeout ?verbose ?setup ?http_1_0 ?body action url
+  http_request ?ua ?timeout ?verbose ?setup ?http_1_0 ?body action url
 
-let http_submit ?timeout ?verbose ?setup ?http_1_0 ?(action=`POST) url args =
-  http_request ?timeout ?verbose ?setup ?http_1_0 ~body:(`Form args) action url
+let http_submit ?ua ?timeout ?verbose ?setup ?http_1_0 ?(action=`POST) url args =
+  http_request ?ua ?timeout ?verbose ?setup ?http_1_0 ~body:(`Form args) action url
 
 (* http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html *)
 let string_of_http_code = function
