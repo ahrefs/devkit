@@ -42,10 +42,10 @@ struct
   let proj_list = id
 end
 
-let cons x y = x :: y
 let (+=) a b = a := !a + b
 let (-=) a b = a := !a - b
 let tuck l x = l := x :: !l
+let cons l x = x :: l
 
 let round f =
   let bot = floor f in

@@ -50,8 +50,8 @@ sig
   val proj_list : t list -> T.t list
 end
 
-val cons : 'a -> 'a list -> 'a list
 val tuck : 'a list ref -> 'a -> unit
+val cons : 'a list -> 'a -> 'a list
 
 val ( += ) : int ref -> int -> unit
 val ( -= ) : int ref -> int -> unit
