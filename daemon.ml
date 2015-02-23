@@ -72,7 +72,7 @@ let manage () =
   end;
   Signal.set [Sys.sigpipe] ignore;
   Signal.set [Sys.sigusr1] (fun _ -> Log.reopen !logfile);
-  Signal.set [Sys.sigusr2] (fun _ -> U.malloc_stats (); Action.gc_show "compact" Gc.compact ());
+  Signal.set [Sys.sigusr2] (fun _ -> Memory.log_all_info (); Memory.reclaim ());
   Signal.set_exit (fun _ -> should_exit := true);
   Nix.raise_limits ();
   managed := true;
