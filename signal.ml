@@ -77,6 +77,7 @@ let install_lwt signo f = lwt_handle [signo] (fun () -> f signo)
 let h = Hashtbl.create 10
 let verbose = ref false
 let do_install = ref install_sys
+let is_safe_output () = !verbose
 
 let set sigs f =
   List.iter (fun signo -> Hashtbl.replace h signo f; !do_install signo f) sigs

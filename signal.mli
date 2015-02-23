@@ -23,6 +23,8 @@ val lwt_handle_reload : (unit -> unit) -> unit
 
 (** {2 generic registration} *)
 
+val is_safe_output : unit -> bool
+
 val set : int list -> (int -> unit) -> unit
 val set_exit : (unit -> unit) -> unit
 val set_reload : (unit -> unit) -> unit

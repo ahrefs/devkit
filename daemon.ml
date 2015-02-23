@@ -70,9 +70,23 @@ let manage () =
     log #info "run: %s" (String.concat " " (List.map quote (Array.to_list Sys.argv)));
     log #info "GC settings: %s" (Action.gc_settings ());
   end;
+  let unix_stderr s =
+    let s = Log.State.format_simple `Info log#facility s in
+    try
+      let (_:int) = Unix.write Unix.stderr s 0 (String.length s) in ()
+    with _ ->
+      () (* do not fail, can be ENOSPC *)
+  in
   Signal.set [Sys.sigpipe] ignore;
   Signal.set [Sys.sigusr1] (fun _ -> Log.reopen !logfile);
-  Signal.set [Sys.sigusr2] (fun _ -> Memory.log_all_info (); Memory.reclaim ());
+  Signal.set [Sys.sigusr2] begin fun _ ->
+    match Signal.is_safe_output () with
+    | true -> Memory.log_all_info (); Memory.reclaim ()
+    | false ->
+      (* output directly to fd to prevent deadlock, but breaks buffering *)
+      Memory.show_all_info () |> List.iter unix_stderr;
+      Memory.reclaim_s () |> unix_stderr
+  end;
   Signal.set_exit (fun _ -> should_exit := true);
   Nix.raise_limits ();
   managed := true;

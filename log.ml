@@ -210,6 +210,7 @@ method put : 'a. Logger.level -> 'a pr = fun level -> make (put_s level)
 method allow (level:Logger.level) = Logger.set_filter facil level
 method level : Logger.level = Logger.get_level facil
 method name = facil.Logger.name
+method facility : Logger.facil = facil
 end
 
 let from name = new logger (facility name)

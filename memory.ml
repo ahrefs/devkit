@@ -38,9 +38,13 @@ let show_gc_info () =
 let show_crt_info = ref (fun () -> "MALLOC: ?")
 let malloc_release = ref (ignore : unit -> unit)
 
-let show_all_info () = sprintf "%s\n%s. %s" (show_gc_info ()) (show_vm_info ()) (!show_crt_info ())
+let show_all_info () =
+  [
+    show_gc_info ();
+    sprintf "%s. %s" (show_vm_info ()) (!show_crt_info ())
+  ]
 
-let log_all_info () = log #info "%s" @@ show_all_info ()
+let log_all_info () = show_all_info () |> List.iter log#info_s
 
 let reclaim_s () =
   let open Gc in
