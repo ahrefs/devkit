@@ -4,3 +4,11 @@ description="devkit"
 requires="extlib,pcre,netstring,netsys,netcgi2,zip,tyxml,unix,threads,event,curl,curl.lwt,extunix,xmlm,lwt.unix,bytes"
 archive(mt,byte)="devkit.cma"
 archive(mt,native)="devkit.cmxa"
+
+package "gperftools" (
+  description = "gperftools support"
+  requires = "devkit,gperftools"
+  archive(mt,byte) = "devkit_gperftools.cma"
+  archive(mt,native) = "devkit_gperftools.cmxa"
+  exists_if = "devkit_gperftools.cma"
+)

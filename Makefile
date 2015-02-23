@@ -5,6 +5,7 @@ INSTALL_FILES=$(filter-out \
   _build/myocamlbuild% _build/test.cm%, \
   $(wildcard _build/*.cmx* _build/*.cmi _build/*.mli _build/*.ml _build/*.cma _build/*.cmt* \
 						 _build/*.lib _build/*.a _build/*.dll _build/*.so))
+
 OCAMLBUILD=ocamlbuild -use-ocamlfind -no-links -j 0
 
 target: build
@@ -16,8 +17,10 @@ gen: devkit_ragel.ml
 
 build: lib top build-test
 
+EXTRA_TARGETS := $(shell ocamlfind query gperftools -format "devkit_gperftools.cma devkit_gperftools.cmxa" 2> /dev/null)
+
 lib:
-		$(OCAMLBUILD) $(BUILDFLAGS) devkit.cma devkit.cmxa
+		$(OCAMLBUILD) $(BUILDFLAGS) devkit.cma devkit.cmxa $(EXTRA_TARGETS)
 
 top:
 		$(OCAMLBUILD) $(BUILDFLAGS) devkit.top
@@ -32,7 +35,7 @@ doc:
 		$(OCAMLBUILD) devkit.docdir/index.html
 
 install: lib
-		ocamlfind install -patch-version "$(shell git describe --always)" devkit META $(INSTALL_FILES)
+		ocamlfind install -patch-version "$(shell git describe --always)" devkit META $(sort $(INSTALL_FILES))
 
 uninstall:
 		ocamlfind remove devkit
