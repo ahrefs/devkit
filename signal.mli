@@ -25,10 +25,17 @@ val lwt_handle_reload : (unit -> unit) -> unit
 
 val is_safe_output : unit -> bool
 
+(** add signal handler for specified signals *)
 val set : int list -> (int -> unit) -> unit
 val set_exit : (unit -> unit) -> unit
 val set_reload : (unit -> unit) -> unit
 
+(** replace signal handler for specified signals *)
+val replace : int list -> (int -> unit) -> unit
+
+(** setup "standard" signal driver, deadlock-friendly, default *)
 val setup_sys : unit -> unit
+(** setup signals via libevent (signalfd), requires event loop *)
 val setup_libevent : t -> unit
+(** setup signals via lwt, requires {!Lwt_main.run} *)
 val setup_lwt : unit -> unit

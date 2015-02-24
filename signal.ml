@@ -80,7 +80,17 @@ let do_install = ref install_sys
 let is_safe_output () = !verbose
 
 let set sigs f =
-  List.iter (fun signo -> Hashtbl.replace h signo f; !do_install signo f) sigs
+  sigs |> List.iter begin fun signo ->
+    let f =
+      match Hashtbl.find_option h signo with
+      | None -> f
+      | Some g -> (fun n -> g n; f n)
+    in
+    Hashtbl.replace h signo f; !do_install signo f
+  end
+
+let replace sigs f =
+  sigs |> List.iter (fun signo -> Hashtbl.replace h signo f; !do_install signo f)
 
 let reinstall () = Hashtbl.iter !do_install h
 
