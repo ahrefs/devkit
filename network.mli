@@ -20,6 +20,7 @@ val cidr_of_string_exn : string -> ipv4_cidr
 val range_of_cidr : ipv4_cidr -> ipv4 * ipv4
 val prefix_of_cidr : ipv4_cidr -> ipv4
 val ipv4_matches : ipv4 -> ipv4_cidr -> bool
+val ipv4_special : ipv4 -> bool
 val special_cidr : ipv4_cidr list
 
 (** @return ip address of this machine on private network, with 127.0.0.1 as a fallback *)

@@ -70,6 +70,8 @@ let special_cidr = List.map cidr_of_string_exn [
   "255.255.255.255/32"; (* Broadcast	RFC 919 *)
 ]
 
+let ipv4_special ip = List.exists (ipv4_matches ip) special_cidr
+
 let private_network_ip () =
   (* RFC 1918 *)
   let private_net = List.map cidr_of_string_exn [ "10.0.0.0/8"; "172.16.0.0/12"; "192.168.0.0/16"; ] in
