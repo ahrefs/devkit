@@ -27,6 +27,7 @@ type config =
     name : string;
     max_request_size : int;
     auth : (string * string * string) option;
+    max_clients : int; (** limit on total number of requests in processing at any point of time *)
   }
 
 let default =
@@ -40,6 +41,7 @@ let default =
     name = "HTTP server";
     max_request_size = 16 * 1024;
     auth = None;
+    max_clients = 10_000;
   }
 
 include Httpev_common
@@ -49,6 +51,7 @@ type server = {
   mutable total : int;
   mutable active : int;
   mutable errors : int;
+  mutable reject : int;
   reqs : (int,request) Hashtbl.t;
   config : config;
   digest_auth : Digest_auth.t option;
@@ -72,6 +75,14 @@ type client = {
   mutable req : request_state;
   server : server;
 }
+
+let make_server_state config =
+  let digest_auth =
+    match config.auth with
+    | Some (realm,user,password) -> Some (Digest_auth.init ~realm ~user ~password ())
+    | None -> None
+  in
+  { total = 0; active = 0; errors = 0; reject = 0; reqs = Hashtbl.create 10; config; digest_auth; }
 
 let show_socket_error fd =
   try
@@ -583,21 +594,23 @@ let start_listen config =
   Tcp.listen ~name:config.name ~backlog:config.backlog config.ip config.port
 
 let setup_fd fd config answer =
-  let digest_auth =
-    match config.auth with
-    | Some (realm,user,password) -> Some (Digest_auth.init ~realm ~user ~password ())
-    | None -> None
-  in
-  let server = { total = 0; active = 0; errors = 0; reqs = Hashtbl.create 10; config; digest_auth; } in
+  let server = make_server_state config in
   Async.setup_periodic_timer_wait config.events (Time.minutes 1) (fun () -> check_hung_requests server);
-  Tcp.handle config.events fd (fun (fd,sockaddr) ->
+  Tcp.handle config.events fd begin fun (fd,sockaddr) ->
     INC server.total;
     let req_id = server.total in
-    INC server.active;
-    let client = { fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 1024); } in
-    Unix.set_nonblock fd;
-    if config.debug then log #info "accepted %s" (Nix.show_addr sockaddr);
-    handle_client client answer)
+    match server.active >= config.max_clients with
+    | true ->
+      INC server.reject;
+      if config.debug then log #info "rejected #%d %s" req_id (Nix.show_addr sockaddr);
+      teardown fd
+    | false ->
+      INC server.active;
+      let client = { fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 1024); } in
+      Unix.set_nonblock fd;
+      if config.debug then log #info "accepted #%d %s" req_id (Nix.show_addr sockaddr);
+      handle_client client answer
+  end
 
 let setup config answer =
   let fd = start_listen config in
@@ -859,12 +872,7 @@ let handle_lwt fd k =
   done
 
 let setup_fd_lwt fd config answer =
-  let digest_auth =
-    match config.auth with
-    | Some (realm,user,password) -> Some (Digest_auth.init ~realm ~user ~password ())
-    | None -> None
-  in
-  let server = { total = 0; active = 0; errors = 0; reqs = Hashtbl.create 10; config; digest_auth; } in
+  let server = make_server_state config in
   Lwt.ignore_result begin
     while_lwt true do
       lwt () = Lwt_unix.sleep @@ Time.minutes 1 in
@@ -873,14 +881,17 @@ let setup_fd_lwt fd config answer =
   end;
   handle_lwt fd begin fun (fd,sockaddr) ->
     INC server.total;
+    let req_id = server.total in
+    match server.active >= config.max_clients with
+    | true -> INC server.reject; if config.debug then log #info "rejected #%d %s" req_id (Nix.show_addr sockaddr); Lwt.return_unit
+    | false ->
     INC server.active;
     let error = lazy (INC server.errors) in
-    let req_id = server.total in
     let client =
       (* used only in show_socket_error *)
       { fd = Lwt_unix.unix_file_descr fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 0); }
     in
-    if config.debug then log #info "accepted %s" (Nix.show_addr sockaddr);
+    if config.debug then log #info "accepted #%d %s" req_id (Nix.show_addr sockaddr);
     let cin = Lwt_io.(of_fd ~close:Lwt.return ~mode:input fd) in
     let cout = Lwt_io.(of_fd ~close:Lwt.return ~mode:output fd) in
     lwt reply =
