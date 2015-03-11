@@ -58,7 +58,7 @@ let check_pidfile path =
   match probe_pidfile path with
   | `Missing -> () (* free to go *)
   | `Stale -> Log.self #info "removing stale pidfile"; Exn.suppress Sys.remove path
-  | `Alive -> Log.self #info "pid is alive, exiting"; exit 2
+  | `Alive -> Log.self #info "pid is alive, exiting"; exit 133
   | `Error exn -> Log.self #warn ~exn "wrong pid file, exiting"; exit 3
 
 let manage_pidfile path =
