@@ -10,6 +10,7 @@ val ipv4_of_string_exn : string -> ipv4
 val ipv4_of_string_null : string -> ipv4
 val ipv4_of_int32 : int32 -> ipv4
 val int32_of_ipv4 : ipv4 -> int32
+val is_ipv4_slow : string -> bool
 val is_ipv4 : string -> bool
 val ipv4_of_int : int -> ipv4
 val int_of_ipv4 : ipv4 -> int

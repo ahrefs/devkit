@@ -451,7 +451,6 @@ end (* Google *)
   let bing_html s' =
     let s = parse @@ Stream.of_string s' in
     let total = ref 0 in
-    let is_digit = function '0'..'9' -> true | _ -> false in
     begin try
       stream_find (tag "span" ~a:["class","sb_count"]) s;
       match Stream.next s with
@@ -461,7 +460,7 @@ end (* Google *)
         List.map String.strip |>
         List.filter (fun s -> s <> "") |>
         List.rev |>
-        List.dropwhile (fun s -> not (is_digit s.[0]))
+        List.dropwhile (fun s -> not (Stre.ASCII.is_digit s.[0]))
         in
         begin match l with
         | [] -> Exn.fail "no digits"
