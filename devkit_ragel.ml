@@ -3,25 +3,25 @@
 
 
 # 6 "devkit_ragel.ml"
-let _ipv4_trans_keys : int array = [|
+let _ipv4_trans_keys : int array = Array.concat [ [|
 	0; 0; 48; 57; 46; 57; 48; 57; 46; 57; 48; 57; 46; 57; 48; 57; 
 	46; 57; 46; 46; 46; 57; 46; 46; 46; 57; 46; 46; 48; 57; 48; 57; 
 	0; 0; 0
-|]
+|] ]
 
-let _ipv4_key_spans : int array = [|
+let _ipv4_key_spans : int array = Array.concat [ [|
 	0; 10; 12; 10; 12; 10; 12; 10; 
 	12; 1; 12; 1; 12; 1; 10; 10; 
 	0
-|]
+|] ]
 
-let _ipv4_index_offsets : int array = [|
+let _ipv4_index_offsets : int array = Array.concat [ [|
 	0; 0; 11; 24; 35; 48; 59; 72; 
 	83; 96; 98; 111; 113; 126; 128; 139; 
 	150
-|]
+|] ]
 
-let _ipv4_indicies : int array = [|
+let _ipv4_indicies : int array = Array.concat [ [|
 	0; 0; 0; 0; 0; 0; 0; 
 	0; 0; 0; 1; 2; 1; 3; 3; 
 	3; 3; 3; 3; 3; 3; 3; 3; 
@@ -42,23 +42,23 @@ let _ipv4_indicies : int array = [|
 	14; 14; 14; 1; 15; 15; 15; 15; 
 	15; 15; 15; 15; 15; 15; 1; 1; 
 	0
-|]
+|] ]
 
-let _ipv4_trans_targs : int array = [|
+let _ipv4_trans_targs : int array = Array.concat [ [|
 	2; 0; 3; 12; 4; 5; 10; 6; 
 	7; 8; 14; 9; 11; 13; 15; 16
-|]
+|] ]
 
-let _ipv4_trans_actions : int array = [|
+let _ipv4_trans_actions : int array = Array.concat [ [|
 	1; 0; 2; 3; 1; 4; 3; 1; 
 	5; 3; 1; 3; 3; 3; 3; 3
-|]
+|] ]
 
-let _ipv4_eof_actions : int array = [|
+let _ipv4_eof_actions : int array = Array.concat [ [|
 	0; 0; 0; 0; 0; 0; 0; 0; 
 	0; 0; 0; 0; 0; 0; 6; 6; 
 	6
-|]
+|] ]
 
 let ipv4_start : int = 1
 let ipv4_first_final : int = 14
@@ -177,7 +177,7 @@ and do_test_eof () =
 # 19 "devkit_ragel.ml.rl"
   if !cs >= ipv4_first_final then !ip else invalid_arg "parse_ipv4"
 
-let is_ipv4 data =
+let is_ipv4_slow data =
   let cs = ref 0 and p = ref 0 and pe = ref (String.length data) and eof = ref (String.length data) in
   let n = ref 0 in
   let set () = if !n > 255 then raise Not_found in
@@ -280,22 +280,153 @@ and do_test_eof () =
 
 
 # 283 "devkit_ragel.ml"
-let _compact_duration_trans_keys : int array = [|
+let _is_ipv4_trans_keys : int array = Array.concat [ [|
+	0; 0; 48; 57; 46; 57; 48; 57; 46; 57; 48; 57; 46; 57; 48; 57; 
+	46; 57; 46; 46; 46; 57; 46; 53; 46; 57; 46; 46; 46; 57; 46; 53; 
+	46; 57; 46; 46; 46; 57; 46; 53; 48; 57; 48; 57; 0; 0; 48; 57; 
+	48; 53; 0
+|] ]
+
+let _is_ipv4_key_spans : int array = Array.concat [ [|
+	0; 10; 12; 10; 12; 10; 12; 10; 
+	12; 1; 12; 8; 12; 1; 12; 8; 
+	12; 1; 12; 8; 10; 10; 0; 10; 
+	6
+|] ]
+
+let _is_ipv4_index_offsets : int array = Array.concat [ [|
+	0; 0; 11; 24; 35; 48; 59; 72; 
+	83; 96; 98; 111; 120; 133; 135; 148; 
+	157; 170; 172; 185; 194; 205; 216; 217; 
+	228
+|] ]
+
+let _is_ipv4_indicies : int array = Array.concat [ [|
+	0; 0; 2; 3; 3; 3; 3; 
+	3; 3; 3; 1; 4; 1; 3; 3; 
+	3; 3; 3; 3; 3; 3; 3; 3; 
+	1; 5; 5; 6; 7; 7; 7; 7; 
+	7; 7; 7; 1; 8; 1; 7; 7; 
+	7; 7; 7; 7; 7; 7; 7; 7; 
+	1; 9; 9; 10; 11; 11; 11; 11; 
+	11; 11; 11; 1; 12; 1; 11; 11; 
+	11; 11; 11; 11; 11; 11; 11; 11; 
+	1; 13; 13; 14; 15; 15; 15; 15; 
+	15; 15; 15; 1; 12; 1; 16; 16; 
+	16; 16; 16; 16; 16; 16; 16; 16; 
+	1; 12; 1; 12; 1; 11; 11; 11; 
+	11; 11; 17; 16; 16; 16; 16; 1; 
+	12; 1; 16; 16; 16; 16; 16; 16; 
+	1; 8; 1; 18; 18; 18; 18; 18; 
+	18; 18; 18; 18; 18; 1; 8; 1; 
+	8; 1; 7; 7; 7; 7; 7; 19; 
+	18; 18; 18; 18; 1; 8; 1; 18; 
+	18; 18; 18; 18; 18; 1; 4; 1; 
+	20; 20; 20; 20; 20; 20; 20; 20; 
+	20; 20; 1; 4; 1; 4; 1; 3; 
+	3; 3; 3; 3; 21; 20; 20; 20; 
+	20; 1; 4; 1; 20; 20; 20; 20; 
+	20; 20; 1; 15; 15; 15; 15; 15; 
+	15; 15; 15; 15; 15; 1; 22; 22; 
+	22; 22; 22; 22; 22; 22; 22; 22; 
+	1; 1; 15; 15; 15; 15; 15; 23; 
+	22; 22; 22; 22; 1; 22; 22; 22; 
+	22; 22; 22; 1; 0
+|] ]
+
+let _is_ipv4_trans_targs : int array = Array.concat [ [|
+	2; 0; 18; 16; 3; 4; 14; 12; 
+	5; 6; 10; 8; 7; 20; 23; 21; 
+	9; 11; 13; 15; 17; 19; 22; 24
+|] ]
+
+let is_ipv4_start : int = 1
+let is_ipv4_first_final : int = 20
+let is_ipv4_error : int = 0
+
+let is_ipv4_en_main : int = 1
+
+type _is_ipv4_state = { mutable keys : int; mutable trans : int; }
+exception Goto_match
+exception Goto_again
+exception Goto_eof_trans
+
+# 36 "devkit_ragel.ml.rl"
+
+
+let is_ipv4 data =
+  let cs = ref 0 and p = ref 0 and pe = ref (String.length data) in
+  
+# 361 "devkit_ragel.ml"
+	begin
+	cs.contents <- is_ipv4_start;
+	end;
+
+# 41 "devkit_ragel.ml.rl"
+  
+# 368 "devkit_ragel.ml"
+	begin
+	let state = { keys = 0; trans = 0; } in
+	let rec do_start () =
+	if p.contents = pe.contents then
+		do_test_eof ()
+	else
+	if cs.contents = 0 then
+		do_out ()
+	else
+	do_resume ()
+and do_resume () =
+	begin try
+	let keys = cs.contents lsl 1 in
+	let inds = _is_ipv4_index_offsets.(cs.contents) in
+
+	let slen = _is_ipv4_key_spans.(cs.contents) in
+	state.trans <- _is_ipv4_indicies.(inds + (
+		if slen > 0 && _is_ipv4_trans_keys.(keys) <= Char.code data.[p.contents] &&
+		Char.code data.[p.contents] <= _is_ipv4_trans_keys.(keys+1) then
+		Char.code data.[p.contents] - _is_ipv4_trans_keys.(keys) else slen));
+
+	with Goto_match -> () end;
+	do_eof_trans ()
+and do_eof_trans () =
+	cs.contents <- _is_ipv4_trans_targs.(state.trans);
+
+	do_again ()
+	and do_again () =
+	match cs.contents with
+	| 0 -> do_out ()
+	| _ ->
+	p.contents <- p.contents + 1;
+	if p.contents <> pe.contents then
+		do_resume ()
+	else do_test_eof ()
+and do_test_eof () =
+	()
+	and do_out () = ()
+	in do_start ()
+	end;
+
+# 42 "devkit_ragel.ml.rl"
+  !cs >= is_ipv4_first_final
+
+
+# 414 "devkit_ragel.ml"
+let _compact_duration_trans_keys : int array = Array.concat [ [|
 	0; 0; 48; 57; 46; 115; 48; 115; 48; 115; 48; 115; 115; 115; 0; 0; 
 	48; 57; 46; 115; 48; 57; 46; 115; 48; 57; 46; 115; 0
-|]
+|] ]
 
-let _compact_duration_key_spans : int array = [|
+let _compact_duration_key_spans : int array = Array.concat [ [|
 	0; 10; 70; 68; 68; 68; 1; 0; 
 	10; 70; 10; 70; 10; 70
-|]
+|] ]
 
-let _compact_duration_index_offsets : int array = [|
+let _compact_duration_index_offsets : int array = Array.concat [ [|
 	0; 0; 11; 82; 151; 220; 289; 291; 
 	292; 303; 374; 385; 456; 467
-|]
+|] ]
 
-let _compact_duration_indicies : int array = [|
+let _compact_duration_indicies : int array = Array.concat [ [|
 	0; 0; 0; 0; 0; 0; 0; 
 	0; 0; 0; 1; 2; 1; 3; 3; 
 	3; 3; 3; 3; 3; 3; 3; 3; 
@@ -364,24 +495,24 @@ let _compact_duration_indicies : int array = [|
 	1; 1; 1; 1; 1; 1; 1; 1; 
 	1; 1; 1; 1; 1; 1; 1; 1; 
 	1; 7; 1; 0
-|]
+|] ]
 
-let _compact_duration_trans_targs : int array = [|
+let _compact_duration_trans_targs : int array = Array.concat [ [|
 	2; 0; 3; 2; 8; 10; 12; 7; 
 	4; 7; 5; 6; 9; 9; 11; 11; 
 	13; 13
-|]
+|] ]
 
-let _compact_duration_trans_actions : int array = [|
+let _compact_duration_trans_actions : int array = Array.concat [ [|
 	1; 0; 0; 3; 0; 0; 0; 0; 
 	5; 6; 7; 7; 9; 3; 11; 3; 
 	13; 3
-|]
+|] ]
 
-let _compact_duration_eof_actions : int array = [|
+let _compact_duration_eof_actions : int array = Array.concat [ [|
 	0; 0; 2; 4; 2; 2; 2; 2; 
 	8; 2; 10; 2; 12; 2
-|]
+|] ]
 
 let compact_duration_start : int = 1
 let compact_duration_first_final : int = 1
@@ -394,7 +525,7 @@ exception Goto_match
 exception Goto_again
 exception Goto_eof_trans
 
-# 40 "devkit_ragel.ml.rl"
+# 53 "devkit_ragel.ml.rl"
 
 
 let parse_compact_duration data =
@@ -403,14 +534,14 @@ let parse_compact_duration data =
   let n = ref 0 and f = ref 0. and fn = ref 0. in
   let t = ref 0 in
   
-# 407 "devkit_ragel.ml"
+# 538 "devkit_ragel.ml"
 	begin
 	cs.contents <- compact_duration_start;
 	end;
 
-# 48 "devkit_ragel.ml.rl"
+# 61 "devkit_ragel.ml.rl"
   
-# 414 "devkit_ragel.ml"
+# 545 "devkit_ragel.ml"
 	begin
 	let state = { keys = 0; trans = 0; } in
 	let rec do_start () =
@@ -442,54 +573,54 @@ and do_eof_trans () =
 
 	match _compact_duration_trans_actions.(state.trans) with
 	| 3 ->
-# 33 "devkit_ragel.ml.rl"
+# 46 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
 	| 6 ->
-# 34 "devkit_ragel.ml.rl"
+# 47 "devkit_ragel.ml.rl"
 		begin  f := 0.; fn := 1.;  end;
 	()
 	| 7 ->
-# 34 "devkit_ragel.ml.rl"
+# 47 "devkit_ragel.ml.rl"
 		begin  fn := !fn *. 10.; f := !f +. float (Char.code data.[p.contents] - Char.code '0') /. !fn;  end;
 	()
 	| 1 ->
-# 33 "devkit_ragel.ml.rl"
+# 46 "devkit_ragel.ml.rl"
 		begin  n := 0;  end;
-# 33 "devkit_ragel.ml.rl"
+# 46 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
 	| 5 ->
-# 34 "devkit_ragel.ml.rl"
+# 47 "devkit_ragel.ml.rl"
 		begin  f := 0.; fn := 1.;  end;
-# 34 "devkit_ragel.ml.rl"
+# 47 "devkit_ragel.ml.rl"
 		begin  fn := !fn *. 10.; f := !f +. float (Char.code data.[p.contents] - Char.code '0') /. !fn;  end;
 	()
 	| 9 ->
-# 35 "devkit_ragel.ml.rl"
+# 48 "devkit_ragel.ml.rl"
 		begin  t := !t + !n*24*60*60;  end;
-# 33 "devkit_ragel.ml.rl"
+# 46 "devkit_ragel.ml.rl"
 		begin  n := 0;  end;
-# 33 "devkit_ragel.ml.rl"
+# 46 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
 	| 11 ->
-# 36 "devkit_ragel.ml.rl"
+# 49 "devkit_ragel.ml.rl"
 		begin  t := !t + !n*60*60;  end;
-# 33 "devkit_ragel.ml.rl"
+# 46 "devkit_ragel.ml.rl"
 		begin  n := 0;  end;
-# 33 "devkit_ragel.ml.rl"
+# 46 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
 	| 13 ->
-# 37 "devkit_ragel.ml.rl"
+# 50 "devkit_ragel.ml.rl"
 		begin  t := !t + !n*60;  end;
-# 33 "devkit_ragel.ml.rl"
+# 46 "devkit_ragel.ml.rl"
 		begin  n := 0;  end;
-# 33 "devkit_ragel.ml.rl"
+# 46 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
-# 493 "devkit_ragel.ml"
+# 624 "devkit_ragel.ml"
 		| _ -> ()
 	with Goto_again -> () end;
 
@@ -507,28 +638,28 @@ and do_test_eof () =
 	begin try
 	begin match _compact_duration_eof_actions.(cs.contents) with
 	| 8 ->
-# 35 "devkit_ragel.ml.rl"
+# 48 "devkit_ragel.ml.rl"
 		begin  t := !t + !n*24*60*60;  end;
 	()
 	| 10 ->
-# 36 "devkit_ragel.ml.rl"
+# 49 "devkit_ragel.ml.rl"
 		begin  t := !t + !n*60*60;  end;
 	()
 	| 12 ->
-# 37 "devkit_ragel.ml.rl"
+# 50 "devkit_ragel.ml.rl"
 		begin  t := !t + !n*60;  end;
 	()
 	| 2 ->
-# 38 "devkit_ragel.ml.rl"
+# 51 "devkit_ragel.ml.rl"
 		begin  t := !t + !n;  end;
 	()
 	| 4 ->
-# 34 "devkit_ragel.ml.rl"
+# 47 "devkit_ragel.ml.rl"
 		begin  f := 0.; fn := 1.;  end;
-# 38 "devkit_ragel.ml.rl"
+# 51 "devkit_ragel.ml.rl"
 		begin  t := !t + !n;  end;
 	()
-# 532 "devkit_ragel.ml"
+# 663 "devkit_ragel.ml"
 		| _ -> ()
 	end
 	with Goto_again -> do_again ()
@@ -538,5 +669,5 @@ and do_test_eof () =
 	in do_start ()
 	end;
 
-# 49 "devkit_ragel.ml.rl"
+# 62 "devkit_ragel.ml.rl"
   if !cs >= compact_duration_first_final then float !t +. !f else invalid_arg "parse_compact_duration"

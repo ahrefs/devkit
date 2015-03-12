@@ -18,7 +18,7 @@ let parse_ipv4 data =
   %%write exec;
   if !cs >= ipv4_first_final then !ip else invalid_arg "parse_ipv4"
 
-let is_ipv4 data =
+let is_ipv4_slow data =
   let cs = ref 0 and p = ref 0 and pe = ref (String.length data) and eof = ref (String.length data) in
   let n = ref 0 in
   let set () = if !n > 255 then raise Not_found in
@@ -27,6 +27,19 @@ let is_ipv4 data =
   %%write exec;
   !cs >= ipv4_first_final
   with Not_found -> false
+
+%%{
+ machine is_ipv4;
+ octet = ('2' ([0-4] digit | '5' [0-5]) | [01]? digit{1,2}) ;
+ main := octet '.' octet '.' octet '.' octet ;
+ write data;
+}%%
+
+let is_ipv4 data =
+  let cs = ref 0 and p = ref 0 and pe = ref (String.length data) in
+  %%write init;
+  %%write exec;
+  !cs >= is_ipv4_first_final
 
 %%{
  machine compact_duration;
