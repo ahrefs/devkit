@@ -19,6 +19,6 @@ depends: [
   "pcre-ocaml"
   "extunix"
   "xmlm"
-  "lwt" {>="2.4.5"}
+  "lwt" {="2.4.8+patch"}
   "base-bytes"
 ]

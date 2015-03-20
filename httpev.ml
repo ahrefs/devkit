@@ -6,6 +6,8 @@ module Ev = Libevent
 
 open Prelude
 
+let buffer_size = 4096
+
 (* hide log *)
 module Hidden = struct let log = Log.from "httpev" end
 open Hidden
@@ -871,6 +873,18 @@ let handle_lwt fd k =
       Lwt.return ()
   done
 
+module BuffersCache : sig
+val get : unit -> Lwt_bytes.t
+val release : Lwt_bytes.t -> unit
+end = struct
+let cache = Stack.create ()
+let get () =
+  if Stack.is_empty cache then Lwt_bytes.create buffer_size
+  else Stack.pop cache
+let release h =
+  Stack.push h cache
+end
+
 let setup_fd_lwt fd config answer =
   let server = make_server_state config in
   Lwt.ignore_result begin
@@ -892,8 +906,8 @@ let setup_fd_lwt fd config answer =
       { fd = Lwt_unix.unix_file_descr fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 0); }
     in
     if config.debug then log #info "accepted #%d %s" req_id (Nix.show_addr sockaddr);
-    let cin = Lwt_io.(of_fd ~close:Lwt.return ~mode:input fd) in
-    let cout = Lwt_io.(of_fd ~close:Lwt.return ~mode:output fd) in
+    let buffer = BuffersCache.get () in
+    let cin = Lwt_io.(of_fd ~buffer ~close:Lwt.return ~mode:input fd) in
     lwt reply =
       try_lwt
         handle_client_lwt client cin answer
@@ -903,6 +917,8 @@ let setup_fd_lwt fd config answer =
         log #warn "error for %s : %s" (show_client client) msg;
         Lwt.return @@ `Body (http_error,[],"")
     in
+    (* reusing same buffer! *)
+    let cout = Lwt_io.(of_fd ~buffer ~close:Lwt.return ~mode:output fd) in
     try_lwt
       send_reply client cout reply
     with exn ->
@@ -911,6 +927,7 @@ let setup_fd_lwt fd config answer =
       Lwt.return ()
     finally
       DEC server.active;
+      BuffersCache.release buffer;
       Lwt.return ()
   end
 
