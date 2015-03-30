@@ -652,7 +652,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) = struct
       begin match body with
       | Some (`Form args) -> set_body h "application/x-www-form-urlencoded" (make_url_args args)
       | Some (`Raw (ct,body)) -> set_body h ct body
-      | None -> ()
+      | None -> set_postfieldsize h 0 (* prevent reading from stdin with POST without body *)
       end;
       if http_1_0 then set_httpversion h HTTP_VERSION_1_0;
       Option.may (set_timeout h) timeout;
