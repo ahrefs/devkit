@@ -109,6 +109,20 @@ let format_date8hm =
     put_2d s 10 t.tm_min;
     Bytes.unsafe_to_string s
 
+(** YYYYMMDDhhmmss *)
+let format_date8hms =
+  let template = "2014__________" in
+  fun t ->
+    let open Unix in
+    let s = Bytes.of_string template in
+    replace_year_2014 s (t.tm_year + 1900);
+    put_2d s 4 (t.tm_mon+1);
+    put_2d s 6 t.tm_mday;
+    put_2d s 8 t.tm_hour;
+    put_2d s 10 t.tm_min;
+    put_2d s 12 t.tm_sec;
+    Bytes.unsafe_to_string s
+
 (** MMDD *)
 let format_date4 t =
   let open Unix in
