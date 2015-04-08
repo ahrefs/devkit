@@ -14,8 +14,8 @@ let unsafe_digit n = Char.unsafe_chr (Char.code '0' + n)
 let put_2d s ofs n =
   Bytes.unsafe_set s ofs (unsafe_digit (n / 10));
   Bytes.unsafe_set s (ofs+1) (unsafe_digit (n mod 10))
-let replace_year_2014 s year =
-  if year <> 2014 then
+let replace_year_2015 s year =
+  if year <> 2015 then
   begin
     if year >= 2010 && year < 2020 then
       Bytes.unsafe_set s 3 (unsafe_digit (year mod 10))
@@ -25,7 +25,7 @@ let replace_year_2014 s year =
 
 let fast_to_string =
   (* "%04u-%02u-%02uT%02u:%02u:%02u%s" *)
-  let template = "2014-__-__T__:__:__" in
+  let template = "2015-__-__T__:__:__" in
   let template_z = template ^ "Z" in
   let last_time = ref 0 in
   let last_gmt = ref true in
@@ -37,7 +37,7 @@ let fast_to_string =
     let open Unix in
     let t = (if gmt then gmtime else localtime) f in
     let s = Bytes.of_string (if gmt then template_z else template) in
-    replace_year_2014 s (t.tm_year + 1900);
+    replace_year_2015 s (t.tm_year + 1900);
     put_2d s 5 (t.tm_mon+1);
     put_2d s 8 t.tm_mday;
     put_2d s 11 t.tm_hour;
@@ -64,33 +64,33 @@ let gmt_string_ms = to_string ~gmt:true ~ms:true
 
 (** YYYY-MM-DD *)
 let format_date_w3 =
-  let template = "2014-__-__" in
+  let template = "2015-__-__" in
   fun t ->
     let open Unix in
     let s = Bytes.of_string template in
-    replace_year_2014 s (t.tm_year + 1900);
+    replace_year_2015 s (t.tm_year + 1900);
     put_2d s 5 (t.tm_mon+1);
     put_2d s 8 t.tm_mday;
     Bytes.unsafe_to_string s
 
 (** YYYYMMDD *)
 let format_date8 =
-  let template = "2014____" in
+  let template = "2015____" in
   fun t ->
     let open Unix in
     let s = Bytes.of_string template in
-    replace_year_2014 s (t.tm_year + 1900);
+    replace_year_2015 s (t.tm_year + 1900);
     put_2d s 4 (t.tm_mon+1);
     put_2d s 6 t.tm_mday;
     Bytes.unsafe_to_string s
 
 (** YYYYMMDDhh *)
 let format_date8h =
-  let template = "2014______" in
+  let template = "2015______" in
   fun t ->
     let open Unix in
     let s = Bytes.of_string template in
-    replace_year_2014 s (t.tm_year + 1900);
+    replace_year_2015 s (t.tm_year + 1900);
     put_2d s 4 (t.tm_mon+1);
     put_2d s 6 t.tm_mday;
     put_2d s 8 t.tm_hour;
@@ -98,11 +98,11 @@ let format_date8h =
 
 (** YYYYMMDDhhmm *)
 let format_date8hm =
-  let template = "2014________" in
+  let template = "2015________" in
   fun t ->
     let open Unix in
     let s = Bytes.of_string template in
-    replace_year_2014 s (t.tm_year + 1900);
+    replace_year_2015 s (t.tm_year + 1900);
     put_2d s 4 (t.tm_mon+1);
     put_2d s 6 t.tm_mday;
     put_2d s 8 t.tm_hour;
@@ -111,11 +111,11 @@ let format_date8hm =
 
 (** YYYYMMDDhhmmss *)
 let format_date8hms =
-  let template = "2014__________" in
+  let template = "2015__________" in
   fun t ->
     let open Unix in
     let s = Bytes.of_string template in
-    replace_year_2014 s (t.tm_year + 1900);
+    replace_year_2015 s (t.tm_year + 1900);
     put_2d s 4 (t.tm_mon+1);
     put_2d s 6 t.tm_mday;
     put_2d s 8 t.tm_hour;
