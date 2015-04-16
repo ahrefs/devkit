@@ -247,27 +247,6 @@ let find_mount path =
   assert (bound !mount <> "");
   !mount
 
-module Mallinfo = struct
-
-type t = {
- arena : int;    (* non-mmapped space allocated from system *)
- ordblks : int;  (* number of free chunks *)
- smblks : int;   (* number of fastbin blocks *)
- hblks : int;    (* number of mmapped regions *)
- hblkhd : int;   (* space in mmapped regions *)
- usmblks : int;  (* maximum total allocated space *)
- fsmblks : int;  (* space available in freed fastbin blocks *)
- uordblks : int; (* total allocated space *)
- fordblks : int; (* total free space *)
- keepcost : int; (* top-most, releasable (via malloc_trim) space *)
-}
-
-let to_string v =
-  Printf.sprintf "arena %d ordblks %d smblks %d hblks %d hblkhd %d usmblks %d fsmblks %d uordblks %d fordblks %d keepcost %d"
-    v.arena v.ordblks v.smblks v.hblks v.hblkhd v.usmblks v.fsmblks v.uordblks v.fordblks v.keepcost
-
-end
-
 (* in seconds *)
 let sleep seconds =
   let rec loop t =
