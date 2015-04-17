@@ -8,6 +8,17 @@ let by_space = Pcre.regexp "\\s+"
 let by_lines = Pcre.regexp "\\r?\\n"
 let split rex str = match Pcre.split ~rex str with ""::l -> l | l -> l
 
+let nsplitc_enum str sep =
+  let p = ref 0 in
+  let n = String.length str in
+  let next () =
+    if !p >= n then raise Enum.No_more_elements;
+    match String.index_from str !p sep with
+    | p2 -> let s = String.sub str !p (p2 - !p) in p := p2 + 1; s
+    | exception Not_found -> let s = String.sub str !p (n - !p) in p := n; s
+  in
+  Enum.from next
+
 let nsplitc_fold str sep fold zero =
   if str = "" then zero
   else
