@@ -8,15 +8,17 @@ let by_space = Pcre.regexp "\\s+"
 let by_lines = Pcre.regexp "\\r?\\n"
 let split rex str = match Pcre.split ~rex str with ""::l -> l | l -> l
 
-let nsplitc_rev str sep =
-  if str = "" then []
+let nsplitc_fold str sep fold zero =
+  if str = "" then zero
   else
     let rec nsplit acc p =
-      match try Some (String.index_from str p sep) with Not_found -> None with
-      | Some p2 -> nsplit (String.sub str p (p2 - p) :: acc) (p2 + 1)
-      | None -> String.sub str p (String.length str - p) :: acc
+      match String.index_from str p sep with
+      | p2 -> nsplit (fold acc (String.sub str p (p2 - p))) (p2 + 1)
+      | exception Not_found -> fold acc (String.sub str p (String.length str - p))
     in
     nsplit [] 0
+
+let nsplitc_rev str sep = nsplitc_fold str sep cons []
 
 let nsplitc str sep = List.rev (nsplitc_rev str sep)
 
