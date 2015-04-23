@@ -1,26 +1,27 @@
 open ExtLib
 
+type attributes = (string * string) list
 type t = Time of Time.t | Count of int | Bytes of int
-type group = { name : string; k : string; get : (unit -> (string * t) list); }
+type group = { name : string; k : string; attr : attributes; get : (unit -> (string * t) list); }
 
 let h_groups = Hashtbl.create 10
 let register g = Hashtbl.replace h_groups g.name g
 
-let make_cc f pp name k =
+let make_cc f pp name ?(attr=[]) k =
   let cc = Cache.Count.create () in
   let get () = Cache.Count.fold cc (fun k n acc -> (pp k, f n) :: acc) [] in
-  register { name; k; get };
+  register { name; k; get; attr; };
   cc
 
 let cc f = make_cc (fun n -> Count n) f
 let cc_ms f = make_cc (fun n -> Time (float n /. 1000.)) f
 
-class typ name k =
+class typ name ?(attr=[]) k =
 object(self)
   val h = Hashtbl.create 7
   initializer
     let get () = Hashtbl.fold (fun k v acc -> (k, v ()) :: acc) h [] in
-    register { name; k; get }
+    register { name; k; get; attr; }
   method ref : 'a. 'a -> ('a -> t) -> string -> 'a ref = fun init f name ->
     let v = ref init in
     Hashtbl.replace h name (fun () -> f !v);
@@ -32,7 +33,7 @@ end
 
 let iter f =
   h_groups |> Hashtbl.iter begin fun _name g ->
-    g.get () |> List.iter (fun (k,v) -> f g.name g.k k v)
+    g.get () |> List.iter (fun (k,v) -> f g.name g.attr g.k k v)
   end
 
 (*

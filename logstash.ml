@@ -29,28 +29,29 @@ let get () =
     ]
   in
   let l = ref system_memory in
-  Var.iter begin fun t kname k v ->
+  Var.iter begin fun t attr kname k v ->
     let (previous,t,k) =
       try Hashtbl.find state (t,k) with
       | Not_found -> let x = ref (zero v), escape t, escape k in Hashtbl.add state (t,k) x; x
     in
+    let this = List.fold_left (fun acc (k,v) -> (k, `String v) :: acc) common attr in
     match v, !previous with
     | Count x, Count x' ->
       begin match x - x' with
       | 0 -> ()
-      | delta -> previous := v; tuck l @@ `Assoc (("type",`String t) :: (kname, `String k) :: ("count", `Int delta) :: common)
+      | delta -> previous := v; tuck l @@ `Assoc (("type",`String t) :: (kname, `String k) :: ("count", `Int delta) :: this)
       end
     | Bytes x, Bytes x' ->
       begin match x - x' with
       | 0 -> ()
-      | delta -> previous := v; tuck l @@ `Assoc (("type",`String t) :: (kname, `String k) :: ("bytes", `Int delta) :: common)
+      | delta -> previous := v; tuck l @@ `Assoc (("type",`String t) :: (kname, `String k) :: ("bytes", `Int delta) :: this)
       end
     | Time x, Time x' ->
       let delta = x -. x' in
       if delta > epsilon_float then
       begin
         previous := v;
-        tuck l @@ `Assoc (("type",`String t) :: (kname, `String k) :: ("count", `Float delta) :: common)
+        tuck l @@ `Assoc (("type",`String t) :: (kname, `String k) :: ("count", `Float delta) :: this)
       end
     | Count _, Bytes _ | Count _, Time _
     | Bytes _, Count _ | Bytes _, Time _
