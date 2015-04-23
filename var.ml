@@ -26,6 +26,9 @@ object(self)
     let v = ref init in
     Hashtbl.replace h name (fun () -> f !v);
     v
+  method get_count name f = Hashtbl.replace h name (fun () -> Count (f ()))
+  method get_bytes name f = Hashtbl.replace h name (fun () -> Bytes (f ()))
+  method get_time name f = Hashtbl.replace h name (fun () -> Time (f ()))
   method count name = self#ref 0 (fun x -> Count x) name
   method bytes name = self#ref 0 (fun x -> Bytes x) name
   method time name = self#ref 0. (fun x -> Time x) name
