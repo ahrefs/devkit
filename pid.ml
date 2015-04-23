@@ -6,7 +6,7 @@ type t = { host : string; id : int; name : string; stamp : int; }
 let dummy = { host="*"; id=0; name="*"; stamp=0; }
 
 let show { id; name; host; stamp=_; } = sprintf "%u:%s@%s" id name host
-let string_of_pid { id; name; host; stamp; } = sprintf "%u:%u:%s@%s" stamp id name host
+let to_string { id; name; host; stamp; } = sprintf "%u:%u:%s@%s" stamp id name host
 let compare (pid1:t) pid2 = compare pid1 pid2
 let equal pid1 pid2 = 0 = compare pid1 pid2
 let short_name { name; _ } = try fst @@ String.split name "." with _ -> name
