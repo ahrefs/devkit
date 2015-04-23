@@ -11,7 +11,7 @@ let compare (pid1:t) pid2 = compare pid1 pid2
 let equal pid1 pid2 = 0 = compare pid1 pid2
 let short_name { name; _ } = try fst @@ String.split name "." with _ -> name
 
-let parse_pid_exn s =
+let parse_exn s =
   (* cf self_pid *)
   Scanf.sscanf s "%u:%u:%[a-zA-Z0-9_.-]@@%[a-zA-Z0-9_-]%!" (fun stamp id name host ->
    if host = "" then Exn.fail "empty hostname";

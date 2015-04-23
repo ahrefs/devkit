@@ -10,7 +10,7 @@ val short_name : t -> string
 val compare : t -> t -> int
 val equal : t -> t -> bool
 
-val parse_pid_exn : string -> t
+val parse_exn : string -> t
 
 val self_as : string -> t
 val set_name : string -> unit
