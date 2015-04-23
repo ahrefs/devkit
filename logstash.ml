@@ -15,7 +15,7 @@ let get () =
   let common =
     [
       "timestamp_ms", `Int (int_of_float @@ Time.now () *. 1000.);
-      "pid", `String (Messaging.show_self ());
+      "pid", `String (Pid.show_self ());
     ]
   in
   let system_memory =
@@ -35,7 +35,7 @@ let get () =
       | Not_found -> let x = ref (zero v), escape t, escape k in Hashtbl.add state (t,k) x; x
     in
     match v, !previous with
-    | Var.Count x, Count x' ->
+    | Count x, Count x' ->
       begin match x - x' with
       | 0 -> ()
       | delta -> previous := v; tuck l @@ `Assoc (("type",`String t) :: (kname, `String k) :: ("count", `Int delta) :: common)

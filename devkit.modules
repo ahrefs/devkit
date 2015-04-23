@@ -39,3 +39,6 @@ FastBase64
 Signal
 Idn
 Memory
+Pid
+Var
+Logstash
