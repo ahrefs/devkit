@@ -27,9 +27,9 @@ let h_groups = Hashtbl.create 10
 let register ~name ~k ~get ~attr =
   let attr = Attr.make (("class",name)::attr) in
   let (_:Attr.t) = Attr.add (k,"") attr in (* check that all keys are unique *)
-  match Hashtbl.find h_groups name with
-  | exception Not_found -> Hashtbl.replace h_groups name { k; get; attr; }
-  | _ -> Exn.fail "duplicate Var %S" name
+  match Hashtbl.find h_groups attr with
+  | exception Not_found -> Hashtbl.replace h_groups attr { k; get; attr; }
+  | _ -> Exn.fail "duplicate Var %s" (Action.strl (uncurry @@ sprintf "%S:%S") @@ Attr.get attr)
 
 let make_cc f pp name ?(attr=[]) k =
   let cc = Cache.Count.create () in
