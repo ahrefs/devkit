@@ -1,3 +1,4 @@
+open Printf
 open ExtLib
 open Prelude
 
@@ -25,8 +26,8 @@ let get () =
       | Not_found -> let x = ref (zero v), List.map (fun (k, s) -> escape k, `String s) attr in Hashtbl.add state attr x; x
     in
     let this = (common @ attr
-      :  (string * [ `Float of float | `Int of int | `String of string]) list
-      :> (string * [>`Float of float | `Int of int | `String of string]) list)
+      :  (string * [ `Floatlit of string | `Int of int | `String of string]) list
+      :> (string * [>`Floatlit of string | `Int of int | `String of string]) list)
     in
     match v, !previous with
     | Count x, Count x' ->
@@ -37,7 +38,7 @@ let get () =
       if delta <> 0 then begin previous := v; tuck l @@ `Assoc (("bytes", `Int delta) :: this) end
     | Time x, Time x' ->
       let delta = x -. x' in
-      if delta > epsilon_float then begin previous := v; tuck l @@ `Assoc (("count", `Float delta) :: this) end
+      if delta > epsilon_float then begin previous := v; tuck l @@ `Assoc (("seconds", `Floatlit (sprintf "%g" delta)) :: this) end
     | Count _, Bytes _ | Count _, Time _
     | Bytes _, Count _ | Bytes _, Time _
     | Time _, Count _ | Time _, Bytes _ -> () (* cannot happen *)
