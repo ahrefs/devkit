@@ -1,16 +1,40 @@
+open Printf
 open ExtLib
+open Prelude
+
+module Attr : sig
+type t = private (string * string) list
+val make : (string * string) list -> t
+val add : (string * string) -> t -> t
+val get : t -> (string * string) list
+end = struct
+type t = (string * string) list
+let add (k,_ as x) l =
+  if List.mem_assoc k l then Exn.fail "duplicate attribute %S" k;
+  List.sort ~cmp:compare (x :: l)
+let make l =
+  let a = List.unique ~cmp:(fun (a,_) (b,_) -> a = b) l in
+  if List.length a <> List.length l then Exn.fail "duplicate attributes : %s" (Action.strl (uncurry @@ sprintf "%S:%S") l);
+  List.sort ~cmp:compare l
+let get = identity
+end
 
 type attributes = (string * string) list
 type t = Time of Time.t | Count of int | Bytes of int
-type group = { name : string; k : string; attr : attributes; get : (unit -> (string * t) list); }
+type group = { k : string; attr : Attr.t; get : (unit -> (string * t) list); }
 
 let h_groups = Hashtbl.create 10
-let register g = Hashtbl.replace h_groups g.name g
+let register ~name ~k ~get ~attr =
+  let attr = Attr.make (("class",name)::attr) in
+  let (_:Attr.t) = Attr.add (k,"") attr in (* check that all keys are unique *)
+  match Hashtbl.find h_groups name with
+  | exception Not_found -> Hashtbl.replace h_groups name { k; get; attr; }
+  | _ -> Exn.fail "duplicate Var %S" name
 
 let make_cc f pp name ?(attr=[]) k =
   let cc = Cache.Count.create () in
   let get () = Cache.Count.fold cc (fun k n acc -> (pp k, f n) :: acc) [] in
-  register { name; k; get; attr; };
+  register ~name ~k ~get ~attr;
   cc
 
 let cc f = make_cc (fun n -> Count n) f
@@ -21,7 +45,7 @@ object(self)
   val h = Hashtbl.create 7
   initializer
     let get () = Hashtbl.fold (fun k v acc -> (k, v ()) :: acc) h [] in
-    register { name; k; get; attr; }
+    register ~k ~get ~attr ~name
   method ref : 'a. 'a -> ('a -> t) -> string -> 'a ref = fun init f name ->
     let v = ref init in
     Hashtbl.replace h name (fun () -> f !v);
@@ -36,7 +60,10 @@ end
 
 let iter f =
   h_groups |> Hashtbl.iter begin fun _name g ->
-    g.get () |> List.iter (fun (k,v) -> f g.name g.attr g.k k v)
+    g.get () |> List.iter begin fun (k,v) ->
+      let attr = (g.k, k) :: Attr.get g.attr in (* this was checked to be valid in [register] *)
+      f attr v
+    end
   end
 
 (*
@@ -47,3 +74,9 @@ let show () =
   end;
   Buffer.contents b
 *)
+
+let system_memory = new typ "system_memory" "kind"
+
+let () = system_memory#get_bytes "rss" (fun () -> (Memory.get_vm_info ()).rss)
+let () = system_memory#get_bytes "vsize" (fun () -> (Memory.get_vm_info ()).vsize)
+let () = system_memory#get_bytes "ocaml_heap" (fun () -> let gc = Gc.quick_stat () in Action.bytes_of_words gc.heap_words)

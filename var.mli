@@ -22,5 +22,5 @@ val cc : ('a -> string) -> string -> ?attr:attributes -> string -> 'a Cache.Coun
 val cc_ms : ('a -> string) -> string -> ?attr:attributes -> string -> 'a Cache.Count.t
 
 (* val show : unit -> string *)
-(** callback takes type, attributes, key name, key value and counter value *)
-val iter : (string -> attributes -> string -> string -> t -> unit) -> unit
+(** callback takes attributes and value *)
+val iter : (attributes -> t -> unit) -> unit
