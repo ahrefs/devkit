@@ -24,7 +24,10 @@ let get () =
       try Hashtbl.find state attr with
       | Not_found -> let x = ref (zero v), List.map (fun (k, s) -> escape k, `String s) attr in Hashtbl.add state attr x; x
     in
-    let this = List.append common attr in
+    let this = (common @ attr
+      :  (string * [ `Float of float | `Int of int | `String of string]) list
+      :> (string * [>`Float of float | `Int of int | `String of string]) list)
+    in
     match v, !previous with
     | Count x, Count x' ->
       let delta = x - x' in
