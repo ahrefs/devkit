@@ -1,6 +1,6 @@
 true: bin_annot, annot, debug, thread, package(threads), warn_A, warn_e, warn(-35-40..42-44-48)
 <*.ml{,i}>: package(extlib), package(pcre), package(bytes), package(extunix)
-"web.ml": package(netstring), package(curl), package(xmlm)
+"web.ml": package(netstring), package(curl)
 "exn.ml": package(curl), package(xmlm)
 "htmlStream.ml" or "stre.ml" or "php_serialize.ml" or "web.ml": syntax_camlp4o, package(camlp4)
 "nix.ml" or "files.ml" or "daemon.ml" or "prelude.ml" or "parallel.ml" or "signal.ml": package(lwt.unix)

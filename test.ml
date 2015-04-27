@@ -8,32 +8,6 @@ open Prelude
 let tests = ref []
 let test name f = let open OUnit in tests := (name >:: f) :: !tests
 
-let test_search p s =
-  let module WP = Web.Provider in
-  let pr = print_endline in
-(*   let url = sprintf "http://www.bing.com/search?q=%s&setmkt=fr-FR&go=&qs=n&sk=&sc=8-4&form=QBRE&filt=all" (Web.urlencode s) in *)
-  let html = match s with
-  | `Query s ->
-      let url = p.WP.request s in
-      printfn "url: %s" url;
-(*       let (n,res,ads) = WP.bing_html (Std.input_file "search.html") in *)
-      Web.http_get url
-  | `File s ->
-      Std.input_file s
-  in
-  let (n,res,ads) = p.WP.extract_full html in
-  let summary = sprintf "results %d of %d and %d ads" (Array.length res) n (Array.length ads) in
-  let show = Array.iter (fun (l,_,t,d) -> pr l; pr t; pr d; pr "") in
-  pr summary;
-  pr "RESULTS :";
-  pr "";
-  show res;
-(*   pr summary; *)
-  pr "ADS :";
-  pr "";
-  show ads;
-  pr summary
-
 let () = test "HtmlStream" begin fun () ->
   Printexc.record_backtrace true;
   let module HS = HtmlStream in
@@ -226,22 +200,6 @@ let () = test "Network.ipv4_matches" begin fun () ->
   t "255.255.255.254" "255.255.255.255/32" false
 end
 
-let () = test "Web.extract_first_number" begin fun () ->
-  let t n s =
-    assert_equal ~printer:string_of_int n (Web.extract_first_number s);
-  in
-  t 10 "10";
-  t 10 "00 10";
-  t 10 "0010";
-  t 10 "dsad10dsa";
-  t 10 "10dsadsa";
-  t 10 "10dadasd22";
-  t 12345 "got 12,345 with 20 something";
-  t 12345 "a1,2,3,4,5,,,6,7,8dasd";
-  t 12345678 "a1,2,3,4,5,,6,7,8dasd";
-  t 12345 "a,1,,2,,3,,4,,5,,,6,7,8dasd";
-end
-
 let () = test "Time.compact_duration" begin fun () ->
   let t n s =
     (* FIXME epsilon compare *)
@@ -382,9 +340,6 @@ let tests () =
   ()
 
 let () =
-  let google = Web.Provider.(google {Google.hl="en"; gl="US"; tld="com"; lang="en";}) in
   match Action.args with
-  | ["query";query] -> test_search google (`Query query)
-  | ["file";file] -> test_search google (`File file)
   | ["http";port] -> Test_httpev.run (int_of_string port)
   | _ -> tests ()
