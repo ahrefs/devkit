@@ -2,6 +2,10 @@ open Printf
 open ExtLib
 open Prelude
 
+let log = Log.from "var"
+
+let show_a = Action.strl (uncurry @@ sprintf "%S:%S")
+
 module Attr : sig
 type t = private (string * string) list
 val make : (string * string) list -> t
@@ -14,7 +18,7 @@ let add (k,_ as x) l =
   List.sort ~cmp:compare (x :: l)
 let make l =
   let a = List.unique ~cmp:(fun (a,_) (b,_) -> a = b) l in
-  if List.length a <> List.length l then Exn.fail "duplicate attributes : %s" (Action.strl (uncurry @@ sprintf "%S:%S") l);
+  if List.length a <> List.length l then Exn.fail "duplicate attributes : %s" (show_a l);
   List.sort ~cmp:compare l
 let get = identity
 end
@@ -29,7 +33,7 @@ let register ~name ~k ~get ~attr =
   let (_:Attr.t) = Attr.add (k,"") attr in (* check that all keys are unique *)
   match Hashtbl.find h_groups attr with
   | exception Not_found -> Hashtbl.replace h_groups attr { k; get; attr; }
-  | _ -> Exn.fail "duplicate Var %s" (Action.strl (uncurry @@ sprintf "%S:%S") @@ Attr.get attr)
+  | _ -> Exn.fail "duplicate Var %s" (show_a @@ Attr.get attr)
 
 let make_cc f pp name ?(attr=[]) k =
   let cc = Cache.Count.create () in
@@ -40,12 +44,15 @@ let make_cc f pp name ?(attr=[]) k =
 let cc f = make_cc (fun n -> Count n) f
 let cc_ms f = make_cc (fun n -> Time (float n /. 1000.)) f
 
-class typ name ?(attr=[]) k =
+class typ name ?(attr=[]) k_name =
 object(self)
   val h = Hashtbl.create 7
   initializer
-    let get () = Hashtbl.fold (fun k v acc -> (k, v ()) :: acc) h [] in
-    register ~k ~get ~attr ~name
+    let get () = Hashtbl.fold (fun k v acc ->
+      match v () with
+      | exception exn -> log #warn ~exn "variable %S %s failed" name (show_a @@ (k_name,k)::attr); acc
+      | v -> (k, v) :: acc) h [] in
+    register ~k:k_name ~get ~attr ~name
   method ref : 'a. 'a -> ('a -> t) -> string -> 'a ref = fun init f name ->
     let v = ref init in
     Hashtbl.replace h name (fun () -> f !v);
