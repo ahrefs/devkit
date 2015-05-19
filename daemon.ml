@@ -24,20 +24,13 @@ let args =
   [
     (let set_loglevel s =
        Stre.nsplitc s ',' |> List.iter begin fun spec ->
-         let level = function
-           | "debug" -> `Debug
-           | "info" -> `Info
-           | _ -> `Warn
-         in
          match Stre.nsplitc spec '=' with
-         | facil :: l :: [] ->
-           Log.set_filter ~name:facil (level l)
-         | l :: _ ->
-           Log.set_filter @@ level l
-         | _ -> ()
+         | facil :: l :: [] -> Log.set_filter ~name:facil (Logger.level l)
+         | l :: [] -> Log.set_filter @@ Logger.level l
+         | _ -> Exn.fail "loglevel not recognized, specify either <level> or <facil>=<level>"
        end
      in
-     "-loglevel", Arg.String set_loglevel, " <[facil=]<debug|info|warn>[,]>+");
+     "-loglevel", Arg.String set_loglevel, " ([<facil>=]debug|info|warn|error[,])+");
     ExtArg.may_str "logfile" logfile "<file> Log file";
     ExtArg.may_str "pidfile" pidfile "<file> PID file";
     ExtArg.may_str "logrotation" logrotation "t<time_hours>|s<size_MB|onceaday> log rotation options";
