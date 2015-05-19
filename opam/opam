@@ -12,7 +12,7 @@ depends: [
   "extlib" {>="1.6.1"}
   "ounit"
   "camlzip"
-  "ocaml-event"
+  "libevent"
   "ocurl" {>= "0.7.2"}
   "ocamlnet"
   "tyxml" {>= "3.2.0"}
