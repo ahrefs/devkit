@@ -19,6 +19,30 @@ type request = { addr : Unix.sockaddr;
                  encoding : encoding;
                  }
 
+type reply_status =
+  [ `Ok
+  | `Created
+  | `Found
+  | `Moved
+  | `Bad_request
+  | `Unauthorized
+  | `Forbidden
+  | `Not_found
+  | `Not_acceptable
+  | `Conflict
+  | `Length_required
+  | `Request_too_large
+  | `Internal_server_error
+  | `Not_implemented
+  | `Service_unavailable
+  | `Version_not_supported
+  | `Custom of string ]
+
+type extended_reply_status = [ reply_status | `No_reply ]
+
+type 'status reply' = 'status * (string * string) list * string
+type reply = extended_reply_status reply'
+
 let show_method = function
   | `GET -> "GET"
   | `POST -> "POST"
@@ -42,3 +66,49 @@ let show_request req =
     (show_method req.meth)
     (Exn.default "" (List.assoc "host") req.headers)
     req.url
+
+let status_code : reply_status -> int = function
+  | `Ok -> 200
+  | `Created -> 201
+
+  | `Moved -> 301
+  | `Found -> 302
+
+  | `Bad_request -> 400
+  | `Unauthorized -> 401
+  | `Forbidden -> 403
+  | `Not_found -> 404
+  | `Not_acceptable -> 406
+  | `Conflict -> 409
+  | `Length_required -> 411
+  | `Request_too_large -> 413
+
+  | `Internal_server_error -> 500
+  | `Not_implemented -> 501
+  | `Service_unavailable -> 503
+  | `Version_not_supported -> 505
+
+  | `Custom _ -> 999
+
+let show_http_reply : reply_status -> string = function
+  | `Ok -> "HTTP/1.0 200 OK"
+  | `Created -> "HTTP/1.0 201 Created"
+
+  | `Moved -> "HTTP/1.0 301 Moved Permanently"
+  | `Found -> "HTTP/1.0 302 Found"
+
+  | `Bad_request -> "HTTP/1.0 400 Bad Request"
+  | `Unauthorized -> "HTTP/1.0 401 Unauthorized"
+  | `Forbidden -> "HTTP/1.0 403 Forbidden"
+  | `Not_found -> "HTTP/1.0 404 Not Found"
+  | `Not_acceptable -> "HTTP/1.0 406 Not Acceptable"
+  | `Conflict -> "HTTP/1.0 409 Conflict"
+  | `Length_required -> "HTTP/1.0 411 Length Required"
+  | `Request_too_large -> "HTTP/1.0 413 Request Entity Too Large"
+
+  | `Internal_server_error -> "HTTP/1.0 500 Internal Server Error"
+  | `Not_implemented -> "HTTP/1.0 501 Not Implemented"
+  | `Service_unavailable -> "HTTP/1.0 503 Service Unavailable"
+  | `Version_not_supported -> "HTTP/1.0 505 HTTP Version Not Supported"
+
+  | `Custom s -> s

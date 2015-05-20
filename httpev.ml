@@ -31,6 +31,8 @@ type config =
     max_request_size : int;
     auth : (string * string * string) option;
     max_clients : int; (** limit on total number of requests in processing at any point of time *)
+    max_data_childs : int;
+    max_data_waiting : int;
   }
 
 let default =
@@ -46,12 +48,15 @@ let default =
     auth = None;
     max_clients = 10_000;
     access_log = ref stdout;
+    max_data_childs = 50;
+    max_data_waiting = 200;
   }
 
 include Httpev_common
 
 (** server state *)
 type server = {
+  listen_socket : Unix.file_descr;
   mutable total : int;
   mutable active : int;
   mutable errors : int;
@@ -59,6 +64,8 @@ type server = {
   reqs : (int,request) Hashtbl.t;
   config : config;
   digest_auth : Digest_auth.t option;
+  h_childs : (int,reply -> unit) Hashtbl.t; (** currently running forked childs *)
+  q_wait : (unit -> unit) Stack.t; (** the stack of requests to fork *)
 }
 
 type partial_body = {
@@ -80,13 +87,24 @@ type client = {
   server : server;
 }
 
-let make_server_state config =
+let make_server_state fd config =
   let digest_auth =
     match config.auth with
     | Some (realm,user,password) -> Some (Digest_auth.init ~realm ~user ~password ())
     | None -> None
   in
-  { total = 0; active = 0; errors = 0; reject = 0; reqs = Hashtbl.create 10; config; digest_auth; }
+  {
+    total = 0;
+    active = 0;
+    errors = 0;
+    reject = 0;
+    reqs = Hashtbl.create 10;
+    config;
+    digest_auth;
+    listen_socket = fd;
+    h_childs = Hashtbl.create 16;
+    q_wait = Stack.create ();
+  }
 
 let show_socket_error fd =
   try
@@ -274,76 +292,6 @@ let write_f c (data,ack) ev fd _flags =
     match c.server.config.log_epipe, exn with
     | false, Unix.Unix_error (Unix.EPIPE,_,_) -> ()
     | _ -> log #warn ~exn "write_f %s" (show_client c)
-
-type reply_status =
-  [ `Ok
-  | `Created
-  | `Found
-  | `Moved
-  | `Bad_request
-  | `Unauthorized
-  | `Forbidden
-  | `Not_found
-  | `Not_acceptable
-  | `Conflict
-  | `Length_required
-  | `Request_too_large
-  | `Internal_server_error
-  | `Not_implemented
-  | `Service_unavailable
-  | `Version_not_supported
-  | `Custom of string ]
-
-type extended_reply_status = [ reply_status | `No_reply ]
-
-type 'status reply' = 'status * (string * string) list * string
-type reply = extended_reply_status reply'
-
-let status_code : reply_status -> int = function
-  | `Ok -> 200
-  | `Created -> 201
-
-  | `Moved -> 301
-  | `Found -> 302
-
-  | `Bad_request -> 400
-  | `Unauthorized -> 401
-  | `Forbidden -> 403
-  | `Not_found -> 404
-  | `Not_acceptable -> 406
-  | `Conflict -> 409
-  | `Length_required -> 411
-  | `Request_too_large -> 413
-
-  | `Internal_server_error -> 500
-  | `Not_implemented -> 501
-  | `Service_unavailable -> 503
-  | `Version_not_supported -> 505
-
-  | `Custom _ -> 999
-
-let show_http_reply : reply_status -> string = function
-  | `Ok -> "HTTP/1.0 200 OK"
-  | `Created -> "HTTP/1.0 201 Created"
-
-  | `Moved -> "HTTP/1.0 301 Moved Permanently"
-  | `Found -> "HTTP/1.0 302 Found"
-
-  | `Bad_request -> "HTTP/1.0 400 Bad Request"
-  | `Unauthorized -> "HTTP/1.0 401 Unauthorized"
-  | `Forbidden -> "HTTP/1.0 403 Forbidden"
-  | `Not_found -> "HTTP/1.0 404 Not Found"
-  | `Not_acceptable -> "HTTP/1.0 406 Not Acceptable"
-  | `Conflict -> "HTTP/1.0 409 Conflict"
-  | `Length_required -> "HTTP/1.0 411 Length Required"
-  | `Request_too_large -> "HTTP/1.0 413 Request Entity Too Large"
-
-  | `Internal_server_error -> "HTTP/1.0 500 Internal Server Error"
-  | `Not_implemented -> "HTTP/1.0 501 Not Implemented"
-  | `Service_unavailable -> "HTTP/1.0 503 Service Unavailable"
-  | `Version_not_supported -> "HTTP/1.0 505 HTTP Version Not Supported"
-
-  | `Custom s -> s
 
 let find_header req name =
   List.assoc (String.lowercase name) req.headers
@@ -633,12 +581,35 @@ let check_hung_requests server =
       log #warn "request takes too much time to process : %s" (show_request req)
   end
 
+let check_waiting_requests srv =
+  while not (Stack.is_empty srv.q_wait) && Hashtbl.length srv.h_childs < srv.config.max_data_childs do
+    let f = Stack.pop srv.q_wait in
+    begin try let () = f () in () with exn -> log #warn ~exn "q_wait" end
+  done
+
+let finish_child srv pid =
+(*     log #info "child %d reaped" pid; *)
+    match Hashtbl.find_option srv.h_childs pid with
+    | Some k ->
+      Hashtbl.remove srv.h_childs pid;
+      k (`No_reply,[],""); (* just close socket *)
+      check_waiting_requests srv
+    | None -> log #warn "no handler for child %d" pid
+
+let reap_orphans srv =
+  let rec loop () =
+    match Exn.catch (Unix.waitpid [Unix.WNOHANG]) 0 with
+    | None | Some (0,_) -> ()
+    | Some (pid,st) -> log #info "reaped orphan %d %S" pid (Std.dump st); finish_child srv pid; loop ()
+  in loop ()
+
 let start_listen config =
   Tcp.listen ~name:config.name ~backlog:config.backlog config.ip config.port
 
-let setup_fd fd config answer =
-  let server = make_server_state config in
+let setup_server_fd fd config answer =
+  let server = make_server_state fd config in
   Async.setup_periodic_timer_wait config.events (Time.minutes 1) (fun () -> check_hung_requests server);
+  Async.setup_periodic_timer_now config.events 10. (fun () -> reap_orphans server);
   Tcp.handle config.events fd begin fun (fd,sockaddr) ->
     INC server.total;
     let req_id = server.total in
@@ -653,15 +624,21 @@ let setup_fd fd config answer =
       Unix.set_nonblock fd;
       if config.debug then log #info "accepted #%d %s" req_id (Nix.show_addr sockaddr);
       handle_client client answer
-  end
+  end;
+  server
 
-let setup config answer =
+let setup_server config answer =
   let fd = start_listen config in
-  setup_fd fd config answer
+  setup_server_fd fd config answer
 
-let server config answer =
+let setup_fd fd config answer = let (_:server) = setup_server_fd fd config answer in ()
+let setup config answer = let (_:server) = setup_server config answer in ()
+
+let run config answer =
   setup config answer;
   Ev.dispatch config.events
+
+let server = run (* deprecated *)
 
 let header n v = n,v
 let forbidden = `Forbidden, [], "forbidden"
@@ -749,6 +726,68 @@ let serve_html req html =
 
 let run ?(ip=Unix.inet_addr_loopback) port answer =
   server { default with ip = ip; port = port } answer
+
+(** {2 Forked workers} *)
+
+let answer_forked ?(debug=false) srv req answer k =
+  let do_fork () =
+    let check () = match Unix.getsockopt_int req.socket Unix.SO_ERROR with
+    | 0 -> `Ok
+    | n -> `Error n
+    in
+    match check () with
+    | `Error n -> Exn.fail "pre fork %s : socket error %d" (show_request req) n
+    | `Ok ->
+    begin match Lwt_unix.fork () with
+    | 0 ->
+      Exn.suppress Unix.close srv.listen_socket;
+      let count = ref 0L in
+      let code = try
+      if debug then Printexc.record_backtrace true;
+      Control.with_output (set_blocking req) begin fun io ->
+        let check_exn () =
+          match check () with `Ok -> () | `Error n -> Exn.fail "socket error %d" n
+        in
+        let io = Action.count_bytes_to count io in
+        let pre h =
+          k (`Ok, ("X-Disable-Log", "true") :: h,"");
+          check_exn ()
+        in
+        check_exn ();
+        let () = answer pre io in
+        200
+      end
+      with exn ->
+        let saved_backtrace = Exn.get_backtrace () in
+        log #warn ~exn ~backtrace:debug ~saved_backtrace "answer forked %s" (show_request req);
+        -1
+      in
+      log_access_apache !(srv.config.access_log) code (Int64.to_int !count) req;
+      U.sys_exit 0
+    | -1 -> Exn.fail "fork failed : %s" (show_request req)
+    | pid ->
+      log #info "forked %d : %s" pid (show_request req);
+      Hashtbl.add srv.h_childs pid k
+    end
+  in
+  let do_fork () =
+    try
+      do_fork ()
+    with
+      exn ->
+        log #warn ~exn "answer fork failed %s" (show_request req);
+        k (`Internal_server_error,[],"")
+  in
+  if Hashtbl.length srv.h_childs < srv.config.max_data_childs then
+    do_fork ()
+  else
+  if Stack.length srv.q_wait < srv.config.max_data_waiting then
+    Stack.push do_fork srv.q_wait
+  else
+  begin
+    log #info "rejecting, overloaded : %s" (show_request req);
+    k (`Service_unavailable, ["Content-Type", "text/plain"], "overloaded")
+  end
 
 (** {2 Lwt support} *)
 
@@ -906,7 +945,7 @@ let release h =
 end
 
 let setup_fd_lwt fd config answer =
-  let server = make_server_state config in
+  let server = make_server_state (Lwt_unix.unix_file_descr fd (* will not be used *) ) config in
   Lwt.ignore_result begin
     while_lwt true do
       lwt () = Lwt_unix.sleep @@ Time.minutes 1 in
