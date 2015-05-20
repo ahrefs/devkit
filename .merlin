@@ -1,3 +1,3 @@
 B _build
-PKG extunix extlib pcre zip event curl netstring extunix netcgi2 tyxml xmlm lwt.unix bytes oUnit
+PKG extunix extlib pcre zip libevent curl netstring extunix netcgi2 tyxml xmlm lwt.unix bytes oUnit
 EXT lwt
