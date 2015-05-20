@@ -26,6 +26,7 @@ type config =
     log_epipe : bool;
     mutable debug : bool; (** more logging *)
     events : Ev.event_base;
+    access_log : out_channel ref;
     name : string;
     max_request_size : int;
     auth : (string * string * string) option;
@@ -44,6 +45,7 @@ let default =
     max_request_size = 16 * 1024;
     auth = None;
     max_clients = 10_000;
+    access_log = ref stdout;
   }
 
 include Httpev_common
@@ -343,6 +345,31 @@ let show_http_reply : reply_status -> string = function
 
   | `Custom s -> s
 
+let find_header req name =
+  List.assoc (String.lowercase name) req.headers
+
+let header_exn req name =
+  try find_header req name with _ -> Exn.fail "header %S" name
+
+let header_safe req name = try find_header req name with _ -> ""
+
+let header_referer req =
+  try find_header req "Referer" with _ -> try find_header req "Referrer" with _ -> ""
+
+let log_access_apache ch code size req =
+  try
+    let now = Time.now () in
+    fprintf ch "%s - - [%s] %S %d %dB . %S %S %.3f %s\n%!"
+      (show_client_addr req) (Time.to_string now) req.line code size
+      (header_referer req) (header_safe req "user-agent") (now -. req.conn) (header_safe req "host")
+  with exn ->
+    log #warn ~exn "access log : %s" @@ show_request req
+
+let log_status_apache ch status size req =
+  match status with
+  | `No_reply -> () (* ignore *)
+  | #reply_status as code -> log_access_apache ch (status_code code) size req
+
 (** Wait until [fd] becomes readable and close it (for eventfd-backed notifications) *)
 let wait base fd k =
   Async.simple_event base fd [Ev.READ] begin fun ev fd _ ->
@@ -432,11 +459,19 @@ let send_reply_blocking c (code,hdrs) =
     exn -> abort c exn "send_reply_blocking"; raise exn
 
 (* this function is called back by user to actually send data *)
-let send_reply_user c encoding (code,hdrs,body) =
+let send_reply_user c req (code,hdrs,body) =
   match code with
   | `No_reply -> finish c
   | #reply_status as code ->
-  let blocking = match c.req with Ready x -> Option.is_some x.blocking | _ -> false in
+  let hdrs =
+    match hdrs with
+    (* hack for answer_forked, which logs on its own *)
+    | ("X-Disable-Log", "true") :: hs -> hs
+    | _ ->
+      log_status_apache !(c.server.config.access_log) code (String.length body) req;
+      hdrs
+  in
+  let blocking = Option.is_some req.blocking in
   (* filter headers *)
   let hdrs = hdrs |> List.filter begin fun (k,_) ->
     let open Stre in
@@ -451,10 +486,10 @@ let send_reply_user c encoding (code,hdrs,body) =
   | true ->
     (* this is forked child, events are gone, so write to socket with blocking *)
     Unix.clear_nonblock c.fd;
-    let hdrs = match encoding with Identity -> hdrs | Gzip -> ("Content-Encoding", "gzip") :: hdrs in
+    let hdrs = match req.encoding with Identity -> hdrs | Gzip -> ("Content-Encoding", "gzip") :: hdrs in
     send_reply_blocking c (code,hdrs);
   | false ->
-    send_reply_async c encoding (code,hdrs,body)
+    send_reply_async c req.encoding (code,hdrs,body)
 
 let make_error = function
 | Parse (what,msg) ->
@@ -482,7 +517,7 @@ let handle_request c body answer =
       | Some auth -> Digest_auth.check auth req
       | None -> `Ok
       in
-      let k = send_reply_user c req.encoding in
+      let k = send_reply_user c req in
       begin match auth with
       | `Unauthorized header -> k (`Unauthorized, [header], "Unauthorized")
       | `Ok -> answer c.server req k
@@ -715,31 +750,6 @@ let serve_html req html =
 let run ?(ip=Unix.inet_addr_loopback) port answer =
   server { default with ip = ip; port = port } answer
 
-let find_header req name =
-  List.assoc (String.lowercase name) req.headers
-
-let header_exn req name =
-  try find_header req name with _ -> Exn.fail "header %S" name
-
-let header_safe req name = try find_header req name with _ -> ""
-
-let header_referer req =
-  try find_header req "Referer" with _ -> try find_header req "Referrer" with _ -> ""
-
-let log_access_apache ch code size req =
-  try
-    let now = Time.now () in
-    fprintf ch "%s - - [%s] %S %d %dB . %S %S %.3f %s\n%!"
-      (show_client_addr req) (Time.to_string now) req.line code size
-      (header_referer req) (header_safe req "user-agent") (now -. req.conn) (header_safe req "host")
-  with exn ->
-    log #warn ~exn "access log : %s" @@ show_request req
-
-let log_status_apache ch status size req =
-  match status with
-  | `No_reply -> () (* ignore *)
-  | #reply_status as code -> log_access_apache ch (status_code code) size req
-
 (** {2 Lwt support} *)
 
 let default_timeout = 30.
@@ -751,6 +761,10 @@ let send_reply c cout reply =
   | `Body (code,hdrs,s) -> code, hdrs, `Body s
   | `Chunks (code,hdrs,gen) -> code, hdrs, `Chunks gen
   in
+  begin match c.req with
+  | Ready req -> log_status_apache !(c.server.config.access_log) code (match body with `Body s -> String.length s | `Chunks _ -> 0) req
+  | _ -> assert false
+  end;
   (* filter headers *)
   let hdrs = hdrs |> List.filter begin fun (k,_) ->
     let open Stre in
