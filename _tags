@@ -18,3 +18,4 @@ true: bin_annot, annot, debug, thread, package(threads), warn_A, warn_e, warn(-3
 "devkit_ragel.ml": warn(-38)
 "web.ml": package(lwt), package(lwt.syntax), package(curl.lwt)
 <memory_gperftools.cm*>: package(gperftools)
+"build.ml": package(ocamlbuild)
