@@ -25,15 +25,17 @@ end
 
 type attributes = (string * string) list
 type t = Time of Time.t | Count of int | Bytes of int
-type group = { k : string; attr : Attr.t; get : (unit -> (string * t) list); }
+type group = { k : string; attr : Attr.t; mutable get : (unit -> (string * t) list) list; }
 
 let h_groups = Hashtbl.create 10
 let register ~name ~k ~get ~attr =
   let attr = Attr.make (("class",name)::attr) in
   let (_:Attr.t) = Attr.add (k,"") attr in (* check that all keys are unique *)
   match Hashtbl.find h_groups attr with
-  | exception Not_found -> Hashtbl.replace h_groups attr { k; get; attr; }
-  | _ -> Exn.fail "duplicate Var %s" (show_a @@ Attr.get attr)
+  | exception Not_found -> Hashtbl.replace h_groups attr { k; attr; get = [get] }
+  | r ->
+    log #warn "duplicate Var %s" (show_a @@ Attr.get attr);
+    r.get <- get :: r.get
 
 let make_cc f pp name ?(attr=[]) k =
   let cc = Cache.Count.create () in
@@ -67,10 +69,35 @@ end
 
 let iter f =
   h_groups |> Hashtbl.iter begin fun _name g ->
-    g.get () |> List.iter begin fun (k,v) ->
-      let attr = (g.k, k) :: Attr.get g.attr in (* this was checked to be valid in [register] *)
-      f attr v
-    end
+    match g.get with
+    | [get] ->
+      get () |> List.iter begin fun (k,v) ->
+        let attr = (g.k, k) :: Attr.get g.attr in (* this was checked to be valid in [register] *)
+        f attr v
+      end
+    | l ->
+      (* uh *)
+      let h = Hashtbl.create 10 in
+      l |> List.iter begin fun get ->
+        get () |> List.iter begin fun (k,v) ->
+          let r = match Hashtbl.find h k with
+          | exception Not_found -> v
+          | x ->
+            match x, v with
+            | Time a, Time b -> Time (a+.b)
+            | Count a, Count b -> Count (a+b)
+            | Bytes a, Bytes b -> Bytes (a+b)
+            | Count _, Bytes _ | Count _, Time _
+            | Bytes _, Count _ | Bytes _, Time _
+            | Time _, Count _ | Time _, Bytes _ -> log #warn "mismatched value type for %S in %s" k (show_a @@ Attr.get g.attr); v
+          in
+          Hashtbl.replace h k r
+        end;
+      end;
+      h |> Hashtbl.iter begin fun k v ->
+        let attr = (g.k, k) :: Attr.get g.attr in (* this was checked to be valid in [register] *)
+        f attr v
+      end
   end
 
 (*
