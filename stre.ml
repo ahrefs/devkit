@@ -87,6 +87,18 @@ let extract rex str =
   with
     _ -> None
 
+(** String.starts_with but with [pos] to start from *)
+let starts_with s ?(pos=0) prefix =
+  if pos < 0 || pos > String.length s then invalid_arg "Stre.starts_with";
+  if String.length s < pos + String.length prefix then false else
+  try
+    for i = 0 to String.length prefix - 1 do
+      if s.[pos + i] <> prefix.[i] then raise Not_found
+    done;
+    true
+  with Not_found ->
+    false
+
 let istarts_with s ?(pos=0) prefix =
   if pos < 0 || pos > String.length s then invalid_arg "Stre.istarts_with";
   if String.length s < pos + String.length prefix then false else
