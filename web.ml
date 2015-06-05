@@ -94,6 +94,11 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) = struct
 
   open IO
 
+  let simple_result = function
+    | `Ok (code, s) when code / 100 = 2 -> `Ok s
+    | `Error code -> `Error (sprintf "(%d) %s" (Curl.errno code) (Curl.strerror code))
+    | `Ok (n, _) -> `Error (sprintf "http %d" n)
+
   let return_unit = return ()
 
   let with_curl f = bracket (return @@ Curl.init ()) (fun h -> Curl.cleanup h; return_unit) f
@@ -118,7 +123,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) = struct
     end
 
   (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
-  let http_request ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) ?body (action:http_action) url =
+  let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) ?body (action:http_action) url =
     let open Curl in
     let set_body h ct body =
       set_httpheader h ["Content-Type: "^ct];
@@ -152,11 +157,11 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) = struct
       in
       log #info "%s %s %s" action url body
     end;
-    http_gets ~setup url >>= fun res ->
-    return @@ match res with
-    | `Ok (code, s) when code / 100 = 2 -> `Ok s
-    | `Error code -> `Error (sprintf "(%d) %s" (errno code) (strerror code))
-    | `Ok (n, _) -> `Error (sprintf "http %d" n)
+    http_gets ~setup url
+
+  let http_request ?ua ?timeout ?verbose ?setup ?http_1_0 ?body (action:http_action) url =
+    http_request' ?ua ?timeout ?verbose ?setup ?http_1_0 ?body action url >>= fun res ->
+    return @@ simple_result res
 
   let http_query ?ua ?timeout ?verbose ?setup ?http_1_0 ?body (action:http_action) url =
     let body = match body with Some (ct,s) -> Some (`Raw (ct,s)) | None -> None in
@@ -183,6 +188,7 @@ module Http_blocking = Http(IO_blocking)(Curl_blocking)
 let with_curl = Http_blocking.with_curl
 let with_curl_cache = Http_blocking.with_curl_cache
 let http_gets = Http_blocking.http_gets
+let http_request' = Http_blocking.http_request'
 let http_request = Http_blocking.http_request
 let http_query = Http_blocking.http_query
 let http_submit = Http_blocking.http_submit
@@ -205,6 +211,8 @@ module Curl_lwt_for_http = struct
 end
 
 module Http_lwt = Http(IO_lwt)(Curl_lwt_for_http)
+let http_request_lwt' = Http_lwt.http_request'
+let http_request_lwt = Http_lwt.http_request
 let http_query_lwt = Http_lwt.http_query
 let http_submit_lwt = Http_lwt.http_submit
 
