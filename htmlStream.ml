@@ -127,14 +127,19 @@ let tag name ?(a=[]) = function
 
 let close name = function Close name' when name = name' -> true | _ -> false
 
-let to_text = function
+let to_text ?(br=false) ?(strip=false) = function
+  | Tag ("br",_) when br -> Some (Raw.inj "\n")
   | Tag _ -> None
-  | Text x -> Some x
+  | Text x -> Some (if strip then Raw.inj (String.strip (Raw.proj x)) else x)
   | Close _ -> None
 
 (** extract text from the list elements *)
 (* let make_text l = wrapped_outs (fun out -> List.iter (Option.may (IO.nwrite out) $ Option.map Raw.proj $ to_text) l) *)
-let make_text l =
-  List.enum l |> Enum.filter_map to_text
-  |> Enum.map Raw.proj |> Enum.map String.strip
-  |> List.of_enum |> String.concat " " |> Raw.inj
+let make_text ?br l =
+  let fold e =
+    let b = Buffer.create 10 in
+    let (_:bool) = Enum.fold (fun s bos -> if not bos && s <> "\n" then Buffer.add_char b ' '; Buffer.add_string b s; s = "\n") true e in
+    Buffer.contents b
+  in
+  List.enum l |> Enum.filter_map (to_text ?br ~strip:true) |>
+  Enum.map Raw.proj |> fold |> Raw.inj
