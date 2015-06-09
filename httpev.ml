@@ -802,7 +802,7 @@ let send_reply c cout reply =
   in
   begin match c.req with
   | Ready req -> log_status_apache !(c.server.config.access_log) code (match body with `Body s -> String.length s | `Chunks _ -> 0) req
-  | _ -> assert false
+  | _ -> () (* this can happen when sending back error reply on malformed HTTP input *)
   end;
   (* filter headers *)
   let hdrs = hdrs |> List.filter begin fun (k,_) ->
