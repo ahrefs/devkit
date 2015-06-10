@@ -68,3 +68,9 @@ let reclaim_s () =
      else sprintf "%s (%s)" (changed A.bytes_string rss rss') (Time.duration_str @@ t3 -. t2))
 
 let reclaim () = log #info "%s" @@ reclaim_s ()
+
+let (add_stats,log_stats) =
+  let f_stats = ref [] in (* called in reverse - and it is fine *)
+  (tuck f_stats), (fun () -> List.iter (fun f -> f ()) !f_stats)
+
+let () = add_stats log_all_info
