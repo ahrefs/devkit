@@ -259,6 +259,8 @@ method get_str = Time.duration_str (tm () -. start)
 
 end
 
+let uptime = new timer
+
 let speed n t = float n /. (max t epsilon_float)
 
 let perform ?name f x =
