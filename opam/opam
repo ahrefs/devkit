@@ -18,7 +18,6 @@ depends: [
   "libevent"
   "ocurl" {>= "0.7.2"}
   "ocamlnet"
-  "tyxml" {>= "3.2.0"}
   "pcre-ocaml"
   "extunix"
   "xmlm"

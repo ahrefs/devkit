@@ -11,9 +11,7 @@ Log
 Exn
 Exn_lwt
 Gzip_io
-Varz
 Time
-Varz_html
 Gzip_stream
 Persist
 Action

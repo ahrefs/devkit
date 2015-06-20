@@ -725,10 +725,6 @@ let serve_gzip_io req ?status f =
 let serve_text req ?status text =
   serve req ?status "text/plain" text
 
-let serve_html req html =
-  serve_io req "text/html" (fun out ->
-    Html5.P.print ~output:(IO.nwrite out) html)
-
 let run ?(ip=Unix.inet_addr_loopback) port answer =
   server { default with ip = ip; port = port } answer
 
