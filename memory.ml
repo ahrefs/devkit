@@ -31,8 +31,30 @@ let show_vm_info () =
   let { rss; vsize; nr_maps; swap_used } = get_vm_info () in
   sprintf "VM: rss %s, vsz %s, swap %s, maps %d" (bytes rss) (bytes vsize) (bytes swap_used) nr_maps
 
+let show_gc_heap ?(st=Gc.quick_stat ()) () =
+  let open Action in
+  sprintf "%s (max %s, chunks %d)"
+      (caml_words st.Gc.heap_words)
+      (caml_words st.Gc.top_heap_words)
+      st.Gc.heap_chunks
+
 let show_gc_info () =
-  sprintf "GC: %s" (Varz.gc_info ())
+  let open Action in
+  let st = Gc.quick_stat () in
+  let gc_heap = show_gc_heap ~st () in
+  let gc_ctrs =
+    sprintf "%s %s %s"
+        (caml_words_f st.Gc.minor_words)
+        (caml_words_f st.Gc.promoted_words)
+        (caml_words_f st.Gc.major_words)
+  in
+  let gc_coll =
+    sprintf "%u %u %u"
+        st.Gc.compactions
+        st.Gc.major_collections
+        st.Gc.minor_collections
+  in
+  sprintf "GC: Heap: %s Counters(mi,pr,ma): %s Collections(mv,ma,mi): %s" gc_heap gc_ctrs gc_coll
 
 (* hooks for Memory_gperftools *)
 let show_crt_info = ref (fun () -> "MALLOC: ?")
