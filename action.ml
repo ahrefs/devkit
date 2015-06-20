@@ -22,6 +22,16 @@ let timely_counter period f =
     logger ();
   end
 
+(** Exponential Weighted Moving Average
+  (smooth) 0.05 < alpha < 0.15 (dynamic)
+*)
+type ewma = (float -> unit) * (unit -> float)
+
+let ewma alpha : ewma =
+  let x = ref nan in
+  (fun f -> if compare nan !x = 0 then x := f else x := !x +. alpha *. (f -. !x)),
+  (fun () -> if compare nan !x = 0 then 0. else !x)
+
 let catmap ?(sep="") f l = String.concat sep (List.map f l)
 let strl f l = sprintf "[%s]" @@ catmap ~sep:";" f l
 let stra f a = sprintf "[|%s|]" @@ catmap ~sep:";" f @@ Array.to_list a
