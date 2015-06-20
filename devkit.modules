@@ -10,7 +10,6 @@ Parallel
 Log
 Exn
 Exn_lwt
-Netcgi_ext
 Gzip_io
 Varz
 Time

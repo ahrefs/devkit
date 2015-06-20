@@ -58,15 +58,3 @@ let to_html_doc () =
     ]
   )]
   (to_html ())
-
-(*
-  let module Arg = Netcgi_ext.Cgi_arg(struct let cgi = cgi end) in
-
-  let () =
-  match Arg.get "submit" with
-  | Some "1" ->
-    Varz.controls () |> List.iter (fun (k,v) ->
-      Option.may (fun set -> if set <> v then ignore (Varz.set_control k set)) (Arg.get k))
-  | _ -> ()
-  in
-*)

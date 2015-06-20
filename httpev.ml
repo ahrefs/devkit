@@ -660,9 +660,7 @@ let () =
   server (Unix.ADDR_INET (Unix.inet_addr_any, 8081)) answer
 *)
 
-(** {2 Utilities}
-  mimic {!Netcgi_ext} interface
-*)
+(** {2 Utilities} *)
 
 module Args(T : sig val req : request end) : sig
   exception Bad of string
@@ -698,10 +696,17 @@ struct
     T.req.args |> List.filter (fun (name',_) -> name = name') |> List.map snd
 end
 
+let noclose_io io =
+  IO.create_out
+    ~write:(IO.write io)
+    ~output:(IO.output io)
+    ~flush:(fun () -> IO.flush io)
+    ~close:(fun () -> ())
+
 (** Buffers all output *)
 let output (f : 'a IO.output -> unit) =
   let out = IO.output_string () in
-  f (Netcgi_ext.noclose out);
+  f @@ noclose_io out;
   IO.close_out out
 
 let serve (_req : request) ?status ?(extra=[]) ctype data =
