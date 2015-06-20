@@ -1,14 +1,17 @@
-opam-version: "1"
+opam-version: "1.2"
 maintainer: "igor@ahrefs.com"
 build: [
   [make]
+]
+install: [
   [make "install"]
 ]
 remove: [
   ["ocamlfind" "remove" "devkit"]
 ]
 depends: [
-  "ocamlfind"
+  "ocamlfind" {build}
+  "camlp4" {build}
   "extlib" {>="1.6.1"}
   "ounit"
   "camlzip"

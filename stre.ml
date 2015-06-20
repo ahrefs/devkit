@@ -1,7 +1,8 @@
 (** More string functions *)
 
-open Prelude
+open Printf
 open ExtLib
+open Prelude
 
 let by_words = Pcre.regexp ~flags:[`UTF8] "[^\\pL\\pN.]+"
 let by_space = Pcre.regexp "\\s+"
@@ -201,3 +202,7 @@ let array_concat sep a =
       Buffer.add_string b a.(i);
     done;
     Buffer.contents b
+
+let catmap ?(sep="") f l = String.concat sep (List.map f l)
+let list f l = sprintf "[%s]" @@ catmap ~sep:";" f l
+let array f a = sprintf "[|%s|]" @@ array_concat ";" @@ Array.map f a

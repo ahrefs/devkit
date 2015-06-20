@@ -8,9 +8,6 @@ open Control
 
 let log = Log.self
 
-(** do not use *)
-let get_host = String.lowercase $ Neturl.url_host $ Neturl.parse_url
-
 (** percent-encode (convert space into %20) *)
 let rawurlencode = Netencoding.Url.encode ~plus:false
 (** percent-encode, but convert space into plus, not %20 *)
@@ -46,8 +43,6 @@ let release h =
   Curl.reset h;
   Stack.push h cache
 end
-
-let curl_ok h = Curl.get_httpcode h = 200
 
 let curl_default_setup h =
   Curl.set_nosignal h true;
@@ -216,7 +211,7 @@ let http_request_lwt = Http_lwt.http_request
 let http_query_lwt = Http_lwt.http_query
 let http_submit_lwt = Http_lwt.http_submit
 
-let http_get_io_exn ?(setup=ignore) ?(check=curl_ok) url out =
+let http_get_io_exn ?(setup=ignore) ?(check=(fun h -> Curl.get_httpcode h = 200)) url out =
   let inner = ref None in
   try
     with_curl_cache begin fun h ->

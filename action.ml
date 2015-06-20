@@ -32,9 +32,9 @@ let ewma alpha : ewma =
   (fun f -> if compare nan !x = 0 then x := f else x := !x +. alpha *. (f -. !x)),
   (fun () -> if compare nan !x = 0 then 0. else !x)
 
-let catmap ?(sep="") f l = String.concat sep (List.map f l)
-let strl f l = sprintf "[%s]" @@ catmap ~sep:";" f l
-let stra f a = sprintf "[|%s|]" @@ catmap ~sep:";" f @@ Array.to_list a
+let catmap = Stre.catmap
+let strl = Stre.list
+let stra = Stre.array
 
 let uniq p e =
   let h = Hashtbl.create 16 in

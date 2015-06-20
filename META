@@ -1,7 +1,7 @@
 name="devkit"
 version="git"
 description="devkit"
-requires="extlib,pcre,netstring,netsys,zip,tyxml,unix,threads,libevent,curl,curl.lwt,extunix,xmlm,lwt.unix,bytes"
+requires="extlib,pcre,netstring,zip,tyxml,unix,threads,libevent,curl,curl.lwt,extunix,xmlm,lwt.unix,bytes"
 archive(mt,byte)="devkit.cma"
 archive(mt,native)="devkit.cmxa"
 
