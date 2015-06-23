@@ -28,7 +28,6 @@ Daemon
 MVar
 Network
 Devkit_ragel
-Seq
 ExtEnum
 Static_config
 Reader
