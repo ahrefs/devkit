@@ -15,8 +15,5 @@ package "gperftools" (
 
 package "build" (
   description = "build utilities"
-  requires = "unix,ocamlbuild"
-  archive(byte) = "devkit_build.cma"
-  archive(native) = "devkit_build.cmxa"
-  exists_if = "devkit_build.cma"
+  requires = "mybuild"
 )

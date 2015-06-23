@@ -17,7 +17,7 @@ gen: devkit_ragel.ml
 
 build: lib top build-test
 
-EXTRA_TARGETS := devkit_build.cma devkit_build.cmxa $(shell ocamlfind query gperftools -format "devkit_gperftools.cma devkit_gperftools.cmxa" 2> /dev/null)
+EXTRA_TARGETS := $(shell ocamlfind query gperftools -format "devkit_gperftools.cma devkit_gperftools.cmxa" 2> /dev/null)
 
 lib:
 		$(OCAMLBUILD) $(BUILDFLAGS) devkit.cma devkit.cmxa $(EXTRA_TARGETS)
