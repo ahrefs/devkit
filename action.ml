@@ -245,19 +245,6 @@ let caml_words_f = bytes_string_f $ bytes_of_words_f
 
 (* EMXIF *)
 
-module App(Info : sig val version : string val name : string end) = struct
-
-let run main =
-  Printexc.record_backtrace true;
-  Log.self #info "%s started. Version %s. PID %u" Info.name Info.version (Unix.getpid ());
-  try
-    main ();
-    Log.self #info "%s finished." Info.name
-  with
-    exn -> Log.self #error ~exn ~backtrace:true "%s aborted" Info.name
-
-end
-
 class timer =
 let tm = Unix.gettimeofday  in
 object
