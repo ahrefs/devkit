@@ -6,6 +6,12 @@ build: [
 install: [
   [make "install"]
 ]
+build-test: [
+  [make "test"]
+]
+build-doc: [
+  [make "doc"]
+]
 remove: [
   ["ocamlfind" "remove" "devkit"]
 ]
@@ -18,7 +24,7 @@ depends: [
   "libevent"
   "ocurl" {>= "0.7.2"}
   "ocamlnet"
-  "pcre-ocaml"
+  "pcre"
   "extunix"
   "xmlm"
   "lwt" {="2.4.8+patch"}
