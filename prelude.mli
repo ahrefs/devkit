@@ -3,42 +3,50 @@
 module U = ExtUnix.Specific
 module Enum = ExtEnum
 
-val ( $ ) : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b
 (** function composition : [f $ g] is equivalent to [(fun x -> f (g x))] *)
-val ( $$ ) : ('a -> 'a -> 'b) -> ('c -> 'a) -> 'c -> 'c -> 'b
+val ( $ ) : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b
+
 (** 2-function composition : [f $$ g] is equivalent to [(fun x y -> f (g x) (g y))] *)
-val ( >> ) : 'a -> ('a -> 'b) -> 'b [@@ocaml.deprecated "use (|>) instead"]
+val ( $$ ) : ('a -> 'a -> 'b) -> ('c -> 'a) -> 'c -> 'c -> 'b
+
 (** @deprecated Use [|>] instead. *)
-val ( & ) : ('a -> 'b) -> 'a -> 'b [@@ocaml.deprecated "use (@@) instead"]
+val ( >> ) : 'a -> ('a -> 'b) -> 'b [@@ocaml.deprecated "use (|>) instead"]
+
 (** @deprecated Use [\@\@] instead. *)
+val ( & ) : ('a -> 'b) -> 'a -> 'b [@@ocaml.deprecated "use (@@) instead"]
 
-val id : 'a -> 'a
 (** identity *)
-val identity : 'a -> 'a
+val id : 'a -> 'a
+
 (** idem *)
+val identity : 'a -> 'a
 
-val flip : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
 (** reverse arguments, [flip f x y] is equivalent to [f y x] *)
+val flip : ('a -> 'b -> 'c) -> 'b -> 'a -> 'c
 
-val apply2 : ('a -> 'b) -> 'a * 'a -> 'b * 'b
 (** map over 2-tuple *)
+val apply2 : ('a -> 'b) -> 'a * 'a -> 'b * 'b
 
-val some : 'a -> 'a option
 (** [some x] is equivalent to [Some x] *)
-val const : 'a -> (unit -> 'a)
+val some : 'a -> 'a option
+
 (** @return function returning given value *)
-val curry : ('a * 'b -> 'c) -> ('a -> 'b -> 'c)
+val const : 'a -> (unit -> 'a)
+
 (** @return curried version from function of tuple *)
-val uncurry : ('a -> 'b -> 'c) -> ('a * 'b -> 'c)
+val curry : ('a * 'b -> 'c) -> ('a -> 'b -> 'c)
+
 (** @return function of tuple from curried function *)
+val uncurry : ('a -> 'b -> 'c) -> ('a * 'b -> 'c)
 
-val ( !! ) : 'a Lazy.t -> 'a
 (** [Lazy.force] *)
+val ( !! ) : 'a Lazy.t -> 'a
 
-val printfn : ('a, unit, string, unit) format4 -> 'a
 (** printf to stdout with newline *)
-val eprintfn : ('a, unit, string, unit) format4 -> 'a
+val printfn : ('a, unit, string, unit) format4 -> 'a
+
 (** printf to stderr with newline *)
+val eprintfn : ('a, unit, string, unit) format4 -> 'a
 
 (** abstract type generator *)
 module New(T : sig type t end) :
@@ -58,10 +66,10 @@ val ( -= ) : int ref -> int -> unit
 
 val round : float -> float
 
-val atoi : string -> string -> int
 (** [atoi name value]
   @return integer of string [value]
   @raise Failure if [value] is not an integer (with [name] and [value] in exception message)
 *)
+val atoi : string -> string -> int
 
 val call_me_maybe : ('a -> unit) option -> 'a -> unit

@@ -14,8 +14,10 @@ val dummy : t
 
 (** @return pretty-printed pid (human readable) *)
 val show : t -> string
+
 (** @return short application name (without instance suffix) *)
 val short_name : t -> string
+
 (** @return string representation of pid, can be read back by [parse_pid_exn] *)
 val to_string : t -> string
 

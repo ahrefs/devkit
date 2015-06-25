@@ -166,9 +166,13 @@ module Count : sig
   val enum : 'a t -> ('a * int) Enum.t
   val iter : 'a t -> ('a -> int -> unit) -> unit
   val fold : 'a t -> ('a -> int -> 'b -> 'b) -> 'b -> 'b
-  val count : 'a t -> 'a -> int (** number of times given element was seen *)
+
+  (** number of times given element was seen *)
+  val count : 'a t -> 'a -> int
   val count_all : 'a t -> int
-  val size : 'a t -> int (** number of distinct elements *)
+
+  (** number of distinct elements *)
+  val size : 'a t -> int
   val show : 'a t -> ?sep:string -> ('a -> string) -> string
   val show_sorted : 'a t -> ?limit:int -> ?sep:string -> ('a -> string) -> string
   val stats : 'a t -> ?cmp:('a -> 'a -> int) -> ('a -> string) -> string
@@ -277,14 +281,19 @@ let group_fst e =
 module Assoc : sig
   type ('a,'b) t
   val create : unit -> ('a,'b) t
+
   (** Add association, assert on duplicate key *)
   val add : ('a,'b) t -> 'a -> 'b -> unit
+
   (** Get associated value, @raise Not_found if key is not present *)
   val get : ('a,'b) t -> 'a -> 'b
+
   (** Get associated value *)
   val try_get : ('a,'b) t -> 'a -> 'b option
+
   (** Delete association, assert if key is not present, @return associated value *)
   val del : ('a,'b) t -> 'a -> 'b
+
   (** Delete association, assert if key is not present *)
   val remove : ('a,'b) t -> 'a -> unit
   val size : ('a,'b) t -> int
