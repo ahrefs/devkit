@@ -30,7 +30,6 @@ let label = String.lowercase
 (** parse stream of characters @return stream of html elements *)
 let rec parse = parser
   | [< ''<'; x = tag; t >] -> [< 'x; parse t >]
-  | [< 'c when is_ws c; () = skip is_ws; t >] -> parse t
   | [< 'c; x = chars c (neq '<'); t >] -> [< 'Text (Raw.inj x); parse t >]
   | [< >] -> [< >]
   and tag = parser
