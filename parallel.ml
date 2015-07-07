@@ -73,6 +73,8 @@ let worker (execute : task -> result) =
   | -1 -> assert false
   | 0 -> (* child *)
       Unix.close main_read; Unix.close main_write;
+      Unix.set_close_on_exec child_read;
+      Unix.set_close_on_exec child_write;
       let output = Unix.out_channel_of_descr child_write in
       let input = Unix.in_channel_of_descr child_read in
       let rec loop () =
@@ -98,6 +100,9 @@ let worker (execute : task -> result) =
       exit 0
   | pid ->
       Unix.close child_read; Unix.close child_write;
+      (* prevent sharing these pipes with other children *)
+      Unix.set_close_on_exec main_write;
+      Unix.set_close_on_exec main_read;
       let cout = Unix.out_channel_of_descr main_write in
       let cin = Unix.in_channel_of_descr main_read in
       { ch = Some (cin, cout); pid; }
