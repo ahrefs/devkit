@@ -12,8 +12,12 @@ val eos : t -> bool
 val rest : t -> string
 val till : t -> string -> string
 val try_till : t -> string -> string
+val tillc : t -> char -> string
+val try_tillc : t -> char -> string
 val take : t -> int -> string
 val try_take : t -> int -> string
 val is_const : t -> string -> bool
 val const : t -> string -> unit
 val try_const : t -> string -> unit
+val while_ : t -> (char -> bool) -> string
+val skipc : t -> char -> unit

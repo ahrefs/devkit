@@ -29,11 +29,37 @@ let till t sep =
 
 let try_till t sub = try till t sub with EOS -> rest t
 
-let take t n =
-  if n > left t then raise EOS;
+let tillc t c =
+  try
+    let i = index_from t.s t.pos c in
+    let s = sub t.s t.pos (i - t.pos) in
+    t.pos <- i + 1;
+    s
+  with
+    Invalid_string -> raise EOS
+
+let try_tillc t c = try tillc t c with EOS -> rest t
+
+let extract t n =
   let s = sub t.s t.pos n in
   t.pos <- t.pos + n;
   s
+
+let take t n =
+  if n > left t then raise EOS;
+  extract t n
+
+let while_ t p =
+  let rec loop t p i =
+    if i = length t.s then rest t else
+    if p @@ String.unsafe_get t.s i then loop t p (i+1)
+    else extract t (i - t.pos)
+  in
+  loop t p t.pos
+
+let skipc t c =
+  if t.pos = length t.s then raise EOS;
+  if String.unsafe_get t.s t.pos = c then t.pos <- t.pos + 1 else raise (Not_equal (String.make 1 c))
 
 let try_take t n = take t (min n (left t))
 
