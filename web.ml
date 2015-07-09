@@ -31,18 +31,7 @@ let url_get_args url =
 
 let () = Curl.global_init Curl.CURLINIT_GLOBALALL
 
-module CurlCache : sig
-val get : unit -> Curl.t
-val release : Curl.t -> unit
-end = struct
-let cache = Stack.create ()
-let get () =
-  if Stack.is_empty cache then Curl.init ()
-  else Stack.pop cache
-let release h =
-  Curl.reset h;
-  Stack.push h cache
-end
+module CurlCache = Cache.Reuse(struct type t = Curl.t let create = Curl.init let reset = Curl.reset end)
 
 let curl_default_setup h =
   Curl.set_nosignal h true;

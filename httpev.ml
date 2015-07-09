@@ -933,17 +933,7 @@ let handle_lwt fd k =
       Lwt.return ()
   done
 
-module BuffersCache : sig
-val get : unit -> Lwt_bytes.t
-val release : Lwt_bytes.t -> unit
-end = struct
-let cache = Stack.create ()
-let get () =
-  if Stack.is_empty cache then Lwt_bytes.create buffer_size
-  else Stack.pop cache
-let release h =
-  Stack.push h cache
-end
+module BuffersCache = Cache.Reuse(struct type t = Lwt_bytes.t let create () = Lwt_bytes.create buffer_size let reset = ignore end)
 
 let setup_fd_lwt fd config answer =
   let server = make_server_state (Lwt_unix.unix_file_descr fd (* will not be used *) ) config in
