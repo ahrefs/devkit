@@ -1,5 +1,10 @@
 opam-version: "1.2"
 maintainer: "igor@ahrefs.com"
+authors: "Ahrefs"
+license: "LGPL-2.1 with OCaml linking exception"
+homepage: "https://github.com/ahrefs/devkit"
+dev-repo: "git@github.com/ahrefs/devkit.git"
+bug-reports: "https://github.com/ahrefs/devkit/issues"
 build: [
   [make]
 ]
@@ -18,7 +23,7 @@ remove: [
 depends: [
   "ocamlfind" {build}
   "camlp4" {build}
-  "extlib" {>="1.6.1"}
+  ("extlib" | "extlib-compat") {>="1.6.1"}
   "ounit"
   "camlzip"
   "libevent"
@@ -27,6 +32,8 @@ depends: [
   "pcre"
   "extunix"
   "xmlm"
-  "lwt" {="2.4.8+patch"}
+  "lwt" {>= "2.5.0"}
   "base-bytes"
+  "base-unix"
+  "base-threads"
 ]
