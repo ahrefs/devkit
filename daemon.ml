@@ -20,6 +20,10 @@ let should_exit = ref false
 (** exception to be raised by functions that wish to signal premature termination due to [!should_exit = true] *)
 exception ShouldExit
 
+(** raise [ShouldExit] if [should_exit] condition was set *)
+let break () =
+  if !should_exit then raise ShouldExit
+
 let args =
   [
     (let set_loglevel s =
