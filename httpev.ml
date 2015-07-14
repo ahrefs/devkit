@@ -914,24 +914,31 @@ let handle_client_lwt client cin answer =
     Lwt.return ()
 
 let handle_lwt fd k =
-  while_lwt not !Daemon.should_exit do
-    match_lwt Exn_lwt.map Lwt_unix.accept fd with
-    | `Exn (Unix.Unix_error (Unix.EMFILE,_,_)) ->
-      let pause = 2. in
-      log #error "too many open files, disabling accept for %s" (Time.duration_str pause);
-      Lwt_unix.sleep pause
-    | `Exn exn -> log #warn ~exn "accept"; Lwt.return ()
-    | `Ok (fd,addr as peer) ->
-      let task =
-        try_lwt k peer
-        with exn -> log #warn ~exn "accepted (%s)" (Nix.show_addr addr); Lwt.return ()
-        finally
-          Lwt_unix.(Exn.suppress (shutdown fd) SHUTDOWN_ALL);
-          Lwt_unix.close fd
-      in
-      Lwt.ignore_result task; (* "fork" processing *)
-      Lwt.return ()
-  done
+  match_lwt Exn_lwt.map Lwt_unix.accept fd with
+  | `Exn (Unix.Unix_error (Unix.EMFILE,_,_)) ->
+    let pause = 2. in
+    log #error "too many open files, disabling accept for %s" (Time.duration_str pause);
+    Lwt_unix.sleep pause
+  | `Exn exn -> log #warn ~exn "accept"; Lwt.return ()
+  | `Ok (fd,addr as peer) ->
+    let task =
+      try_lwt k peer
+      with exn -> log #warn ~exn "accepted (%s)" (Nix.show_addr addr); Lwt.return ()
+      finally
+        Lwt_unix.(Exn.suppress (shutdown fd) SHUTDOWN_ALL);
+        Lwt_unix.close fd
+    in
+    Lwt.ignore_result task; (* "fork" processing *)
+    Lwt.return ()
+
+let handle_lwt config fd k =
+  let rec loop () =
+    lwt () = handle_lwt fd k in
+    loop ()
+  in
+  lwt () = Lwt.choose [Daemon.should_exit_lwt; loop ()] in
+  log #info "%s %s:%d exit" config.name (Unix.string_of_inet_addr config.ip) config.port;
+  Lwt.return_unit
 
 module BuffersCache = Cache.Reuse(struct type t = Lwt_bytes.t let create () = Lwt_bytes.create buffer_size let reset = ignore end)
 
@@ -943,7 +950,7 @@ let setup_fd_lwt fd config answer =
       Lwt.wrap1 check_hung_requests server
     done
   end;
-  handle_lwt fd begin fun (fd,sockaddr) ->
+  handle_lwt config fd begin fun (fd,sockaddr) ->
     INC server.total;
     let req_id = server.total in
     match server.active >= config.max_clients with
