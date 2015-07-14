@@ -15,14 +15,18 @@ let managed = ref false
 (** global flag indicating that process should exit,
     [manage] will automatically set this flag on SIGTERM unless default signal handling is overriden
 *)
-let should_exit = ref false
+let should_exit_ = ref false
+let should_exit = should_exit_ (* compatibility *)
+let (should_exit_lwt,signal_exit_lwt) = Lwt.wait ()
 
 (** exception to be raised by functions that wish to signal premature termination due to [!should_exit = true] *)
 exception ShouldExit
 
+let signal_exit () = Lwt.wakeup signal_exit_lwt (); should_exit_ := true
+
 (** raise [ShouldExit] if [should_exit] condition was set *)
-let break () =
-  if !should_exit then raise ShouldExit
+let break () = if !should_exit_ then raise ShouldExit
+let break_lwt () = Lwt.bind should_exit_lwt (fun () -> Lwt.fail ShouldExit)
 
 let args =
   [
@@ -100,7 +104,7 @@ let manage () =
       Memory.show_all_info () |> List.iter unix_stderr;
       Memory.reclaim_s () |> unix_stderr
   end;
-  Signal.set_exit (fun _ -> should_exit := true);
+  Signal.set_exit signal_exit;
   Nix.raise_limits ();
   managed := true;
   ()
