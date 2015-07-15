@@ -330,7 +330,7 @@ let run_forks ?wait ?workers (type t) (f : t -> unit) l =
   let module W = Forks(Worker) in
   let worker x =
     (* sane signal handler FIXME restore? *)
-    Nix.handle_sig_exit_with ~exit:false (fun () -> Daemon.should_exit := true);
+    Signal.set_exit Daemon.signal_exit;
     f x
   in
   let proc = W.create worker (match workers with Some n -> assert (n > 0); n | None -> List.length l) in

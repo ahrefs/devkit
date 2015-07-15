@@ -16,8 +16,8 @@ let managed = ref false
     [manage] will automatically set this flag on SIGTERM unless default signal handling is overriden
 *)
 let should_exit_ = ref false
-let should_exit = should_exit_ (* compatibility *)
 let (should_exit_lwt,signal_exit_lwt) = Lwt.wait ()
+let should_exit () = !should_exit_
 
 (** exception to be raised by functions that wish to signal premature termination due to [!should_exit = true] *)
 exception ShouldExit
