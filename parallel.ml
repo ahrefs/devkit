@@ -346,33 +346,13 @@ let run_forks' f l =
 
 module Fin = struct
 
-  type t = { q : (unit -> unit) Mtq.t; evfd : Unix.file_descr; }
-
-  let setup events =
-    let fin = { q = Mtq.create (); evfd = U.eventfd 0; } in
-    let rec loop () =
-      match Mtq.try_get fin.q with
-      | None -> ()
-      | Some f -> begin try f () with exn -> log #warn ~exn "fin loop" end; loop ()
-    in
-    let reset fd =
-      try
-        ignore (U.eventfd_read fd)
-      with
-      | Unix.Unix_error (Unix.EAGAIN, _, _) -> ()
-      | exn -> log #warn ~exn "fin reset"; ()
-    in
-    Async.setup_simple_event events fin.evfd [Async.Ev.READ] begin fun _ fd _ -> reset fd; loop () end;
-    fin
-
-  let callback fin k result =
-    Mtq.put fin.q (fun () -> k result);
-    U.eventfd_write fin.evfd 1L
+  type t = Async.Fin.t
+  let setup = Async.Fin.setup
 
   let poolback fin pool default f x k =
     ThreadPool.put pool (fun () ->
       let result = try f x with exn -> log #warn ~exn "poolback"; default in
-      callback fin k result
+      Async.Fin.callback fin (fun () -> k result)
     )
 
 end

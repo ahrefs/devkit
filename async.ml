@@ -248,3 +248,39 @@ let delay events timeout f x =
   Ev.add timer (Some timeout)
 
 let poll events = Ev.loop events Ev.NONBLOCK
+
+module Fin : sig
+
+type t
+
+val setup : Ev.event_base -> t
+
+(** Arrange for callback to be executed in libevent loop, callback should not throw (exceptions are reported and ignored) *)
+val callback : t -> (unit -> unit) -> unit
+
+end = struct
+
+  type t = { q : (unit -> unit) Mtq.t; evfd : Unix.file_descr; }
+
+  let setup events =
+    let fin = { q = Mtq.create (); evfd = U.eventfd 0; } in
+    let rec loop () =
+      match Mtq.try_get fin.q with
+      | None -> ()
+      | Some f -> begin try f () with exn -> log #warn ~exn "fin loop" end; loop ()
+    in
+    let reset fd =
+      try
+        ignore (U.eventfd_read fd)
+      with
+      | Unix.Unix_error (Unix.EAGAIN, _, _) -> ()
+      | exn -> log #warn ~exn "fin reset"; ()
+    in
+    setup_simple_event events fin.evfd [Ev.READ] begin fun _ fd _ -> reset fd; loop () end;
+    fin
+
+  let callback fin f =
+    Mtq.put fin.q f;
+    U.eventfd_write fin.evfd 1L
+
+end

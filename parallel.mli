@@ -94,7 +94,6 @@ end
 module Fin : sig
 type t
 val setup : Libevent.event_base -> t
-val callback : t -> ('a -> unit) -> 'a -> unit
 
 (** Execute [f x] in ThreadPool [pool] and invoke [k result] back in originating thread.
    [result] is either [f x] or [default] if [f] throws an exception.
