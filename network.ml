@@ -41,6 +41,22 @@ let is_ipv4 s =
 
 let class_c ip = Int32.logand 0xFFFFFF00l ip
 
+module IPv4 = struct
+type t = ipv4
+let equal = (=)
+let compare = Pervasives.compare
+let null = ipv4_null
+let to_bytes = bytes_of_ipv4
+let to_string = string_of_ipv4
+let of_string_exn = ipv4_of_string_exn
+let of_string_null = ipv4_of_string_null
+let of_int32 = ipv4_of_int32
+let to_int32 = int32_of_ipv4
+let of_int = ipv4_of_int
+let to_int = int_of_ipv4
+let class_c = class_c
+end
+
 let make_broadcast addr netmask = Int32.logor addr (Int32.lognot netmask)
 
 let cidr_of_string_exn s =

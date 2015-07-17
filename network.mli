@@ -16,6 +16,22 @@ val ipv4_of_int : int -> ipv4
 val int_of_ipv4 : ipv4 -> int
 val class_c : ipv4 -> ipv4
 
+module IPv4 : sig
+type t
+val equal : t -> t -> bool
+val compare : t -> t -> int
+val null : t
+val to_bytes : t -> int * int * int * int
+val to_string : t -> string
+val of_string_exn : string -> t
+val of_string_null : string -> t
+val of_int32 : int32 -> t
+val to_int32 : t -> int32
+val of_int : int -> t
+val to_int : t -> int
+val class_c : t -> t
+end
+
 (** accepts addr/n notation or single ip *)
 val cidr_of_string_exn : string -> ipv4_cidr
 val range_of_cidr : ipv4_cidr -> ipv4 * ipv4
