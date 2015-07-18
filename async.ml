@@ -249,6 +249,9 @@ let delay events timeout f x =
 
 let poll events = Ev.loop events Ev.NONBLOCK
 
+(**
+  Communication from worker threads to the main event loop
+*)
 module Fin : sig
 
 type t

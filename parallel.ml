@@ -343,16 +343,3 @@ let run_forks' f l =
   | [] -> ()
   | [x] -> f x
   | l -> run_forks f l
-
-module Fin = struct
-
-  type t = Async.Fin.t
-  let setup = Async.Fin.setup
-
-  let poolback fin pool default f x k =
-    ThreadPool.put pool (fun () ->
-      let result = try f x with exn -> log #warn ~exn "poolback"; default in
-      Async.Fin.callback fin (fun () -> k result)
-    )
-
-end
