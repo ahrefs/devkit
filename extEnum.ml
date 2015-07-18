@@ -2,7 +2,6 @@
 
 include Enum
 
-(* same as Enum.find, but found element is peeked, not junked *)
 let rec find_peek f e =
   match peek e with
   | Some x when f x ->
@@ -23,18 +22,7 @@ let list_loop l =
   in
   from next
 
-(* same as list loop, but after loop takes new list *)
-let list_loop_changes l =
-  assert (!l <> []);
-  let r = ref !l in
-  let rec next () =
-    match !r with
-    | x :: xs -> r := xs; x
-    | [] -> assert (!l <> []); r := !l; next ()
-  in
-  from next
-
-let dyn_range ?(start=0) ?n d =
+let of_dynarray ?(start=0) ?n d =
   let last =
     match n with
     | None -> DynArray.length d
@@ -56,6 +44,8 @@ let dyn_range ?(start=0) ?n d =
     Enum.make ~next ~count ~clone
   in
   make start
+
+let dyn_range = of_dynarray
 
 let take limit e = init limit (fun _ -> next e)
 
@@ -156,8 +146,6 @@ let group_assoc equal fold zero e =
   in
   from next
 
-(** Replace subenum (a consecuitive sequence of elements from [e] comparing equal
-  with the given comparison function) with the first element from that sequence *)
 let uniq equal e =
   let current = ref None in
   let rec next () =
@@ -170,8 +158,6 @@ let uniq equal e =
   in
   from next
 
-(** Replace subenum (a consecuitive sequence of elements from [e] comparing equal
-  with the given comparison function) with the first element from that sequence and the number of duplicates *)
 let count_unique equal e =
   let current = ref None in
   let n = ref 0 in
@@ -185,8 +171,6 @@ let count_unique equal e =
   in
   from next
 
-(** Extract subenum (a consecuitive sequence of the elements from [e])
-  that satisfy the predicate [f] *)
 let sub e f =
   match peek e with
   | None -> None
