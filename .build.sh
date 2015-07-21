@@ -5,7 +5,7 @@ export OPAMKEEPBUILDDIR=true
 export OPAMBUILDTEST=true
 export OPAMYES=true
 
-opam update
+opam update -u
 opam sw 4.02.1
 eval $(opam config env)
 opam uninstall devkit
