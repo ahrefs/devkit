@@ -3,6 +3,9 @@
 module U = ExtUnix.Specific
 module Enum = ExtEnum
 
+module Int = Factor.Int
+module Float = Factor.Float
+
 (** function composition : [f $ g] is equivalent to [(fun x -> f (g x))] *)
 val ( $ ) : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b
 
