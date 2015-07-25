@@ -30,10 +30,11 @@ depends: [
   "ocurl" {>= "0.7.2"}
   "ocamlnet"
   "pcre"
-  "extunix"
+  "extunix" {>= "0.1.2"}
   "xmlm"
   "lwt" {>= "2.5.0"}
   "base-bytes"
   "base-unix"
   "base-threads"
 ]
+available: [ocaml-version >= "4.02.0"]
