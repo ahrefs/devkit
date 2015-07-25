@@ -1,4 +1,10 @@
 
+VERSION=$(shell git describe --always --long)
+
+ifndef VERSION
+VERSION=v0.3
+endif
+
 .PHONY: build lib top doc clean install uninstall test gen
 
 INSTALL_FILES=$(filter-out \
@@ -35,7 +41,7 @@ doc:
 		$(OCAMLBUILD) devkit.docdir/index.html
 
 install: lib
-		ocamlfind install -patch-version "$(shell git describe --always)" devkit META $(sort $(INSTALL_FILES))
+		ocamlfind install -patch-version "$(VERSION:v%=%)" devkit META $(sort $(INSTALL_FILES))
 
 uninstall:
 		ocamlfind remove devkit
