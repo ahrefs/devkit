@@ -1,5 +1,3 @@
-(** In-memory cache *)
-
 open Prelude
 open Control
 
@@ -46,6 +44,12 @@ module TimeLimited(E: sig type t end) = struct
 
   let count t = locked t.mutex (fun () -> M.cardinal t.m)
 
+end
+
+module type Lock = sig
+  type t
+  val create : unit -> t
+  val locked : t -> (unit -> 'a) -> 'a
 end
 
 module NoLock = struct
@@ -103,28 +107,7 @@ module TimeLimited2(E: Set.OrderedType)
 
 end
 
-(** Limited cache which remembers only the fixed number of last inserted values, mt-safe *)
-module SizeLimited : sig
-
-  (** The type of the cache *)
-  type 'a t
-
-  (** The type of the key assigned to each value in the cache *)
-  type key = private int
-
-  val key : int -> key
-
-  (**
-    [create size dummy] creates new empty cache.
-    [size] is the number of last entries to remember.
-  *)
-  val create : int -> 'a t
-
-  val add : 'a t -> 'a -> key
-  val get : 'a t -> key -> 'a option
-  val random : 'a t -> 'a option
-
-end = struct
+module SizeLimited = struct
 
   type key = int
 
@@ -152,35 +135,7 @@ end = struct
 
 end
 
-(** Count elements *)
-module Count : sig
-  type 'a t
-  val create : unit -> 'a t
-  val of_list : ('a * int) list -> 'a t
-  val of_enum : ('a * int) Enum.t -> 'a t
-  val clear : 'a t -> unit
-  val add : 'a t -> 'a -> unit
-  val plus : 'a t -> 'a -> int -> unit
-  val del : 'a t -> 'a -> unit
-  val minus : 'a t -> 'a -> int -> unit
-  val enum : 'a t -> ('a * int) Enum.t
-  val iter : 'a t -> ('a -> int -> unit) -> unit
-  val fold : 'a t -> ('a -> int -> 'b -> 'b) -> 'b -> 'b
-
-  (** number of times given element was seen *)
-  val count : 'a t -> 'a -> int
-  val count_all : 'a t -> int
-
-  (** number of distinct elements *)
-  val size : 'a t -> int
-  val show : 'a t -> ?sep:string -> ('a -> string) -> string
-  val show_sorted : 'a t -> ?limit:int -> ?sep:string -> ('a -> string) -> string
-  val stats : 'a t -> ?cmp:('a -> 'a -> int) -> ('a -> string) -> string
-  val report : 'a t -> ?limit:int -> ?cmp:('a -> 'a -> int) -> ?sep:string -> ('a -> string) -> string
-  val distrib : float t -> float array
-  val show_distrib : ?sep:string -> float t -> string
-  val names : 'a t -> 'a list
-end = struct
+module Count = struct
   open Hashtbl
   type 'a t = ('a,int) Hashtbl.t
   let create () : 'a t = create 16
@@ -256,14 +211,7 @@ end = struct
   let names (t : 'a t) = List.of_enum @@ Hashtbl.keys t
 end
 
-module Group : sig
-  type ('a,'b) t
-  val by : ('a -> 'b) -> ('a,'b) t
-  val add : ('a,'b) t -> 'a -> unit
-  val get : ('a,'b) t -> 'b -> 'a list
-  val iter : ('a,'b) t -> ('b -> 'a list -> unit) -> unit
-  val keys : ('a,'b) t -> 'b Enum.t
-end = struct
+module Group = struct
   type ('a,'b) t = ('b,'a list) Hashtbl.t * ('a -> 'b)
   let by f = Hashtbl.create 32, f
   let add (h,f) x = let k = f x in try Hashtbl.replace h k (x :: Hashtbl.find h k) with Not_found -> Hashtbl.add h k [x]
@@ -277,27 +225,7 @@ let group_fst e =
   Enum.iter (fun (k,v) -> Hashtbl.replace h k (try v :: Hashtbl.find h k with Not_found -> [v])) e;
   Hashtbl.enum h
 
-(** One-to-one associations *)
-module Assoc : sig
-  type ('a,'b) t
-  val create : unit -> ('a,'b) t
-
-  (** Add association, assert on duplicate key *)
-  val add : ('a,'b) t -> 'a -> 'b -> unit
-
-  (** Get associated value, @raise Not_found if key is not present *)
-  val get : ('a,'b) t -> 'a -> 'b
-
-  (** Get associated value *)
-  val try_get : ('a,'b) t -> 'a -> 'b option
-
-  (** Delete association, assert if key is not present, @return associated value *)
-  val del : ('a,'b) t -> 'a -> 'b
-
-  (** Delete association, assert if key is not present *)
-  val remove : ('a,'b) t -> 'a -> unit
-  val size : ('a,'b) t -> int
-end = struct
+module Assoc = struct
   type ('a,'b) t = ('a,'b) Hashtbl.t
   let create () = Hashtbl.create 32
   let add h k v =
@@ -317,17 +245,7 @@ end = struct
   let size = Hashtbl.length
 end
 
-module Lists : sig
-type ('a,'b) t
-val create : unit -> ('a,'b) t
-val add : ('a,'b) t -> 'a -> 'b -> unit
-val get : ('a,'b) t -> 'a -> 'b list
-val set : ('a,'b) t -> 'a -> 'b list -> unit
-val enum : ('a,'b) t -> ('a * 'b list) Enum.t
-val clear : ('a, 'b) t -> unit
-val count_keys : ('a, 'b) t -> int
-val count_all : ('a, 'b) t -> int
-end = struct
+module Lists = struct
 type ('a,'b) t = ('a,'b list) Hashtbl.t
 let create () = Hashtbl.create 16
 let get h k = try Hashtbl.find h k with Not_found -> []
