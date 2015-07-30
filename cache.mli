@@ -139,6 +139,11 @@ class ['a] cache : ('a list -> unit) -> limit:int ->
     method to_list : 'a list
   end
 
+type 'a reused
+val reuse : (unit -> 'a) -> ('a -> unit) -> 'a reused
+val use : 'a reused -> 'a
+val recycle : 'a reused -> 'a -> unit
+
 module Reuse(T : sig type t val create : unit -> t val reset : t -> unit end) : sig
   type t = T.t
   val get : unit -> t

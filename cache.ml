@@ -275,17 +275,18 @@ object(self)
   method size = List.length l
 end
 
+type 'a reused = { cache : 'a Stack.t; create : (unit -> 'a); reset : ('a -> unit); }
+let reuse create reset = { cache = Stack.create (); create; reset; }
+let use t = if Stack.is_empty t.cache then t.create () else Stack.pop t.cache
+let recycle t x = t.reset x; Stack.push x t.cache
+
 module Reuse(T : sig type t val create : unit -> t val reset : t -> unit end) : sig
 type t = T.t
 val get : unit -> t
 val release : t -> unit
 end = struct
 type t = T.t
-let cache = Stack.create ()
-let get () =
-  if Stack.is_empty cache then T.create ()
-  else Stack.pop cache
-let release x =
-  T.reset x;
-  Stack.push x cache
+let cache = reuse T.create T.reset
+let get () = use cache
+let release x = recycle cache x
 end
