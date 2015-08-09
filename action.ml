@@ -481,3 +481,37 @@ let show_bytes_unit =
       loop n ["";"K";"M";"G"]
     with
       exn -> Exn.fail ~exn "unparse_unit %d" n
+
+let shell_sequence names =
+  let l = ref [] in
+  let fresh s =
+    try
+      Scanf.sscanf s "%[a-z]%[0-9]%!" (fun prefix start -> prefix, start, int_of_string start)
+    with _ ->
+      tuck l s;
+      ("","",0)
+  in
+  let flush (prefix,start,last) =
+    if prefix <> "" then
+      tuck l @@ if int_of_string start = last then sprintf "%s%s" prefix start else sprintf "%s{%s..%d}" prefix start last
+  in
+  let acc = List.fold_left begin fun (prefix,start,last as acc) s ->
+    match prefix with
+    | "" -> fresh s
+    | _ ->
+      let next =
+        match String.(length prefix + length start = length s && sub s 0 (length prefix) = prefix) with
+        | false -> None
+        | true ->
+          match int_of_string String.(sub s (length prefix) (length start)) with
+          | exception _ -> None
+          | n when n = last + 1 -> Some (prefix,start,n)
+          | _ -> None
+      in
+      match next with
+      | Some acc -> acc
+      | None -> flush acc; fresh s
+  end ("","",0) names
+  in
+  flush acc;
+  List.rev !l
