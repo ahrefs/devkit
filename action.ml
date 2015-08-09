@@ -482,6 +482,7 @@ let show_bytes_unit =
     with
       exn -> Exn.fail ~exn "unparse_unit %d" n
 
+(** name01 name02 name09 name10 name11 -> name0{1..2} name{09..11} *)
 let shell_sequence names =
   let l = ref [] in
   let fresh s =
