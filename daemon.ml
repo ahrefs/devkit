@@ -22,7 +22,9 @@ let should_exit () = !should_exit_
 (** exception to be raised by functions that wish to signal premature termination due to [!should_exit = true] *)
 exception ShouldExit
 
-let signal_exit () = Lwt.wakeup signal_exit_lwt (); should_exit_ := true
+let signal_exit =
+  let do_lwt = lazy (Lwt.wakeup signal_exit_lwt ()) in
+  fun () -> Lazy.force do_lwt; should_exit_ := true
 
 (** raise [ShouldExit] if [should_exit] condition was set *)
 let break () = if !should_exit_ then raise ShouldExit
