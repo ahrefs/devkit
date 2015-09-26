@@ -3,9 +3,7 @@
 type t = private {
   host : string; (** machine hostname (no spaces allowed) *)
   id : int; (** process id *)
-  name : string; (** application id (no spaces allowed), for information.
-                     Consists of short application name and optional instance suffix delimited by dot
-                 *)
+  name : string; (** application id (no spaces allowed), for information. *)
   stamp : int; (** stamp for uniqueness to guard against pid reuse *)
 }
 
@@ -15,8 +13,10 @@ val dummy : t
 (** @return pretty-printed pid (human readable) *)
 val show : t -> string
 
-(** @return short application name (without instance suffix) *)
-val short_name : t -> string
+(** @return application name *)
+val name : t -> string
+(** @return application name *)
+val short_name : t -> string [@@ocaml.deprecated "use Pid.name"]
 
 (** @return string representation of pid, can be read back by [parse_pid_exn] *)
 val to_string : t -> string
