@@ -466,21 +466,28 @@ let parse_bytes_unit s =
       with
         exn -> Exn.fail ~exn "parse_unit: %S" s
 
-(** Pretty-print memory size in a way that can be parsed back by [parse_bytes_unit] *)
-let show_bytes_unit =
+let get_bytes_unit n =
   let rec loop n l =
     match l with
     | [] -> raise Not_found
     | _::xs when n mod 1024 = 0 -> loop (n / 1024) xs
-    | x::_ when n = 1 -> sprintf "%sB" x
-    | x::_ -> sprintf "%d%s" n x
+    | x::_ -> (n, x)
   in
-  fun n ->
-    try
-      assert (n <> 0);
-      loop n ["";"K";"M";"G"]
-    with
-      exn -> Exn.fail ~exn "unparse_unit %d" n
+  assert (n <> 0);
+  loop n ["";"K";"M";"G";"T";"P"]
+
+(** Pretty-print memory size in a way that can be parsed back by [parse_bytes_unit] *)
+let show_bytes_unit n =
+  match get_bytes_unit n with
+  | 1, s -> s ^ "B"
+  | n, s -> (string_of_int n) ^ s
+
+let rec show_bytes = function
+  | 0 -> "0"
+  | n when n < 0 -> "-" ^ show_bytes ~-n
+  | n ->
+    let (n, s) = get_bytes_unit n in
+    (string_of_int n) ^ s
 
 (** name01 name02 name09 name10 name11 -> name0{1..2} name{09..11} *)
 let shell_sequence names =
