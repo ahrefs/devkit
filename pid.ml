@@ -15,6 +15,7 @@ let short_name { name; _ } = name
 let get_name s = try fst @@ String.split s "." with _ -> s
 let validate_name descr s =
   try Scanf.sscanf s "%_[a-zA-Z0-9_-]%!" () with _ -> Exn.fail "Pid.self: bad %s %S" descr s
+let sanitize_name = String.map (function 'a'..'z' | 'A'..'Z' | '0'..'9' | '_' | '-' as c -> c | _ -> '_')
 
 let parse_exn s =
   (* cf self_pid *)
@@ -24,7 +25,7 @@ let parse_exn s =
    { id; host=String.lowercase host; name=get_name @@ String.lowercase name; stamp; })
 
 let self_stamp = ref None
-let self_name = ref @@ Filename.basename Sys.executable_name
+let self_name = ref @@ sanitize_name @@ Filename.basename Sys.executable_name
 
 let self_as name =
   let id = Unix.getpid () in
