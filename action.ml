@@ -458,13 +458,13 @@ let parse_bytes_unit s =
     | _ -> raise Not_found
   in
   try
-    unit_of_string s
+    if s = "0" then 0 else unit_of_string s
   with
     Not_found ->
       try
         Scanf.sscanf s "%d%s%!" (fun n t -> assert (n <> 0); n * unit_of_string t)
       with
-        exn -> Exn.fail ~exn "parse_unit: %S" s
+        exn -> Exn.fail ~exn "parse_bytes_unit: %S" s
 
 let get_bytes_unit n =
   let rec loop n l =
@@ -476,18 +476,16 @@ let get_bytes_unit n =
   assert (n <> 0);
   loop n ["";"K";"M";"G";"T";"P"]
 
-(** Pretty-print memory size in a way that can be parsed back by [parse_bytes_unit] *)
 let show_bytes_unit n =
   match get_bytes_unit n with
   | 1, s -> s ^ "B"
   | n, s -> (string_of_int n) ^ s
 
-let rec show_bytes = function
-  | 0 -> "0"
-  | n when n < 0 -> "-" ^ show_bytes ~-n
-  | n ->
-    let (n, s) = get_bytes_unit n in
-    (string_of_int n) ^ s
+(** Pretty-print memory size in a way that can be parsed back by [parse_bytes_unit] *)
+let show_bytes_unit = function
+| 0 -> "0"
+| n when n < 0 -> "-" ^ show_bytes_unit ~-n
+| n -> show_bytes_unit n
 
 (** name01 name02 name09 name10 name11 -> name0{1..2} name{09..11} *)
 let shell_sequence names =
