@@ -279,6 +279,9 @@ module LRU = struct
   let miss cache = cache.miss
   let hit cache = cache.hit
 
+  let replace cache key value =
+    try (Hashtbl.find cache.table key).value <- value with Not_found -> ()
+
   let get cache key =
     try
       let node = Hashtbl.find cache.table key in
