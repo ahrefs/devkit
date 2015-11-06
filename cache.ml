@@ -309,7 +309,8 @@ module LRU = struct
         prev = node;
       }
       in
-      cache.lru <- push node cache.lfu
+      cache.lru <- push node cache.lfu;
+      Hashtbl.replace cache.table key node
 end
 
 module Group = struct
