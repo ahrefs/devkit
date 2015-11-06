@@ -212,6 +212,15 @@ module Count = struct
 end
 
 
+(*
+  Generationnal LRU cache.
+  Elements are store in a first fifo, and get evicted in order.
+  If an element is reused while in the first fifo, it is promoted to a second fifo, from which elements are also evicted in order.
+  Hits from the second fifo puts back the element in the back of this fifo.
+
+  The goal is to avoid low hit rate due to large workload with some regularly used elements which would get evicted from the LRU
+  before being reused
+*)
 module LRU = struct
   type ('k, 'v) t = {
     table : ('k, ('k, 'v) node) Hashtbl.t;
@@ -274,19 +283,23 @@ module LRU = struct
     try
       let node = Hashtbl.find cache.table key in
       cache.hit <- cache.hit + 1;
-      cache.lru_avaibl <- cache.lru_avaibl + 1;
       let () =
         match node.in_lfu with
         | true -> remove node
-        | false when node == node.next -> cache.lru <- None
-        | _ -> remove node
+        | false ->
+          cache.lfu_avaibl <- cache.lfu_avaibl - 1;
+          cache.lru_avaibl <- cache.lru_avaibl + 1;
+          node.in_lfu <- true;
+          if node == node.next then
+            cache.lru <- None
+          else
+            remove node
       in
-      node.in_lfu <- true;
       if cache.lfu_avaibl = 0 then
         let (evict, _) = pop cache.lfu in
-        Hashtbl.remove cache.table evict.key
+        Hashtbl.remove cache.table evict.key;
       else
-        cache.lfu_avaibl <- cache.lfu_avaibl - 1;
+        cache.lru_avaibl <- cache.lru_avaibl + 1;
       cache.lfu <- push node cache.lfu;
       node.value
     with Not_found -> cache.miss <- cache.miss + 1; raise Not_found
