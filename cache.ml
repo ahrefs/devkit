@@ -267,6 +267,9 @@ module LRU = struct
       lfu_avaibl = size;
     }
 
+  let miss cache = cache.miss
+  let hit cache = cache.hit
+
   let get cache key =
     try
       let node = Hashtbl.find cache.table key in

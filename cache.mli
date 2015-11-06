@@ -57,6 +57,8 @@ module LRU : sig
   val create : int -> ('k, 'v) t
   val put : ('k, 'v) t -> 'k -> 'v -> unit
   val get : ('k, 'v) t -> 'k -> 'v
+  val miss : ('k, 'v) t -> int
+  val hit : ('k, 'v) t -> int
 end
 
 (** Count elements *)
