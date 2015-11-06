@@ -1,6 +1,8 @@
 open Prelude
 open Control
 
+module StdHashtbl = Hashtbl
+
 open ExtLib
 open Printf
 
@@ -221,22 +223,23 @@ end
   The goal is to avoid low hit rate due to large workload with some regularly used elements which would get evicted from the LRU
   before being reused
 *)
-module LRU = struct
-  type ('k, 'v) t = {
-    table : ('k, ('k, 'v) node) Hashtbl.t;
+module LRU (Keys : StdHashtbl.HashedType) = struct
+  module Hashtbl = StdHashtbl.Make(Keys)
+  type 'v t = {
+    table : 'v node Hashtbl.t;
     mutable lru_avaibl : int;
     mutable lfu_avaibl : int;
-    mutable lru : ('k, 'v) node option;
-    mutable lfu : ('k, 'v) node option;
+    mutable lru : 'v node option;
+    mutable lfu : 'v node option;
     mutable hit : int;
     mutable miss : int;
   }
-  and ('k, 'v) node = {
-    mutable key : 'k;
+  and 'v node = {
+    mutable key : Hashtbl.key;
     mutable value : 'v;
     mutable in_lfu : bool;
-    mutable next : ('k, 'v) node;
-    mutable prev : ('k, 'v) node;
+    mutable next : 'v node;
+    mutable prev : 'v node;
   }
 
   let remove node =

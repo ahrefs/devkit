@@ -52,14 +52,14 @@ module SizeLimited : sig
 
 end
 
-module LRU : sig
-  type ('k, 'v) t
-  val create : int -> ('k, 'v) t
-  val put : ('k, 'v) t -> 'k -> 'v -> unit
-  val get : ('k, 'v) t -> 'k -> 'v
-  val replace : ('k, 'v) t -> 'k -> 'v -> unit
-  val miss : ('k, 'v) t -> int
-  val hit : ('k, 'v) t -> int
+module LRU(K : Hashtbl.HashedType) : sig
+  type 'v t
+  val create : int -> 'v t
+  val put : 'v t -> K.t -> 'v -> unit
+  val get : 'v t -> K.t -> 'v
+  val replace : 'v t -> K.t -> 'v -> unit
+  val miss : 'v t -> int
+  val hit : 'v t -> int
 end
 
 (** Count elements *)
