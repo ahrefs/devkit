@@ -211,6 +211,104 @@ module Count = struct
   let names (t : 'a t) = List.of_enum @@ Hashtbl.keys t
 end
 
+
+module LRU = struct
+  type ('k, 'v) t = {
+    table : ('k, ('k, 'v) node) Hashtbl.t;
+    mutable lru_avaibl : int;
+    mutable lfu_avaibl : int;
+    mutable lru : ('k, 'v) node option;
+    mutable lfu : ('k, 'v) node option;
+    mutable hit : int;
+    mutable miss : int;
+  }
+  and ('k, 'v) node = {
+    mutable key : 'k;
+    mutable value : 'v;
+    mutable in_lfu : bool;
+    mutable next : ('k, 'v) node;
+    mutable prev : ('k, 'v) node;
+  }
+
+  let remove node =
+    node.prev.next <- node.next;
+    node.next.prev <- node.prev
+
+  let push node = function
+    | None ->
+      node.next <- node;
+      node.prev <- node;
+      Some node
+    | Some first when first == node -> Some first
+    | Some first ->
+      node.prev <- first.prev;
+      node.next <- first;
+      first.prev.next <- node;
+      first.prev <- node;
+      Some first
+
+  let pop = function
+    | None -> raise Not_found
+    | Some n when n == n.next -> n, None
+    | Some n ->
+      n.prev.next <- n.next;
+      n.next.prev <- n.prev;
+      n, (Some n.next)
+
+  let create size =
+    assert (size > 0);
+    {
+      table = Hashtbl.create size;
+      lru = None;
+      lfu = None;
+      hit = 0;
+      miss = 0;
+      lru_avaibl = size;
+      lfu_avaibl = size;
+    }
+
+  let get cache key =
+    try
+      let node = Hashtbl.find cache.table key in
+      cache.hit <- cache.hit + 1;
+      cache.lru_avaibl <- cache.lru_avaibl + 1;
+      let () =
+        match node.in_lfu with
+        | true -> remove node
+        | false when node == node.next -> cache.lru <- None
+        | _ -> remove node
+      in
+      node.in_lfu <- true;
+      if cache.lfu_avaibl = 0 then
+        let (evict, _) = pop cache.lfu in
+        Hashtbl.remove cache.table evict.key
+      else
+        cache.lfu_avaibl <- cache.lfu_avaibl - 1;
+      cache.lfu <- push node cache.lfu;
+      node.value
+    with Not_found -> cache.miss <- cache.miss + 1; raise Not_found
+
+  let put cache key value =
+    try
+      let node = Hashtbl.find cache.table key in
+      node.value <- value
+    with Not_found ->
+      if cache.lru_avaibl = 0 then
+        let (evict, _) = pop cache.lru in
+        Hashtbl.remove cache.table evict.key
+      else
+        cache.lru_avaibl <- cache.lru_avaibl - 1;
+      let rec node = {
+        key;
+        value;
+        in_lfu = false;
+        next = node;
+        prev = node;
+      }
+      in
+      cache.lru <- push node cache.lfu
+end
+
 module Group = struct
   type ('a,'b) t = ('b,'a list) Hashtbl.t * ('a -> 'b)
   let by f = Hashtbl.create 32, f

@@ -52,6 +52,13 @@ module SizeLimited : sig
 
 end
 
+module LRU : sig
+  type ('k, 'v) t
+  val create : int -> ('k, 'v) t
+  val put : ('k, 'v) t -> 'k -> 'v -> unit
+  val get : ('k, 'v) t -> 'k -> 'v
+end
+
 (** Count elements *)
 module Count : sig
   type 'a t
