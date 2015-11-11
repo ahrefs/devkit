@@ -1,7 +1,5 @@
 (** Useful shortcuts *)
 
-open ExtLib
-
 module U = ExtUnix.Specific
 module Enum = ExtEnum
 
@@ -61,30 +59,5 @@ let call_me_maybe f x =
   | None -> ()
   | Some f -> f x
 
-class poll_engine =
-let readmask = U.Poll.(pollin + pollerr + pollhup + pollpri + pollrdhup) in
-let writemask = U.Poll.(pollout + pollerr + pollhup) in
-let convert (fd,i,o) = fd, U.Poll.((if i then pollin else none) + (if o then pollout else none)) in
-object
-val mutable buffer = [||]
-inherit Lwt_engine.poll_based
-method poll fds timeout =
-(*
-  let show = Action.strl (fun (fd,i,o) -> sprintf "%d%s%s" (U.int_of_file_descr fd) (if i then "r" else "") (if o then "w" else "")) in
-  log #info "lwt poll %f %s" timeout (show fds);
-*)
-  let nfds = List.length fds in
-  if nfds <= Array.length buffer && nfds * 2 > Array.length buffer then
-  begin
-    List.iteri (fun i x -> buffer.(i) <- convert x) fds;
-  end
-  else
-    buffer <- Array.of_list @@ List.map convert fds;
-
-  let l = U.poll buffer ~n:nfds timeout |> List.map (fun (fd,f) -> fd, U.Poll.is_inter f readmask, U.Poll.is_inter f writemask) in
-(*   log #info "lwt poll done %s" (show l); *)
-  l
-end
-
 let () =
-  Lwt_engine.set (new poll_engine)
+  Lwt_engine.set @@ new Lwt_engines.poll

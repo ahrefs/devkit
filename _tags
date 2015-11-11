@@ -3,12 +3,12 @@ true: bin_annot, annot, debug, thread, package(threads), warn_A, warn_e, warn(-3
 "web.ml": package(netstring), package(curl)
 "exn.ml": package(curl), package(xmlm)
 "htmlStream.ml" or "stre.ml" or "php_serialize.ml" or "web.ml": syntax_camlp4o, package(camlp4)
-"nix.ml" or "files.ml" or "daemon.ml" or "prelude.ml" or "parallel.ml" or "signal.ml": package(lwt.unix)
+"nix.ml" or "files.ml" or "daemon.ml" or "prelude.ml" or "parallel.ml" or "signal.ml" or "lwt_engines.ml": package(lwt.unix)
 "exn_lwt.ml": package(lwt)
 <gzip_*.ml>: package(zip)
 "httpev.ml": package(libevent), package(netstring), syntax_camlp4o, package(camlp4.macro), package(lwt.syntax)
 #"prelude.ml": syntax_camlp4o, package(camlp4.macro), dversion
-"async.ml" or "nix.ml" or "parallel.ml" or "parallel.mli" or <signal.ml*> or "test_httpev.ml": package(libevent)
+"async.ml" or "nix.ml" or "parallel.ml" or "parallel.mli" or <signal.ml*> or "test_httpev.ml" or "lwt_engines.ml": package(libevent)
 <*.{top,byte,native}>: package(extlib), package(pcre), package(zip), package(libevent), package(curl), package(curl.lwt), package(netstring),\
   package(extunix), package(xmlm), package(lwt.unix), package(bytes)
 <test.*>: package(oUnit)
