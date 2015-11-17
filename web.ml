@@ -229,7 +229,7 @@ let http_get ?verbose ?setup url = wrapped (IO.output_string ()) IO.close_out (h
 let http_get_io_lwt ?timeout ?(setup=ignore) ?(check=(fun h -> Curl.get_httpcode h = 200)) url out =
   let inner = ref None in
   try_lwt
-    with_curl_cache begin fun h ->
+    Http_lwt.with_curl_cache begin fun h ->
       Curl.set_url h url;
       curl_default_setup h;
       Option.may (Curl.set_timeout h) timeout;
