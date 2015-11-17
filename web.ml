@@ -226,6 +226,27 @@ let http_get_io url ?(verbose=true) ?setup out =
 
 let http_get ?verbose ?setup url = wrapped (IO.output_string ()) IO.close_out (http_get_io ?verbose ?setup url)
 
+let http_get_io_lwt ?timeout ?(setup=ignore) ?(check=(fun h -> Curl.get_httpcode h = 200)) url out =
+  let inner = ref None in
+  try_lwt
+    with_curl_cache begin fun h ->
+      Curl.set_url h url;
+      curl_default_setup h;
+      Option.may (Curl.set_timeout h) timeout;
+      setup h;
+      Curl.set_writefunction h (fun s ->
+        try
+          match check h with
+          | false -> 0
+          | true -> IO.nwrite out s; String.length s
+        with exn -> inner := Some exn; 0);
+      match_lwt Curl_lwt.perform h with
+      | Curl.CURLE_OK -> `Ok (Curl.get_httpcode h, Curl.get_sizedownload h) |> Lwt.return
+      | code -> `Error (sprintf "(%d) %s" (Curl.errno code) (Curl.strerror code)) |> Lwt.return
+    end
+  with
+  | exn -> Exn_lwt.fail ~exn:(Option.default exn !inner) "http_get_io_lwt"
+
 (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
 let http_do ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (action:http_action_old) url =
   let open Curl in
