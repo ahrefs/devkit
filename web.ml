@@ -228,7 +228,7 @@ let http_get_io url ?(verbose=true) ?setup out =
 
 let http_get ?verbose ?setup url = wrapped (IO.output_string ()) IO.close_out (http_get_io ?verbose ?setup url)
 
-let http_get_io_lwt ?timeout ?(setup=ignore) ?(check=(fun h -> Curl.get_httpcode h = 200)) url out =
+let http_get_io_lwt ?timeout ?(setup=ignore) ?(handle_result=Http_lwt.simple_result) ?(check=(fun h -> Curl.get_httpcode h = 200)) url out =
   let inner = ref None in
   try_lwt
     Http_lwt.with_curl_cache begin fun h ->
@@ -242,9 +242,12 @@ let http_get_io_lwt ?timeout ?(setup=ignore) ?(check=(fun h -> Curl.get_httpcode
           | false -> 0
           | true -> IO.nwrite out s; String.length s
         with exn -> inner := Some exn; 0);
-      match_lwt Curl_lwt.perform h with
-      | Curl.CURLE_OK -> IO.flush out; `Ok (Curl.get_httpcode h, Curl.get_sizedownload h) |> Lwt.return
-      | code -> `Error (sprintf "(%d) %s" (Curl.errno code) (Curl.strerror code)) |> Lwt.return
+      lwt result =
+        match_lwt Curl_lwt.perform h with
+        | Curl.CURLE_OK -> IO.flush out; `Ok (Curl.get_httpcode h, Curl.get_sizedownload h) |> Lwt.return
+        | code -> `Error code |> Lwt.return
+      in
+      handle_result result |> Lwt.return
     end
   with
   | exn -> Exn_lwt.fail ~exn:(Option.default exn !inner) "http_get_io_lwt"
