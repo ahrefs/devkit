@@ -212,7 +212,9 @@ let http_get_io_exn ?(setup=ignore) ?(check=(fun h -> Curl.get_httpcode h = 200)
           | false -> 0
           | true -> IO.nwrite out s; String.length s
         with exn -> inner := Some exn; 0);
-      Curl.perform h
+      let result = Curl.perform h in
+      IO.flush out;
+      result
     end
   with
   | exn -> raise (Option.default exn !inner)
@@ -241,7 +243,7 @@ let http_get_io_lwt ?timeout ?(setup=ignore) ?(check=(fun h -> Curl.get_httpcode
           | true -> IO.nwrite out s; String.length s
         with exn -> inner := Some exn; 0);
       match_lwt Curl_lwt.perform h with
-      | Curl.CURLE_OK -> `Ok (Curl.get_httpcode h, Curl.get_sizedownload h) |> Lwt.return
+      | Curl.CURLE_OK -> IO.flush out; `Ok (Curl.get_httpcode h, Curl.get_sizedownload h) |> Lwt.return
       | code -> `Error (sprintf "(%d) %s" (Curl.errno code) (Curl.strerror code)) |> Lwt.return
     end
   with
