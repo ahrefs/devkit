@@ -28,7 +28,7 @@ let nsplitc_fold str sep fold zero =
       | p2 -> nsplit (fold acc (String.sub str p (p2 - p))) (p2 + 1)
       | exception Not_found -> fold acc (String.sub str p (String.length str - p))
     in
-    nsplit [] 0
+    nsplit zero 0
 
 let nsplitc_rev str sep = nsplitc_fold str sep cons []
 
