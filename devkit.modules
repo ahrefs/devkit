@@ -25,6 +25,7 @@ Logger
 Logstash
 Lwt_engines
 Lwt_flag
+Lwt_mark
 Memory
 Mtq
 MVar
