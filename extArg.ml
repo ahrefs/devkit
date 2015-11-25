@@ -59,7 +59,7 @@ let may_int = make_arg int_option
 let may_str = make_arg str_option
 let positive_int = make_arg (test_int (fun x -> x > 0))
 
-let usage_header = sprintf "Usage: %s [options]\nOptions are:" Sys.argv.(0)
+let usage_header = "Available options are:"
 
 let align ?(sep="#") args =
   let open ExtString in
