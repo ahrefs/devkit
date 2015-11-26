@@ -335,6 +335,98 @@ let () = test "Enum.iter_while" begin fun () ->
   OUnit.assert_equal ~printer:(Action.strl string_of_int) [6;7] (List.of_enum e)
 end
 
+module LRU = struct
+  module L = Cache.LRU(struct type t = int let equal = (=) let hash x = x end)
+  open OUnit
+
+  let () = test "LRU.put simple" begin fun () ->
+      let size = 5 in
+      let cache = L.create size in
+      L.put cache 1 "a";
+      assert_equal (L.lru_free cache) (size - 1);
+      assert_equal (L.lfu_free cache) size;
+      let value = L.get cache 1 in
+      assert_equal ~msg:"insert_hashtbl" value "a";
+      assert_equal (L.lru_free cache) size;
+      assert_equal (L.lfu_free cache) (size - 1);
+      L.put cache 1 "b";
+      assert_equal (L.lru_free cache) size;
+      assert_equal (L.lfu_free cache) (size - 1);
+      assert_equal ~msg:"insert_hashtbl" (L.get cache 1) "b"
+    end
+
+  let () = test "LRU evict lru" begin fun () ->
+      let size = 3 in
+      let cache = L.create size in
+      L.put cache 1 "a";
+      L.put cache 2 "b";
+      L.put cache 3 "c";
+      assert_equal (L.lru_free cache) 0;
+      assert_equal (L.lfu_free cache) 3;
+      L.put cache 4 "c";
+      assert_equal (L.lru_free cache) 0;
+      assert_equal (L.lfu_free cache) 3;
+      assert_equal ~printer:(function Some s -> sprintf "some %s" s | None -> "none") (try Some (L.get cache 1) with Not_found -> None) None;
+      assert_bool "key 2" (L.mem cache 2);
+      assert_bool "key 3" (L.mem cache 3);
+      assert_bool "key 4" (L.mem cache 4);
+    end
+
+  let () = test "LRU evict lfu" begin fun () ->
+      let size = 3 in
+      let cache = L.create size in
+      L.put cache 1 "a";
+      L.put cache 2 "b";
+      L.put cache 3 "c";
+      assert_equal (L.get cache 1) "a";
+      assert_equal (L.lru_free cache) 1;
+      assert_equal (L.lfu_free cache) 2;
+      L.put cache 4 "d";
+      assert_equal (L.lru_free cache) 0;
+      assert_equal (L.lfu_free cache) 2;
+      let _ = L.get cache 2 in
+      let _ = L.get cache 3 in
+      assert_equal (L.lru_free cache) 2;
+      assert_equal (L.lfu_free cache) 0;
+      let _ = L.get cache 2 in
+      assert_equal (L.lru_free cache) 2;
+      assert_equal (L.lfu_free cache) 0;
+      let _ = L.get cache 4 in
+      assert_equal (L.lru_free cache) 3;
+      assert_equal (L.lfu_free cache) 0;
+      assert_bool "key 1 evicted" ( not @@ L.mem cache 1)
+    end
+
+  let () = test "LRU bounded" begin fun () ->
+      let size = 2 in
+      let cache = L.create size in
+      for i = 0 to 20 do
+        L.put cache i "a";
+      done;
+      assert_equal (L.lru_free cache) 0;
+      assert_equal (L.lfu_free cache) 2;
+      assert_equal (L.size cache) 2
+    end
+
+  let () = test "LFU keep" begin fun () ->
+      let size = 2 in
+      let cache = L.create size in
+      L.put cache 1 "a";
+      L.put cache 2 "b";
+      let _ = L.get cache 2 in
+      let _ = L.get cache 1 in
+      for i = 3 to 6 do
+        L.put cache i "b";
+        (*let _ = L.get cache (i - 1) in*)
+        let _ = L.get cache 1 in
+        ()
+      done;
+      assert_equal (L.lru_free cache) 0;
+      assert_equal (L.lfu_free cache) 0;
+      assert_bool "key 1 kept" (L.mem cache 1)
+    end
+end
+
 let tests () =
   let (_:test_results) = run_test_tt_main ("devkit" >::: List.rev !tests) in
   ()

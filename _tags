@@ -11,7 +11,7 @@ true: bin_annot, annot, debug, thread, package(threads), warn_A, warn_e, warn(-3
 "async.ml" or "nix.ml" or "parallel.ml" or "parallel.mli" or <signal.ml*> or "test_httpev.ml" or "lwt_engines.ml": package(libevent)
 <*.{top,byte,native}>: package(extlib), package(pcre), package(zip), package(libevent), package(curl), package(curl.lwt), package(netstring),\
   package(extunix), package(xmlm), package(lwt.unix), package(bytes)
-<test.*>: package(oUnit)
+<test.*> or "cache.ml": package(oUnit)
 "extStream.ml": warn(-9-27)
 "devkit_ragel.ml": warn(-38)
 "web.ml": package(lwt), package(lwt.syntax), package(curl.lwt)

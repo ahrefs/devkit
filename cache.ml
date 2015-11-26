@@ -225,111 +225,132 @@ end
 *)
 module LRU (Keys : StdHashtbl.HashedType) = struct
   module Hashtbl = StdHashtbl.Make(Keys)
+  module Queue = struct
+    exception Empty
+
+    type 'a elem = 'a Dllist.node_t
+    type 'a t = 'a elem option ref
+
+    let create () = ref None
+
+    let unwrap = Dllist.get
+
+    let is_singleton list = Dllist.next list == list
+
+    let drop elem =
+      match is_singleton elem with
+      | true -> None
+      | false -> Some (Dllist.drop elem)
+
+    let append t value =
+      match !t with
+      | None -> t := Some (value)
+      | Some queue ->
+        Dllist.splice value (Dllist.next queue);
+        Dllist.splice queue value
+
+    let push t value =
+      let node = Dllist.create value in
+      append t node;
+      node
+
+    let pop t =
+      match !t with
+      | None -> raise Empty
+      | Some queue ->
+        t := drop queue;
+        queue
+
+    let remove t elem =
+      match !t with
+      | None -> ()
+      | Some queue when elem == queue ->
+        t := drop queue
+      | Some _ ->
+        Dllist.remove elem
+  end
+
+  type 'v entry = {
+    key : Hashtbl.key;
+    mutable value : 'v;
+    mutable queue : [`Lru | `Lfu ];
+  }
+
   type 'v t = {
-    table : 'v node Hashtbl.t;
+    table : 'v entry Queue.elem Hashtbl.t;
     mutable lru_avaibl : int;
     mutable lfu_avaibl : int;
-    mutable lru : 'v node option;
-    mutable lfu : 'v node option;
+    lru : 'v entry Queue.t;
+    lfu : 'v entry Queue.t;
     mutable hit : int;
     mutable miss : int;
   }
-  and 'v node = {
-    mutable key : Hashtbl.key;
-    mutable value : 'v;
-    mutable in_lfu : bool;
-    mutable next : 'v node;
-    mutable prev : 'v node;
-  }
-
-  let remove node =
-    node.prev.next <- node.next;
-    node.next.prev <- node.prev
-
-  let push node = function
-    | None ->
-      node.next <- node;
-      node.prev <- node;
-      Some node
-    | Some first when first == node -> Some first
-    | Some first ->
-      node.prev <- first.prev;
-      node.next <- first;
-      first.prev.next <- node;
-      first.prev <- node;
-      Some first
-
-  let pop = function
-    | None -> raise Not_found
-    | Some n when n == n.next -> n, None
-    | Some n ->
-      n.prev.next <- n.next;
-      n.next.prev <- n.prev;
-      n, (Some n.next)
 
   let create size =
     assert (size > 0);
     {
       table = Hashtbl.create size;
-      lru = None;
-      lfu = None;
+      lru = Queue.create ();
+      lfu = Queue.create ();
       hit = 0;
       miss = 0;
       lru_avaibl = size;
       lfu_avaibl = size;
     }
 
+  let size cache = Hashtbl.length cache.table
+
   let miss cache = cache.miss
   let hit cache = cache.hit
 
   let replace cache key value =
-    try (Hashtbl.find cache.table key).value <- value with Not_found -> ()
+    try
+      let entry = Hashtbl.find cache.table key |> Queue.unwrap in
+      entry.value <- value
+    with Not_found -> ()
 
   let get cache key =
     try
       let node = Hashtbl.find cache.table key in
+      let entry = Queue.unwrap node in
       cache.hit <- cache.hit + 1;
-      let () =
-        match node.in_lfu with
-        | true -> remove node
-        | false ->
-          cache.lfu_avaibl <- cache.lfu_avaibl - 1;
-          cache.lru_avaibl <- cache.lru_avaibl + 1;
-          node.in_lfu <- true;
-          if node == node.next then
-            cache.lru <- None
-          else
-            remove node
-      in
-      if cache.lfu_avaibl = 0 then
-        let (evict, _) = pop cache.lfu in
-        Hashtbl.remove cache.table evict.key;
-      else
+      (* first remove the entry from the current queue *)
+      begin match entry.queue with
+      | `Lru ->
+        (* if the node is in the lru queuen it will be moved to the lfu queue *)
         cache.lru_avaibl <- cache.lru_avaibl + 1;
-      cache.lfu <- push node cache.lfu;
-      node.value
+        entry.queue <- `Lfu;
+        Queue.remove cache.lru node;
+      | `Lfu ->
+        cache.lfu_avaibl <- cache.lfu_avaibl + 1;
+        Queue.remove cache.lfu node
+      end;
+      (* If the queue is full, drop one entry *)
+      if cache.lfu_avaibl <= 0 then begin
+        let evicted = Queue.pop cache.lfu in
+        Hashtbl.remove cache.table (Queue.unwrap evicted).key;
+      end else
+        cache.lfu_avaibl <- cache.lfu_avaibl - 1;
+      Queue.append cache.lfu node;
+      entry.value
     with Not_found -> cache.miss <- cache.miss + 1; raise Not_found
+
+  let mem cache key = Hashtbl.mem cache.table key
+  let lru_free cache = cache.lru_avaibl
+  let lfu_free cache = cache.lfu_avaibl
 
   let put cache key value =
     try
-      let node = Hashtbl.find cache.table key in
+      let node = Hashtbl.find cache.table key |> Queue.unwrap in
       node.value <- value
     with Not_found ->
       if cache.lru_avaibl = 0 then
-        let (evict, _) = pop cache.lru in
-        Hashtbl.remove cache.table evict.key
+        let evicted = Queue.pop cache.lru in
+        Hashtbl.remove cache.table (Queue.unwrap evicted).key
       else
         cache.lru_avaibl <- cache.lru_avaibl - 1;
-      let rec node = {
-        key;
-        value;
-        in_lfu = false;
-        next = node;
-        prev = node;
-      }
-      in
-      cache.lru <- push node cache.lfu;
-      Hashtbl.replace cache.table key node
+      let node = Queue.push cache.lru { key;  value; queue = `Lru } in
+      Hashtbl.add cache.table key node
 end
 
 module Group = struct
