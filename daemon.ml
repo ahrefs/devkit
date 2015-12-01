@@ -31,7 +31,7 @@ let signal_exit =
 let break () = if !should_exit_ then raise ShouldExit
 let break_lwt () = Lwt.bind should_exit_lwt (fun () -> Lwt.fail ShouldExit)
 
-let args =
+let get_args () =
   [
     (let set_loglevel s =
        Stre.nsplitc s ',' |> List.iter begin fun spec ->
@@ -50,6 +50,8 @@ let args =
       "<user> run as specified user";
     "-fg", Arg.Set foreground, " Stay in foreground";
   ]
+
+let args = get_args ()
 
 let manage () =
   match !managed with
