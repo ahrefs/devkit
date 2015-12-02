@@ -76,10 +76,12 @@ module State = struct
   let base_name = ref ""
   let need_rotation = ref (fun _ -> false)
 
+  let hook = ref ignore
+
   module Put = Logger.PutSimple(
   struct
     let format = format_simple
-    let output = fun s -> output_ch log_ch s
+    let output = fun s -> let () = !hook s in output_ch log_ch s
   end)
 
   module M = Logger.Make(Put)
