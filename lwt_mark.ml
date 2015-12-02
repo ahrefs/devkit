@@ -204,42 +204,46 @@ let rec parent_of_status parent_id =
   | Status -> parent_of_status parent.parent_id
 
 let summary () =
-  let statuses = IntMap.fold begin fun _id mark acc ->
-      match mark.kind with
-      | Normal | Background -> acc
-      | Status -> begin
-          let { parent_id; _ } = parent_of_status mark.parent_id in
-          let (acc, statuses) =
-            try (acc, IntMap.find parent_id acc)
-            with Not_found -> let s = ref [] in (IntMap.add parent_id s acc, s)
-          in
-          tuck statuses mark;
-          acc
-        end
-    end
-    !marks
-    IntMap.empty
-  in
   let b = Buffer.create 100 in
   let open Printf in
   Buffer.add_string b "Lwt_mark status (running threads):\n";
-  IntMap.iter begin fun _id {id; name; parent_id; parent_name; logs; kind} ->
-      bprintf b "%s (#%i, %s%s)\n"
-        !!name id (string_of_kind kind)
-        (if parent_id = 0 then "" else sprintf ", parent: %s#%i" !!parent_name parent_id);
-      let logs = LastN.to_list logs in
-      List.iter (fun line -> Buffer.add_string b " L "; Buffer.add_string b !!line) logs;
-      begin match kind with
-        | Status -> ()
-        | Normal | Background ->
-            let sts =
-              match IntMap.find id statuses with
-              | sts_acc -> List.rev !sts_acc
-              | exception Not_found -> []
+  if !enabled
+  then begin
+    let statuses = IntMap.fold begin fun _id mark acc ->
+        match mark.kind with
+        | Normal | Background -> acc
+        | Status -> begin
+            let { parent_id; _ } = parent_of_status mark.parent_id in
+            let (acc, statuses) =
+              try (acc, IntMap.find parent_id acc)
+              with Not_found -> let s = ref [] in (IntMap.add parent_id s acc, s)
             in
-            List.iter (fun status -> bprintf b " S %s#%i\n" !!(status.name) status.id) sts
-      end;
-      Buffer.add_char b '\n'
-    end
-    !marks;
+            tuck statuses mark;
+            acc
+          end
+      end
+      !marks
+      IntMap.empty
+    in
+    IntMap.iter begin fun _id {id; name; parent_id; parent_name; logs; kind} ->
+        bprintf b "%s (#%i, %s%s)\n"
+          !!name id (string_of_kind kind)
+          (if parent_id = 0 then "" else sprintf ", parent: %s#%i" !!parent_name parent_id);
+        let logs = LastN.to_list logs in
+        List.iter (fun line -> Buffer.add_string b " L "; Buffer.add_string b !!line) logs;
+        begin match kind with
+          | Status -> ()
+          | Normal | Background ->
+              let sts =
+                match IntMap.find id statuses with
+                | sts_acc -> List.rev !sts_acc
+                | exception Not_found -> []
+              in
+              List.iter (fun status -> bprintf b " S %s#%i\n" !!(status.name) status.id) sts
+        end;
+        Buffer.add_char b '\n'
+      end
+      !marks
+  end else
+    bprintf b "<not initialized>\n";
   Buffer.contents b
