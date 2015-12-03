@@ -82,7 +82,7 @@ module State = struct
     end facilities
 
   let output_ch ch =
-    fun str -> try Lwt_mark.log str; output_string ch str; flush ch with _ -> () (* logging never fails, most probably ENOSPC *)
+    fun str -> try output_string ch str; flush ch with _ -> () (* logging never fails, most probably ENOSPC *)
 
   let format_simple level facil msg =
     let pid = Unix.getpid () in

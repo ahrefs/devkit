@@ -7,9 +7,6 @@ let enabled = ref false
 
 let is_enabled () = !enabled
 
-let init () =
-  enabled := true
-
 (**)
 
 module LastN = struct
@@ -246,3 +243,10 @@ let summary () =
   end else
     bprintf b "<not initialized>\n";
   Buffer.contents b
+
+(**)
+
+let init () =
+  enabled := true;
+  let old_hook = !Log.State.hook in
+  Log.State.hook := fun level facil msg -> (log msg; old_hook level facil msg)
