@@ -422,13 +422,17 @@ let reuse create reset = { cache = Stack.create (); create; reset; }
 let use t = if Stack.is_empty t.cache then t.create () else Stack.pop t.cache
 let recycle t x = t.reset x; Stack.push x t.cache
 
-module Reuse(T : sig type t val create : unit -> t val reset : t -> unit end) : sig
+module ReuseLocked(L : Lock)(T : sig type t val create : unit -> t val reset : t -> unit end) : sig
 type t = T.t
 val get : unit -> t
 val release : t -> unit
 end = struct
 type t = T.t
-let cache = reuse T.create T.reset
-let get () = use cache
-let release x = recycle cache x
+type cache = { cache : t Stack.t; lock : L.t }
+let cache = { cache = Stack.create (); lock = L.create () }
+let get' () = if Stack.is_empty cache.cache then T.create () else Stack.pop cache.cache
+let get () = L.locked cache.lock get'
+let release x = L.locked cache.lock (fun () -> T.reset x; Stack.push x cache.cache)
 end
+
+module Reuse = ReuseLocked(NoLock)
