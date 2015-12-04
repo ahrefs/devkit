@@ -228,8 +228,15 @@ let http_get_io url ?(verbose=true) ?setup out =
 
 let http_get ?verbose ?setup url = wrapped (IO.output_string ()) IO.close_out (http_get_io ?verbose ?setup url)
 
-let http_get_io_lwt ?timeout ?(setup=ignore) ?(handle_result=Http_lwt.simple_result) ?(check=(fun h -> Curl.get_httpcode h = 200)) url out =
-  let inner = ref None in
+let http_get_io_lwt ?timeout ?(setup=ignore) ?(check=(fun h -> Curl.get_httpcode h = 200)) url out =
+  let inner_error = ref `None in
+  let error code = sprintf "curl (%d) %s" (Curl.errno code) (Curl.strerror code) in
+  let inner_error_msg () =
+    match !inner_error with
+    | `None -> error Curl.CURLE_WRITE_ERROR
+    | `Write exn -> sprintf "write error : %s" @@ Exn.to_string exn
+    | `Http code -> sprintf "http : %d" code
+  in
   try_lwt
     Http_lwt.with_curl_cache begin fun h ->
       Curl.set_url h url;
@@ -239,18 +246,17 @@ let http_get_io_lwt ?timeout ?(setup=ignore) ?(handle_result=Http_lwt.simple_res
       Curl.set_writefunction h (fun s ->
         try
           match check h with
-          | false -> 0
+          | false -> inner_error := `Http (Curl.get_httpcode h); 0
           | true -> IO.nwrite out s; String.length s
-        with exn -> inner := Some exn; 0);
-      lwt result =
+        with exn -> inner_error := `Write exn; 0);
         match_lwt Curl_lwt.perform h with
-        | Curl.CURLE_OK -> IO.flush out; `Ok (Curl.get_httpcode h, Curl.get_sizedownload h) |> Lwt.return
-        | code -> `Error code |> Lwt.return
-      in
-      handle_result result |> Lwt.return
+        | Curl.CURLE_OK when not @@ check h -> `Error (sprintf "http: %d"  (Curl.get_httpcode h)) |> Lwt.return
+        | Curl.CURLE_OK -> IO.flush out; `Ok (Curl.get_sizedownload h) |> Lwt.return
+        | Curl.CURLE_WRITE_ERROR -> `Error (inner_error_msg ()) |> Lwt.return
+        | code -> `Error (error code) |> Lwt.return
     end
   with
-  | exn -> Exn_lwt.fail ~exn:(Option.default exn !inner) "http_get_io_lwt"
+  | exn -> Exn_lwt.fail ~exn "http_get_io_lwt (%s)" (inner_error_msg ())
 
 (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
 let http_do ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (action:http_action_old) url =
