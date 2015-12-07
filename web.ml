@@ -228,7 +228,7 @@ let http_get_io url ?(verbose=true) ?setup out =
 
 let http_get ?verbose ?setup url = wrapped (IO.output_string ()) IO.close_out (http_get_io ?verbose ?setup url)
 
-let http_get_io_lwt ?timeout ?(setup=ignore) ?(check=(fun h -> Curl.get_httpcode h = 200)) url out =
+let http_get_io_lwt ?body ?timeout ?(setup=ignore) ?(check=(fun h -> Curl.get_httpcode h = 200)) url out =
   let inner_error = ref `None in
   let error code = sprintf "curl (%d) %s" (Curl.errno code) (Curl.strerror code) in
   let inner_error_msg () =
@@ -242,6 +242,13 @@ let http_get_io_lwt ?timeout ?(setup=ignore) ?(check=(fun h -> Curl.get_httpcode
       Curl.set_url h url;
       curl_default_setup h;
       Option.may (Curl.set_timeout h) timeout;
+      Option.may (fun (ct, body) ->
+            let open Curl in
+            set_post h true;
+            set_httpheader h ["Content-Type: " ^ ct];
+            set_postfields h body;
+            set_postfieldsize h (String.length body)
+        ) body;
       setup h;
       Curl.set_writefunction h (fun s ->
         try
