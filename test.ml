@@ -425,6 +425,25 @@ module LRU = struct
       assert_equal (L.lfu_free cache) 0;
       assert_bool "key 1 kept" (L.mem cache 1)
     end
+
+  let () = test "LFU remove" begin fun () ->
+      let size = 2 in
+      let cache = L.create size in
+      L.put cache 1 "a";
+      L.remove cache 1;
+      assert_equal (L.lru_free cache) 2;
+      assert_equal (L.lfu_free cache) 2;
+      assert_bool "key 1 removed" (not @@ L.mem cache 1);
+      L.put cache 2 "b";
+      L.put cache 3 "c";
+      let _ = L.get cache 2 in
+      L.put cache 4 "d";
+      L.remove cache 2;
+      assert_equal (L.lfu_free cache) 2;
+      assert_equal (L.lru_free cache) 0;
+      assert_bool "key 2 removed" (not @@ L.mem cache 2);
+      assert_bool "key 3 present" (L.mem cache 3)
+    end
 end
 
 let tests () =

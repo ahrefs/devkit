@@ -351,6 +351,20 @@ module LRU (Keys : StdHashtbl.HashedType) = struct
         cache.lru_avaibl <- cache.lru_avaibl - 1;
       let node = Queue.push cache.lru { key;  value; queue = `Lru } in
       Hashtbl.add cache.table key node
+
+  let remove cache key =
+    try
+      let node = Hashtbl.find cache.table key in
+      Hashtbl.remove cache.table key;
+      match (Queue.unwrap node).queue with
+      | `Lru ->
+        (* if the node is in the lru queuen it will be moved to the lfu queue *)
+        cache.lru_avaibl <- cache.lru_avaibl + 1;
+        Queue.remove cache.lru node
+      | `Lfu ->
+        cache.lfu_avaibl <- cache.lfu_avaibl + 1;
+        Queue.remove cache.lfu node
+    with Not_found -> ()
 end
 
 module Group = struct
