@@ -250,17 +250,18 @@ let http_get_io_lwt ?body ?timeout ?(setup=ignore) ?(check=(fun h -> Curl.get_ht
             set_postfieldsize h (String.length body)
         ) body;
       setup h;
-      Curl.set_writefunction h (fun s ->
+      Curl.set_writefunction h begin fun s ->
         try
           match check h with
           | false -> inner_error := `Http (Curl.get_httpcode h); 0
           | true -> IO.nwrite out s; String.length s
-        with exn -> inner_error := `Write exn; 0);
-        match_lwt Curl_lwt.perform h with
-        | Curl.CURLE_OK when not @@ check h -> `Error (sprintf "http: %d"  (Curl.get_httpcode h)) |> Lwt.return
-        | Curl.CURLE_OK -> IO.flush out; `Ok (Curl.get_sizedownload h) |> Lwt.return
-        | Curl.CURLE_WRITE_ERROR -> `Error (inner_error_msg ()) |> Lwt.return
-        | code -> `Error (error code) |> Lwt.return
+        with exn -> inner_error := `Write exn; 0
+      end;
+      match_lwt Curl_lwt.perform h with
+      | Curl.CURLE_OK when not @@ check h -> `Error (sprintf "http: %d"  (Curl.get_httpcode h)) |> Lwt.return
+      | Curl.CURLE_OK -> IO.flush out; `Ok (Curl.get_sizedownload h) |> Lwt.return
+      | Curl.CURLE_WRITE_ERROR -> `Error (inner_error_msg ()) |> Lwt.return
+      | code -> `Error (error code) |> Lwt.return
     end
   with
   | exn -> Exn_lwt.fail ~exn "http_get_io_lwt (%s)" (inner_error_msg ())
