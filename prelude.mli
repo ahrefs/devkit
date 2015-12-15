@@ -59,6 +59,19 @@ sig
   val proj : t -> T.t
   val inj_list : T.t list -> t list
   val proj_list : t list -> T.t list
+  val inject : T.t -> t
+  val project : t -> T.t
+  val inject_list : T.t list -> t list
+  val project_list : t list -> T.t list
+end
+
+module Fresh(T : sig type t end) :
+sig
+  type t
+  val inject : T.t -> t
+  val project : t -> T.t
+  val inject_list : T.t list -> t list
+  val project_list : t list -> T.t list
 end
 
 val tuck : 'a list ref -> 'a -> unit

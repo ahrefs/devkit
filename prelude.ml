@@ -27,21 +27,20 @@ let eprintfn fmt = Printf.ksprintf prerr_endline fmt
 let curry f a b = f (a, b)
 let uncurry f (a,b) = f a b
 
-module New(T : sig type t end) :
-sig
-  type t
-  val inj : T.t -> t
-  val proj : t -> T.t
-  val inj_list : T.t list -> t list
-  val proj_list : t list -> T.t list
-end =
+module New(T : sig type t end) =
 struct
   type t = T.t
   let inj = id
   let proj = id
   let inj_list = id
   let proj_list = id
+  let inject = id
+  let project = id
+  let inject_list = id
+  let project_list = id
 end
+
+module Fresh = New
 
 let (+=) a b = a := !a + b
 let (-=) a b = a := !a - b
