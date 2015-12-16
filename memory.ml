@@ -56,14 +56,19 @@ let show_gc_info () =
   in
   sprintf "GC: Heap: %s Counters(mi,pr,ma): %s Collections(mv,ma,mi): %s" gc_heap gc_ctrs gc_coll
 
+let show_lwt_info () =
+  let (r, w, t) = Lwt_engine.(readable_count (), writable_count (), timer_count ()) in
+  sprintf "lwt readable %d, writable %d, timer %d" r w t
+
 (* hooks for Memory_gperftools *)
 let show_crt_info = ref (fun () -> "MALLOC: ?")
 let malloc_release = ref (ignore : unit -> unit)
 
 let show_all_info () =
   [
+    sprintf "%s. %s" (show_vm_info ()) (!show_crt_info ());
     show_gc_info ();
-    sprintf "%s. %s" (show_vm_info ()) (!show_crt_info ())
+    show_lwt_info ();
   ]
 
 let log_all_info () = show_all_info () |> List.iter log#info_s
