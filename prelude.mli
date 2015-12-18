@@ -65,13 +65,15 @@ sig
   val project_list : t list -> T.t list
 end
 
-module Fresh(T : sig type t end) :
+module Fresh(T : sig type t val compare : t -> t -> int end) :
 sig
   type t
   val inject : T.t -> t
   val project : t -> T.t
   val inject_list : T.t list -> t list
   val project_list : t list -> T.t list
+  val compare : t -> t -> int
+  val equal : t -> t -> bool
 end
 
 val tuck : 'a list ref -> 'a -> unit

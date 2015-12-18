@@ -40,7 +40,16 @@ struct
   let project_list = id
 end
 
-module Fresh = New
+module Fresh(T : sig type t val compare : t -> t -> int end) =
+struct
+  type t = T.t
+  let inject = id
+  let project = id
+  let inject_list = id
+  let project_list = id
+  let compare = T.compare
+  let equal a b = T.compare a b = 0
+end
 
 let (+=) a b = a := !a + b
 let (-=) a b = a := !a - b
