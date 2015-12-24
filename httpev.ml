@@ -33,6 +33,9 @@ type config =
     max_clients : int; (** limit on total number of requests in processing at any point of time *)
     max_data_childs : int;
     max_data_waiting : int;
+    yield : bool;
+      (** do [Lwt_unix.yield ()] after accepting connection to give other lwt threads chance to run (set to [true] when http requests
+          processing causes other threads to stuck) *)
   }
 
 let default =
@@ -50,6 +53,7 @@ let default =
     access_log = ref stdout;
     max_data_childs = 50;
     max_data_waiting = 200;
+    yield = false;
   }
 
 include Httpev_common
@@ -934,6 +938,7 @@ let handle_lwt fd k =
 let handle_lwt config fd k =
   let rec loop () =
     lwt () = handle_lwt fd k in
+    lwt () = if config.yield then Lwt_unix.yield () else Lwt.return_unit in
     loop ()
   in
   lwt () = Lwt.choose [Daemon.should_exit_lwt; loop ()] in
