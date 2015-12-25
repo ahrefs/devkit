@@ -53,7 +53,7 @@ let default =
     access_log = ref stdout;
     max_data_childs = 50;
     max_data_waiting = 200;
-    yield = false;
+    yield = true;
   }
 
 include Httpev_common
