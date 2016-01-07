@@ -1,7 +1,7 @@
 name="devkit"
 version="git"
 description="devkit"
-requires="extlib,pcre,netstring,zip,unix,threads,libevent,curl,curl.lwt,extunix,xmlm,lwt.unix,bytes"
+requires="extlib,pcre,netstring,zip,unix,threads,libevent,curl,curl.lwt,extunix,xmlm,lwt.unix,bytes,yojson"
 archive(mt,byte)="devkit.cma"
 archive(mt,native)="devkit.cmxa"
 
@@ -11,9 +11,4 @@ package "gperftools" (
   archive(mt,byte) = "devkit_gperftools.cma"
   archive(mt,native) = "devkit_gperftools.cmxa"
   exists_if = "devkit_gperftools.cma"
-)
-
-package "build" (
-  description = "build utilities"
-  requires = "mybuild"
 )
