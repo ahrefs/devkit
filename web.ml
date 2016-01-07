@@ -187,11 +187,8 @@ module IO_lwt = struct
   let return = Lwt.return
   let ( >>= ) = Lwt.( >>= )
   let bracket mresource destroy k =
-    lwt resource = mresource in
-    try_lwt
-      k resource
-    finally
-      destroy resource
+    let%lwt resource = mresource in
+    (k resource) [%finally destroy resource]
   let fail = Exn_lwt.fail
   let raise = Lwt.fail
   let sleep = Lwt_unix.sleep
@@ -246,7 +243,7 @@ let http_get_io_lwt ?body ?timeout ?(setup=ignore) ?(check=(fun h -> Curl.get_ht
     | `Write exn -> sprintf "write error : %s" @@ Exn.to_string exn
     | `Http code -> sprintf "http : %d" code
   in
-  try_lwt
+  try%lwt
     Http_lwt.with_curl_cache begin fun h ->
       Curl.set_url h url;
       curl_default_setup h;
@@ -266,7 +263,7 @@ let http_get_io_lwt ?body ?timeout ?(setup=ignore) ?(check=(fun h -> Curl.get_ht
           | true -> IO.nwrite out s; String.length s
         with exn -> inner_error := `Write exn; 0
       end;
-      match_lwt Curl_lwt.perform h with
+      match%lwt Curl_lwt.perform h with
       | Curl.CURLE_OK when not @@ check h -> `Error (sprintf "http: %d"  (Curl.get_httpcode h)) |> Lwt.return
       | Curl.CURLE_OK -> IO.flush out; `Ok (Curl.get_sizedownload h) |> Lwt.return
       | Curl.CURLE_WRITE_ERROR -> `Error (inner_error_msg ()) |> Lwt.return
