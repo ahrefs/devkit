@@ -66,6 +66,9 @@ module type IO_TYPE = sig
   val return : 'a -> 'a t
   val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
   val bracket : 'a t -> ('a -> unit t) -> ('a -> 'b t) -> 'b t
+  val sleep : Time.t -> unit t
+  val fail : ?exn:exn -> ('a, unit, string, 'b t) format4 -> 'a
+  val raise : exn -> 'a t
 end
 
 module type CURL = sig
@@ -160,6 +163,9 @@ module IO_blocking = struct
   let return = identity
   let ( >>= ) m f = f m
   let bracket = bracket
+  let fail = Exn.fail
+  let raise = raise
+  let sleep = Nix.sleep
 end
 
 module Curl_blocking = struct
@@ -186,6 +192,9 @@ module IO_lwt = struct
       k resource
     finally
       destroy resource
+  let fail = Exn_lwt.fail
+  let raise = Lwt.fail
+  let sleep = Lwt_unix.sleep
 end
 
 module Curl_lwt_for_http = struct
