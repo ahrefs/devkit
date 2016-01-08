@@ -47,13 +47,13 @@ let get () =
   end;
   !l
 
-let setup_ ?(pause=Time.seconds 60) setup =
+let setup_ setup =
   match !Daemon.logfile with
   | None -> log #warn "no logfile, disabling logstash stats too"
   | Some logfile ->
     let stat_basename = try Filename.chop_extension logfile with _ -> logfile in
     log #info "will output logstash stats to %s.YYYYMMDD.json" stat_basename;
-    setup pause begin fun () ->
+    setup begin fun () ->
       let filename = sprintf "%s.%s.json" stat_basename (Time.format_date8 @@ Unix.gmtime @@ Time.now ()) in
       match Files.open_out_append_text filename with
       | exception exn -> log #warn ~exn "failed to open stats file %s" filename
@@ -71,9 +71,10 @@ let setup_ ?(pause=Time.seconds 60) setup =
         end
     end
 
-let setup ?pause events = setup_ ?pause (fun pause f -> Async.setup_periodic_timer_wait events pause f)
-let setup_lwt ?pause () =
-  setup_ ?pause (fun pause f ->
+let default_period = Time.seconds 60
+let setup ?(pause=default_period) events = setup_ (fun f -> Async.setup_periodic_timer_wait events pause f)
+let setup_lwt ?(pause=default_period) () =
+  setup_ (fun f ->
     let rec loop () =
       match Daemon.should_exit () with
       | true -> Lwt.return_unit
