@@ -81,3 +81,65 @@ let setup_lwt ?pause () =
     in
     Lwt.async loop
   )
+
+module J = Yojson.Safe
+
+let open_logstash basename =
+  let filename = sprintf "%s.%s.json" basename (Time.format_date8 @@ Unix.gmtime @@ Time.now ()) in
+  Files.open_out_append_text filename
+
+let is_same_day timestamp =
+  let day = int_of_float @@ timestamp /. Time.days 1 in
+  let cur_day = int_of_float @@ Time.now () /. Time.days 1  in
+  day = cur_day
+
+let null = object method event _j = () end
+
+let log' () =
+  match !Daemon.logfile with
+  | None ->
+    log #info "no logfile, disable"; null
+  | Some name ->
+    try
+      let basename = try Filename.chop_extension name with _ -> name in
+      let out = open_logstash basename in
+      log #info "will ouput log to %s" name;
+      object
+        val mutable timestamp = Time.now ()
+        val mutable out = out
+        val mutable nr = 0
+        method event (j : (string * [< `String of string | `Int of int]) list) =
+          let () =
+            (* try rotate *)
+            match timestamp with
+            | t when not @@ is_same_day t ->
+              begin try
+                  log #info "rotate log";
+                  let new_fd = open_logstash basename in
+                  let prev = out in
+                  out <- new_fd;
+                  timestamp <- Time.now ();
+                  flush prev;
+                  close_out_noerr prev
+                with exn -> log #warn ~exn "failed to rotate log" end
+            | _ -> ()
+          in
+          let json =
+            `Assoc ([
+                "timestamp_ms", `Int (int_of_float @@ Time.now () *. 1000.);
+                "pid", `String (Pid.show_self ());
+              ] @ (j :> (string * J.json) list))
+          in
+          let bytes = J.to_string json in
+          try
+            if (String.length bytes > 4096 -  nr) then (flush out; nr <- 0);
+            output_string out (bytes ^ "\n"); nr <- nr + String.length bytes;
+          with exn -> log #warn ~exn "failed to write event %S" bytes;
+      end
+    with exn -> log #warn ~exn "failed to open log"; null
+
+let log () =
+  let log = Lazy.from_fun log' in
+  object
+    method event j = !!log #event j
+  end
