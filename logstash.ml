@@ -62,6 +62,7 @@ module J = Yojson
 let write_json out nr json =
   let bytes = J.to_string ~std:true json ^ "\n" in
   try
+    (* try not to step on the other forks toes, page writes are atomic *)
     if (String.length bytes > 4096 - !nr) then (flush out; nr := 0);
     output_string out bytes; nr := !nr + String.length bytes
   with exn -> log #warn ~exn "failed to write event %S" bytes
@@ -82,7 +83,8 @@ let setup_ ?(pause=Time.seconds 60) setup =
       | ch ->
         Control.bracket ch close_out_noerr begin fun ch ->
           let write = line_writer ch in
-          get () |> List.iter write; flush ch
+          get () |> List.iter write;
+          flush ch
         end
     end
 
@@ -97,13 +99,12 @@ let setup_lwt ?pause () =
     Lwt.async loop
   )
 
-
 let is_same_day timestamp =
   Time.now () -. Time.days 1 < timestamp
 
 let null = object method event _j = () end
 
-let log' () =
+let log () =
   match !Daemon.logfile with
   | None ->
     log #info "no logfile, disable"; null
@@ -116,16 +117,16 @@ let log' () =
         val mutable timestamp = Time.now ()
         val mutable out = out
         val nr = ref 0
-        method event (j : (string * [< `String of string | `Int of int]) list) =
+        method event (j : (string * J.json) list) =
           let () =
             (* try rotate *)
             match timestamp with
             | t when not @@ is_same_day t ->
               begin try
                   log #info "rotate log";
-                  let new_fd = open_logstash basename in
+                  let new_out = open_logstash basename in
                   let prev = out in
-                  out <- new_fd;
+                  out <- new_out;
                   nr := 0;
                   timestamp <- Time.now ();
                   flush prev;
@@ -133,13 +134,7 @@ let log' () =
                 with exn -> log #warn ~exn "failed to rotate log" end
             | _ -> ()
           in
-          let json = `Assoc (common_fields () @ (j :> (string * J.json) list)) in
+          let json = `Assoc (common_fields () @ j) in
           write_json out nr json
       end
-    with exn -> log #warn ~exn "output disable"; null
-
-let log () =
-  let log = Lazy.from_fun log' in
-  object
-    method event j = !!log #event j
-  end
+    with exn -> log #warn ~exn "output disabled"; null

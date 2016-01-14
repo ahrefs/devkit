@@ -7,4 +7,4 @@ val setup : ?pause:Time.t -> Libevent.event_base -> unit
 val setup_lwt : ?pause:Time.t -> unit -> unit
 
 (* Setup logger for a stream of events *)
-val log : unit -> < event : (string * [< `Int of int | `String of string]) list -> unit >
+val log : unit -> < event : (string * Yojson.json) list -> unit >
