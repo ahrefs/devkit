@@ -14,20 +14,20 @@ let escape k =
 
 let zero = Var.(function Count _ -> Count 0 | Time _ -> Time 0. | Bytes _ -> Bytes 0)
 
+let common_fields () =
+  [
+    "timestamp_ms", `Int (int_of_float @@ Time.now () *. 1000.);
+    "pid", `String (Pid.show_self ());
+  ]
+
 let get () =
-  let common =
-    [
-      "timestamp_ms", `Int (int_of_float @@ Time.now () *. 1000.);
-      "pid", `String (Pid.show_self ());
-    ]
-  in
   let l = ref [] in
   Var.iter begin fun attr v ->
     let (previous,attr) =
       try Hashtbl.find state attr with
       | Not_found -> let x = ref (zero v), List.map (fun (k, s) -> escape k, `String s) attr in Hashtbl.add state attr x; x
     in
-    let this = (common @ attr
+    let this = (common_fields () @ attr
       :  (string * [ `Floatlit of string | `Int of int | `String of string]) list
       :> (string * [>`Floatlit of string | `Int of int | `String of string]) list)
     in
@@ -47,27 +47,42 @@ let get () =
   end;
   !l
 
+
+let basename_of_file logfile =
+  try Filename.chop_extension logfile with _ -> logfile
+
+let open_logstash basename =
+  let filename = sprintf "%s.%s.json" basename (Time.format_date8 @@ Unix.gmtime @@ Time.now ()) in
+  try
+    Files.open_out_append_text filename
+  with exn -> Exn.fail ~exn "failed to open stats file %s" filename
+
+module J = Yojson
+
+let write_json out nr json =
+  let bytes = J.to_string ~std:true json ^ "\n" in
+  try
+    if (String.length bytes > 4096 - !nr) then (flush out; nr := 0);
+    output_string out bytes; nr := !nr + String.length bytes
+  with exn -> log #warn ~exn "failed to write event %S" bytes
+
+let line_writer out =
+  let nr = ref 0 in
+  write_json out nr
+
 let setup_ ?(pause=Time.seconds 60) setup =
   match !Daemon.logfile with
   | None -> log #warn "no logfile, disabling logstash stats too"
   | Some logfile ->
-    let stat_basename = try Filename.chop_extension logfile with _ -> logfile in
+    let stat_basename = basename_of_file logfile in
     log #info "will output logstash stats to %s.YYYYMMDD.json" stat_basename;
     setup pause begin fun () ->
-      let filename = sprintf "%s.%s.json" stat_basename (Time.format_date8 @@ Unix.gmtime @@ Time.now ()) in
-      match Files.open_out_append_text filename with
-      | exception exn -> log #warn ~exn "failed to open stats file %s" filename
+      match open_logstash stat_basename with
+      | exception exn -> log #warn ~exn "no output file, disabling"
       | ch ->
         Control.bracket ch close_out_noerr begin fun ch ->
-          let nr = ref 0 in
-          get () |> List.iter begin fun v ->
-            let s = Yojson.to_string ~std:true v ^ "\n" in
-            (* try not to step on the other forks toes, page writes are atomic *)
-            if !nr + String.length s > 4096 then (flush ch; nr := 0);
-            output_string ch s;
-            nr += String.length s
-          end;
-          flush ch;
+          let write = line_writer ch in
+          get () |> List.iter write; flush ch
         end
     end
 
@@ -82,16 +97,9 @@ let setup_lwt ?pause () =
     Lwt.async loop
   )
 
-module J = Yojson.Safe
-
-let open_logstash basename =
-  let filename = sprintf "%s.%s.json" basename (Time.format_date8 @@ Unix.gmtime @@ Time.now ()) in
-  Files.open_out_append_text filename
 
 let is_same_day timestamp =
-  let day = int_of_float @@ timestamp /. Time.days 1 in
-  let cur_day = int_of_float @@ Time.now () /. Time.days 1  in
-  day = cur_day
+  Time.now () -. Time.days 1 < timestamp
 
 let null = object method event _j = () end
 
@@ -107,7 +115,7 @@ let log' () =
       object
         val mutable timestamp = Time.now ()
         val mutable out = out
-        val mutable nr = 0
+        val nr = ref 0
         method event (j : (string * [< `String of string | `Int of int]) list) =
           let () =
             (* try rotate *)
@@ -118,25 +126,17 @@ let log' () =
                   let new_fd = open_logstash basename in
                   let prev = out in
                   out <- new_fd;
+                  nr := 0;
                   timestamp <- Time.now ();
                   flush prev;
                   close_out_noerr prev
                 with exn -> log #warn ~exn "failed to rotate log" end
             | _ -> ()
           in
-          let json =
-            `Assoc ([
-                "timestamp_ms", `Int (int_of_float @@ Time.now () *. 1000.);
-                "pid", `String (Pid.show_self ());
-              ] @ (j :> (string * J.json) list))
-          in
-          let bytes = J.to_string json in
-          try
-            if (String.length bytes > 4096 -  nr) then (flush out; nr <- 0);
-            output_string out (bytes ^ "\n"); nr <- nr + String.length bytes;
-          with exn -> log #warn ~exn "failed to write event %S" bytes;
+          let json = `Assoc (common_fields () @ (j :> (string * J.json) list)) in
+          write_json out nr json
       end
-    with exn -> log #warn ~exn "failed to open log"; null
+    with exn -> log #warn ~exn "output disable"; null
 
 let log () =
   let log = Lazy.from_fun log' in
