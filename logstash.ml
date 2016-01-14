@@ -48,14 +48,22 @@ let get () =
   !l
 
 
-let basename_of_file logfile =
-  try Filename.chop_extension logfile with _ -> logfile
+let get_basename () =
+  match !Daemon.logfile with
+  | None ->
+    log #warn "no logfile, disabling logstash stats too";
+    None
+  | Some logfile ->
+    let f = try Filename.chop_extension logfile with _ -> logfile in
+    log #info "will output logstash stats to %s.YYYYMMDD.json" f;
+    Some f
 
-let open_logstash basename =
+let open_logstash_exn basename =
   let filename = sprintf "%s.%s.json" basename (Time.format_date8 @@ Unix.gmtime @@ Time.now ()) in
   try
     Files.open_out_append_text filename
-  with exn -> Exn.fail ~exn "failed to open stats file %s" filename
+  with exn ->
+    Exn.fail ~exn "failed to open stats file %s" filename
 
 module J = Yojson
 
@@ -72,14 +80,12 @@ let line_writer out =
   write_json out nr
 
 let setup_ ?(pause=Time.seconds 60) setup =
-  match !Daemon.logfile with
-  | None -> log #warn "no logfile, disabling logstash stats too"
-  | Some logfile ->
-    let stat_basename = basename_of_file logfile in
-    log #info "will output logstash stats to %s.YYYYMMDD.json" stat_basename;
+  match get_basename () with
+  | None -> ()
+  | Some stat_basename ->
     setup pause begin fun () ->
-      match open_logstash stat_basename with
-      | exception exn -> log #warn ~exn "no output file, disabling"
+      match open_logstash_exn stat_basename with
+      | exception exn -> log #warn ~exn "disabling output"
       | ch ->
         Control.bracket ch close_out_noerr begin fun ch ->
           let write = line_writer ch in
@@ -105,14 +111,12 @@ let is_same_day timestamp =
 let null = object method event _j = () end
 
 let log () =
-  match !Daemon.logfile with
-  | None ->
-    log #info "no logfile, disable"; null
-  | Some name ->
-    try
-      let basename = try Filename.chop_extension name with _ -> name in
-      let out = open_logstash basename in
-      log #info "will ouput log to %s" name;
+  match get_basename () with
+  | None -> null
+  | Some stat_basename ->
+    match open_logstash_exn stat_basename with
+    | exception exn -> log #warn ~exn "disabling output"; null
+    | out ->
       object
         val mutable timestamp = Time.now ()
         val mutable out = out
@@ -123,18 +127,17 @@ let log () =
             match timestamp with
             | t when not @@ is_same_day t ->
               begin try
-                  log #info "rotate log";
-                  let new_out = open_logstash basename in
-                  let prev = out in
-                  out <- new_out;
-                  nr := 0;
-                  timestamp <- Time.now ();
-                  flush prev;
-                  close_out_noerr prev
-                with exn -> log #warn ~exn "failed to rotate log" end
+                log #info "rotate log";
+                let new_out = open_logstash_exn stat_basename in
+                let prev = out in
+                out <- new_out;
+                nr := 0;
+                timestamp <- Time.now ();
+                flush prev;
+                close_out_noerr prev
+              with exn -> log #warn ~exn "failed to rotate log" end
             | _ -> ()
           in
           let json = `Assoc (common_fields () @ j) in
           write_json out nr json
       end
-    with exn -> log #warn ~exn "output disabled"; null
