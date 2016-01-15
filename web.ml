@@ -61,6 +61,12 @@ type http_action =
 | `DELETE
 ]
 
+let string_of_http_action : http_action -> string = function
+  | `GET -> "GET"
+  | `POST -> "POST"
+  | `PUT -> "PUT"
+  | `DELETE -> "DELETE"
+
 module type IO_TYPE = sig
   type 'a t
   val return : 'a -> 'a t
@@ -135,7 +141,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) = struct
       ()
     in
     if verbose then begin
-      let action = match action with `GET -> "GET" | `DELETE -> "DELETE" | `POST -> "POST" | `PUT -> "PUT" in
+      let action = string_of_http_action action in
       let body = match body with
       | None -> ""
       | Some (`Form args) -> String.concat " " @@ List.map (fun (k,v) -> sprintf "%s=%S" k (Stre.shorten 64 v)) args
