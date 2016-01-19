@@ -329,6 +329,14 @@ let () = test "Enum.uniq" begin fun () ->
     (List.of_enum @@ Enum.count_unique (=) @@ List.enum [1;2;2;3;1;1;1;1;4;]);
 end
 
+let () = test "Enum.take" begin fun () ->
+  let e = Enum.take 3 (Enum.empty ()) in
+  OUnit.assert_bool "is_empty" (Enum.is_empty e);
+  OUnit.assert_bool "peek None" (Enum.peek e = None);
+  let e = Enum.take 3 (List.enum @@ List.init 10 id) in
+  OUnit.assert_equal ~printer:(Stre.list string_of_int) [0;1;2] (List.of_enum e)
+end
+
 let () = test "Enum.iter_while" begin fun () ->
   let e = List.enum [1;2;3;4;5;6;7;] in
   Enum.iter_while (fun x -> if x = 2 then Enum.iter_while (fun x -> x < 6) e; x < 4) e;

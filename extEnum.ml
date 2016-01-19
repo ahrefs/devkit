@@ -47,7 +47,14 @@ let of_dynarray ?(start=0) ?n d =
 
 let dyn_range = of_dynarray
 
-let take limit e = init limit (fun _ -> next e)
+let take limit e =
+  let limit = ref limit in
+  from begin fun () ->
+    if 0 = !limit then raise Enum.No_more_elements;
+    let x = next e in
+    decr limit;
+    x
+  end
 
 let align f e1 e2 =
   let next () =
