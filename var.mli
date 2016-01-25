@@ -24,3 +24,9 @@ val cc_ms : ('a -> string) -> string -> ?attr:attributes -> string -> 'a Cache.C
 (* val show : unit -> string *)
 (** callback takes attributes and value *)
 val iter : (attributes -> t -> unit) -> unit
+
+(** [list_stats filter]
+
+    @return a list containing a printed line for each counter whose type is in [filter].
+*)
+val list_stats : string list -> string list

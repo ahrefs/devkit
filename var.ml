@@ -100,6 +100,24 @@ let iter f =
       end
   end
 
+let list_stats filter =
+  let l = ref [] in
+  iter begin fun attrs v ->
+    try
+      let klass = List.assoc "class" attrs in
+      if not @@ List.mem klass filter then raise Not_found; (* not interested stats *)
+      let attrs = List.remove_assoc "class" attrs |> List.map (uncurry @@ sprintf "%s.%s") |> String.join "," in
+      let value =
+        match v with
+        | Time t -> Time.compact_duration t
+        | Count c -> string_of_int c
+        | Bytes b -> Action.bytes_string b
+      in
+      tuck l @@ sprintf "%s %s : %s" klass attrs value
+    with Not_found -> ()
+  end;
+  List.sort !l
+
 (*
 let show () =
   let b = Buffer.create (Hashtbl.length h_vars * 20) in
