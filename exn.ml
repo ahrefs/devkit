@@ -1,3 +1,7 @@
+(**
+  Dealing with exceptions
+*)
+
 open Printf
 open ExtLib
 

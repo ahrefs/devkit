@@ -1,3 +1,7 @@
+(**
+  Dealing with Lwt exceptions
+*)
+
 open Printf
 
 let catch f x = Lwt.catch (fun () -> Lwt.bind (f x) (fun r -> Lwt.return (Some r))) (fun _ -> Lwt.return None)
@@ -8,7 +12,3 @@ let fail ?exn fmt =
   ksprintf fails fmt
 
 let invalid_arg fmt = ksprintf (fun s -> Lwt.fail (Invalid_argument s)) fmt
-
-let exn_of_result = function
-  | `Error msg -> Lwt.fail_with msg
-  | `Ok v -> Lwt.return v

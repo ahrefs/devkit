@@ -5,7 +5,7 @@ true: bin_annot, annot, debug, thread, package(threads), warn_A, warn_e, warn(-3
 "htmlStream.ml" or "php_serialize.ml": syntax_camlp4o, package(camlp4)
 "web.ml": package(lwt.ppx)
 "nix.ml" or "files.ml" or "daemon.ml" or "prelude.ml" or "parallel.ml" or "signal.ml" or "lwt_engines.ml" or "memory.ml": package(lwt.unix)
-<exn_lwt.ml*>: package(lwt)
+"exn_lwt.ml": package(lwt)
 <gzip_*.ml>: package(zip)
 "httpev.ml": package(libevent), package(netstring), syntax_camlp4o, package(camlp4.macro), package(lwt.syntax)
 #"prelude.ml": syntax_camlp4o, package(camlp4.macro), dversion
