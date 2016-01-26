@@ -76,7 +76,7 @@ val slice : int -> int -> 'a list -> 'a list
 (** Partitioning a list into chunks *)
 
 (** [chunk_e n e] splits enum [e] into chunks of [n] elements each (except the last which can be shorter).
-  NB the order in result is not specified *)
+  NB the order in result is not specified FIXME? *)
 val chunk : int -> 'a list -> 'a list list
 
 (** [partition n l] splits [l] into [n] chunks, does not preserve the order of the elements. *)
@@ -154,6 +154,8 @@ val hashtbl_find : ('a, 'b) Hashtbl.t -> (unit -> 'b) -> 'a -> 'b
 
 (** Parse memory size specification, accepts: MB KB 1MB 20gb *)
 val parse_bytes_unit : string -> int
+
+(** Pretty-print memory size in a way that can be parsed back by [parse_bytes_unit] *)
 val show_bytes_unit : int -> string
 
 (** Pretty-printing *)
@@ -178,7 +180,7 @@ val gc_settings : unit -> string
 
 (** File IO *)
 
-(** Counting bytes *)
+(** Counting bytes. Not closing underlying io. *)
 val count_bytes_to : int64 ref -> 'a IO.output -> int64 IO.output
 val count_bytes : 'a IO.output -> int64 IO.output
 
@@ -193,7 +195,7 @@ val io_null : unit IO.output
 val file_lines_exn : string -> string list
 val file_lines : string -> string list
 
-(** Removes the lines starting with #. *)
+(** read lines from file skipping empty lines and comments (lines starting with '#') *)
 val make_config_lines : string list -> string list
 val config_lines_exn : string -> string list
 val config_lines : string -> string list

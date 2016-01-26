@@ -22,9 +22,6 @@ let timely_counter period f =
     logger ();
   end
 
-(** Exponential Weighted Moving Average
-  (smooth) 0.05 < alpha < 0.15 (dynamic)
-*)
 type ewma = (float -> unit) * (unit -> float)
 
 let ewma alpha : ewma =
@@ -71,8 +68,6 @@ let list_random = function
 let array_random_exn a = a.(Random.int (Array.length a))
 let array_random = function [||] -> None | a -> Some (array_random_exn a)
 
-(** @return index of first element mathing [p] when iterating [a] in reverse
-    @raise Not_found if no such element exists *)
 let array_rfindi p a =
   let j = ref 0 in
   try
@@ -86,8 +81,7 @@ let array_rfind p a = a.(array_rfindi p a)
 
 let array_iter_rev f a = for i = Array.length a - 1 downto 0 do f (Array.unsafe_get a i) done
 
-(** [shuffle a] shuffles an array, giving a uniform random distribution *)
- let shuffle a =
+let shuffle a =
    for i = pred (Array.length a) downto 1 do
      let j = Random.int (succ i) in
      if i <> j (* faster to omit this test with arrays of about 100000 elements or more *) then (
@@ -97,7 +91,6 @@ let array_iter_rev f a = for i = Array.length a - 1 downto 0 do f (Array.unsafe_
      )
    done
 
-(** [partition n l] splits [l] into [n] chunks, does not preserve the order of the elements *)
 let partition n l =
   assert (n >= 0);
   if n < 2 then [| l |] else
@@ -123,7 +116,6 @@ let unpartition a =
   assert (Array.for_all ((=)[]) a);
   List.rev !l
 
-(** [stable_partition l n] splits [l] into [n] chunks, preserves the order of the elements *)
 let stable_partition n l =
   assert (n >= 0);
   if n <= 1 then [l] else
@@ -138,8 +130,6 @@ let stable_partition n l =
 
 let stable_unpartition = List.flatten
 
-(** extract sublist from a list
- for example [slice 1 3 \[0;1;2;3;4\]] will return [\[1;2;3\]] *)
 let slice b e = List.take (e - b + 1) $ List.drop b
 
 let file_lines_exn file =
@@ -153,7 +143,6 @@ let make_config_lines =
     if s <> "" && s.[0] <> '#' then Some s else None
   end
 
-(** read lines from file skipping empty lines and comments (lines starting with '#') *)
 let config_lines_exn = make_config_lines $ file_lines_exn
 
 let file_lines_exn file = try file_lines_exn file with exn -> Exn.fail ~exn "file_lines %s" file
@@ -165,7 +154,6 @@ let config_lines file = try config_lines_exn file with _ -> []
 let hashtbl_find h f k =
   try Hashtbl.find h k with Not_found -> let v = f () in Hashtbl.replace h k v; v
 
-(** array must be sorted *)
 let binary_search' arr cmp x =
   let rec loop a b =
     match b - a with
@@ -183,8 +171,6 @@ let binary_search' arr cmp x =
 
 let binary_search a b c = Option.is_some @@ binary_search' a b c
 
-(** [chunk n l] splits list [l] into chunks of [n] elements each (except the last which can be shorter).
-  NB the order in result is not specified FIXME? *)
 let chunk n l =
   assert (n > 0);
   let chunks = ref [] in
@@ -202,8 +188,6 @@ let chunk n l =
   in
   loop (List.enum l)
 
-(** [chunk_e n e] splits enum [e] into chunks of [n] elements each (except the last which can be shorter).
-  NB the order in result is not specified *)
 let chunk_e n e =
   assert (n > 0);
   let fin () = raise Enum.No_more_elements in
@@ -214,8 +198,6 @@ let chunk_e n e =
       | 0 -> fin ()
       | _ -> decr i; match Enum.get e with None -> fin () | Some x -> x))
 
-(** [chunk_a n a] splits array [a] into chunks of [n] elements each (except the last which can be shorter), preserving
-  the order of elements, i.e. reverse operation is [Array.concat] *)
 let chunk_a n a =
   assert (n > 0);
   let chunks = Array.length a / n in
@@ -225,7 +207,6 @@ let chunk_a n a =
 
 (* FIXME *)
 
-(** short human-readable display for memory measures *)
 let bytes_string_f f = (* oh ugly *)
   let a = abs_float f in
   if a < 1024. then sprintf "%dB" (int_of_float f) else
@@ -280,7 +261,6 @@ let log_thread ?name f x =
   Thread.create (fun () -> log ?name f x) ()
 let log_thread_do ?name f = log_thread ?name f ()
 
-(** Copy all data from [input] to [output] *)
 let io_copy input output =
   try
     let size = 16 * 1024 in
@@ -370,7 +350,6 @@ let mem_usage v =
   Printf.sprintf "%s (data %s)" (Action.bytes_string (Objsize.size_with_headers x)) (Action.bytes_string (Objsize.size_without_headers x))
 *)
 
-(** not closing underlying io *)
 let count_bytes_to count out =
   IO.create_out
     ~write:(fun c -> count := Int64.succ !count; IO.write out c)
@@ -419,21 +398,11 @@ let rec quick_sort d left right cmp =
 
 let quick_sort d ?(start=0) ?(n = DynArray.length d - start) cmp = quick_sort d start (start + n - 1) cmp
 
-(**
-  find the minimum element in the list
-  @param cmp compare function, default [Pervasives.compare]
-  @raise Empty_list when list is empty
-*)
 let list_min ?(cmp=compare) l =
   List.fold_left (fun x y -> if cmp x y < 0 then x else y) (List.hd l) l
 
-(** command-line arguments *)
 let args = List.tl (Array.to_list Sys.argv)
 
-(** run [f] in thread periodically once in [delay] seconds.
-  @param f returns [false] to stop the thread, [true] otherwise
-  @param now default [false]
-*)
 let thread_run_periodic ~delay ?(now=false) f =
   let (_:Thread.t) = Thread.create begin fun () ->
     if not now then Nix.sleep delay;
@@ -447,7 +416,6 @@ let thread_run_periodic ~delay ?(now=false) f =
 let random_bytes n = String.init n (fun _ -> Char.chr (Random.int 256))
 let random_ascii n = String.init n (fun _ -> Char.chr (Char.code '!' + Random.int (Char.code '~' - Char.code '!' + 1)))
 
-(** Parse memory size specification, accepts: MB KB 1MB 20gb *)
 let parse_bytes_unit s =
   let unit_of_string s =
     match Stre.drop_suffix (String.lowercase s) "b" with
@@ -481,13 +449,11 @@ let show_bytes_unit n =
   | 1, s -> s ^ "B"
   | n, s -> (string_of_int n) ^ s
 
-(** Pretty-print memory size in a way that can be parsed back by [parse_bytes_unit] *)
 let show_bytes_unit = function
 | 0 -> "0"
 | n when n < 0 -> "-" ^ show_bytes_unit ~-n
 | n -> show_bytes_unit n
 
-(** name01 name02 name09 name10 name11 -> name0{1..2} name{09..11} *)
 let shell_sequence names =
   let l = ref [] in
   let fresh s =
