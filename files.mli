@@ -16,4 +16,12 @@ val iter_files : string -> (string -> in_channel -> unit) -> unit
 val open_out_append_bin : string -> out_channel
 val open_out_append_text : string -> out_channel
 
-val save_as : string -> ?mode:Unix.file_perm -> (out_channel -> 'a) -> unit
+(** [save_as filename ?mode f] is similar to
+    [Control.with_open_file_bin] except that writing is done to a
+    temporary file that will be renamed to [filename] after [f] has
+    succesfully terminated. Therefore this guarantee that either
+    [filename] will not be modified or will contain whatever [f] was
+    writing to it as a side-effect.
+
+    FIXME windows *)
+val save_as : string -> ?mode:Unix.file_perm -> (out_channel -> unit) -> unit

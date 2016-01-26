@@ -55,7 +55,6 @@ let () =
   iter_files "/etc" (fun s _ -> print_endline s)
 *)
 
-(** FIXME windows *)
 let save_as name ?(mode=0o644) f =
   (* not using make_temp_file cause same dir is needed for atomic rename *)
   let temp = Printf.sprintf "%s.save.%d.%d.tmp" name (Unix.getpid ()) (Thread.id (Thread.self ())) in
