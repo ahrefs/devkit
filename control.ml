@@ -1,14 +1,5 @@
-(** Control flow *)
-
-(** [bracket resource destroy k]
-    @return [k resource] and guarantee that [resource] is [destroy]'ed at the end. *)
 let bracket resource destroy k = Std.finally (fun () -> destroy resource) k resource
 
-(** [wrapped acc result k]
-
-  Computation [k] accumulates result into resource [acc] which
-  is guaranteed to be released at the end. Rarely useful (e.g. {!IO.output_string})
-  @return [result acc] *)
 let wrapped acc result k =
   let r = ref None in
   let () = Std.finally (fun () -> r := Some (result acc)) k acc in

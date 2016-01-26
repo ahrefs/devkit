@@ -1,13 +1,9 @@
-(** File system *)
-
 open Prelude
 open Control
 
 let enum_dir d = Enum.from (fun () -> try Unix.readdir d with End_of_file -> raise Enum.No_more_elements)
 let with_readdir dirname = bracket (Unix.opendir dirname) Unix.closedir
 
-(** [f fd path rel] gets invoked for each file under [dirname] where
-[fd] is a read-only [Unix.file_descr], [path] is full path and [rel] - path relative to [dirname] *)
 let iter_names dirname f =
   let rec loop path rel =
   with_readdir path (fun d ->
