@@ -86,10 +86,10 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) = struct
 
   open IO
 
-  let simple_result = function
+  let simple_result ?(verbose=false) = function
     | `Ok (code, s) when code / 100 = 2 -> `Ok s
     | `Error code -> `Error (sprintf "(%d) %s" (Curl.errno code) (Curl.strerror code))
-    | `Ok (n, _) -> `Error (sprintf "http %d" n)
+    | `Ok (n, content) -> `Error (sprintf "http %d%s" n (if verbose then ": " ^ content else ""))
 
   let return_unit = return ()
 
@@ -153,7 +153,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) = struct
 
   let http_request ?ua ?timeout ?verbose ?setup ?http_1_0 ?body (action:http_action) url =
     http_request' ?ua ?timeout ?verbose ?setup ?http_1_0 ?body action url >>= fun res ->
-    return @@ simple_result res
+    return @@ simple_result ?verbose res
 
   let http_query ?ua ?timeout ?verbose ?setup ?http_1_0 ?body (action:http_action) url =
     let body = match body with Some (ct,s) -> Some (`Raw (ct,s)) | None -> None in
