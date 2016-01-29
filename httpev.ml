@@ -913,7 +913,10 @@ let handle_client_lwt client cin answer =
     Hashtbl.remove client.server.reqs req.id;
     Lwt.return ()
 
+let accept_hook = ref (fun () -> ())
+
 let handle_lwt fd k =
+  !accept_hook ();
   match_lwt Exn_lwt.map Lwt_unix.accept fd with
   | `Exn (Unix.Unix_error (Unix.EMFILE,_,_)) ->
     let pause = 2. in
