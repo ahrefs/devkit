@@ -105,6 +105,11 @@ let setup_lwt ?(pause=default_period) () =
     Lwt.async loop
   )
 
+let round_to_midnight timestamp =
+  let ms = Time.to_ms timestamp in
+  let diff = ms mod (Time.days 1 |> Time.to_ms) in
+  timestamp -. (Time.msec diff)
+
 let is_same_day timestamp =
   Time.now () -. Time.days 1 < timestamp
 
@@ -118,7 +123,7 @@ let log () =
     | exception exn -> log #warn ~exn "disabling output"; null
     | out ->
       object
-        val mutable timestamp = Time.now ()
+        val mutable timestamp = round_to_midnight @@ Time.now ()
         val mutable out = out
         val nr = ref 0
         method event (j : (string * J.json) list) =
