@@ -113,7 +113,7 @@ let round_to_midnight timestamp =
 let is_same_day timestamp =
   Time.now () -. Time.days 1 < timestamp
 
-let null = object method event _j = () end
+let null = object method event _j = ()  method reload () = () end
 
 let log () =
   match get_basename () with
@@ -122,25 +122,27 @@ let log () =
     match open_logstash_exn stat_basename with
     | exception exn -> log #warn ~exn "disabling output"; null
     | out ->
-      object
+      object(self)
         val mutable timestamp = round_to_midnight @@ Time.now ()
         val mutable out = out
         val nr = ref 0
+        method reload () =
+          try
+            log #info "rotate log";
+            let new_out = open_logstash_exn stat_basename in
+            let prev = out in
+            out <- new_out;
+            nr := 0;
+            timestamp <- round_to_midnight @@ Time.now ();
+            flush prev;
+            close_out_noerr prev
+          with exn -> log #warn ~exn "failed to rotate log"
+
         method event (j : (string * J.json) list) =
           let () =
             (* try rotate *)
             match timestamp with
-            | t when not @@ is_same_day t ->
-              begin try
-                log #info "rotate log";
-                let new_out = open_logstash_exn stat_basename in
-                let prev = out in
-                out <- new_out;
-                nr := 0;
-                timestamp <- Time.now ();
-                flush prev;
-                close_out_noerr prev
-              with exn -> log #warn ~exn "failed to rotate log" end
+            | t when not @@ is_same_day t -> self#reload ()
             | _ -> ()
           in
           let json = `Assoc (common_fields () @ j) in
