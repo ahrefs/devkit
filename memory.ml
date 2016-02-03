@@ -96,6 +96,10 @@ let reclaim_s () =
 
 let reclaim () = log #info "%s" @@ reclaim_s ()
 
+let reclaim_silent () =
+  Gc.compact ();
+  !malloc_release ()
+
 let (add_stats,log_stats) =
   let f_stats = ref [] in (* called in reverse - and it is fine *)
   (tuck f_stats), (fun () -> List.iter (fun f -> f ()) !f_stats)
