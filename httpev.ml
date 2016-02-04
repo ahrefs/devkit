@@ -884,25 +884,38 @@ let handle_request_lwt c req answer =
     log #info "version %u.%u not supported from %s" (fst req.version) (snd req.version) (show_request req);
     return (`Version_not_supported,[],"HTTP/1.0 is supported")
 
-let handle_client_lwt client cin answer =
-  (* TODO client.server.config.max_request_size *)
-  let rec read_headers acc =
-    match_lwt Lwt_io.read_line cin with
-    | "" -> Lwt.return acc
-    | s -> read_headers (extract_header s :: acc)
+let read_headers cin limit =
+  let rec loop buf =
+    match String.length buf >= limit with
+    | true -> Exn_lwt.fail "request larger than max_request_size %s" (Action.bytes_string limit)
+    | false ->
+      lwt s = Lwt_io.read ~count:(limit - String.length buf) cin in
+      let buf = buf ^ s in
+      match String.split buf "\r\n\r\n" with
+      | exception _ -> loop buf
+      | (headers,body) -> Lwt.return (String.nsplit headers "\r\n", body)
   in
-  lwt line1 = Lwt_io.read_line cin in
-  lwt headers = read_headers [] in
+  loop ""
+
+let handle_client_lwt client cin answer =
+  lwt (headers,data) = read_headers cin client.server.config.max_request_size in
+  match headers with
+  | [] -> failed RequestLine "missing"
+  | line1::headers ->
+  let headers = List.map extract_header headers in
   let content_length = get_content_length headers in
   (** TODO transfer-encoding *)
   if List.mem_assoc "transfer-encoding" headers then Exn.fail "Transfer-Encoding not supported";
   lwt data =
     match content_length with
-    | None -> Lwt.return ""
+    | None when data = "" -> Lwt.return ""
+    | None -> failed Extra data
+    | Some n when String.length data > n -> failed Extra (String.slice ~first:n data)
+    | Some n when String.length data = n -> Lwt.return data
     | Some n ->
-      let s = Bytes.create n in
-      lwt () = Lwt_io.read_into_exactly cin s 0 n in
-      Lwt.return s
+      let s = Bytes.create (n - String.length data) in
+      lwt () = Lwt_io.read_into_exactly cin s 0 (n - String.length data) in
+      Lwt.return (data ^ s)
   in
   (* TODO check that no extra bytes arrive *)
   let body = { line1; parsed_headers=headers; content_length; buf = Buffer.create (String.length data); } in
