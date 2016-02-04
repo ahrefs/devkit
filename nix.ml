@@ -47,7 +47,7 @@ let probe_pidfile path =
     try
       let pid = read_pidfile path in
       kill pid 0;
-      `Alive
+      `Alive pid
     with
     | Unix_error (ESRCH, _, _) -> `Stale
     | e -> `Error e
@@ -57,9 +57,9 @@ let probe_pidfile path =
 let check_pidfile path =
   match probe_pidfile path with
   | `Missing -> () (* free to go *)
-  | `Stale -> Log.self #info "removing stale pidfile"; Exn.suppress Sys.remove path
-  | `Alive -> Log.self #info "pid at %s is alive, exiting" path; exit 133
-  | `Error exn -> Log.self #warn ~exn "wrong pid file, exiting"; exit 3
+  | `Stale -> Log.self #info "removing stale pidfile at %s" path; Exn.suppress Sys.remove path
+  | `Alive pid -> Log.self #info "pid %d at %s is alive, exiting" pid path; exit 133
+  | `Error exn -> Log.self #warn ~exn "wrong pid file at %s, exiting" path; exit 3
 
 let manage_pidfile path =
   check_pidfile path;
