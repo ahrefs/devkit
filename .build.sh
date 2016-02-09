@@ -6,7 +6,7 @@ export OPAMBUILDTEST=true
 export OPAMYES=true
 
 opam update -u
-opam sw 4.02.1
+opam sw 4.02.3
 eval $(opam config env)
 opam uninstall devkit
 opam upgrade
