@@ -10,10 +10,13 @@ let log = Log.self
 
 (** percent-encode (convert space into %20) *)
 let rawurlencode = Netencoding.Url.encode ~plus:false
+
 (** percent-encode, but convert space into plus, not %20 *)
 let urlencode = Netencoding.Url.encode ~plus:true
+
 (** percent-decode (leave plus as is) *)
 let rawurldecode s = try Netencoding.Url.decode ~plus:false s with _ -> s
+
 (** percent-decode and convert plus into space *)
 let urldecode s = try Netencoding.Url.decode ~plus:true s with _ -> s
 
@@ -43,14 +46,14 @@ let curl_default_setup h =
 type http_action_old =
 [ `GET
 | `POST_FORM of (string * string) list
-| `POST of (string * string) (** content-type and body *)
+| `POST of (string * string) (* content-type and body *)
 | `PUT of (string * string)
 | `DELETE
-| `CUSTOM of (string * string * string) (** request, content-type and body *)
+| `CUSTOM of (string * string * string) (* request, content-type and body *)
 ]
 
 type http_body =
-[ `Raw of string * string (** content-type and body *)
+[ `Raw of string * string (* content-type and body *)
 | `Form of (string * string) list (* key value *)
 ]
 

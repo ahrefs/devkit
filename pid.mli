@@ -15,6 +15,7 @@ val show : t -> string
 
 (** @return application name *)
 val name : t -> string
+
 (** @return application name *)
 val short_name : t -> string [@@ocaml.deprecated "use Pid.name"]
 
