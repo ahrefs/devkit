@@ -21,8 +21,8 @@ let with_input io = bracket io IO.close_in
 let with_input_bin name k = with_open_in_bin name (fun ch -> k (IO.input_channel ch))
 let with_input_txt name k = with_open_in_txt name (fun ch -> k (IO.input_channel ch))
 let with_output io = bracket io IO.close_out
-let with_output_bin name k = with_open_out_bin name (fun ch -> k (IO.output_channel ch))
-let with_output_txt name k = with_open_out_txt name (fun ch -> k (IO.output_channel ch))
+let with_output_bin name k = with_open_out_bin name (fun ch -> bracket (IO.output_channel ch) IO.flush k)
+let with_output_txt name k = with_open_out_txt name (fun ch -> bracket (IO.output_channel ch) IO.flush k)
 
 let locked mutex f = Mutex.lock mutex; Std.finally (fun () -> Mutex.unlock mutex) f ()
 
