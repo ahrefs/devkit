@@ -450,3 +450,14 @@ let release x = L.locked cache.lock (fun () -> T.reset x; Stack.push x cache.cac
 end
 
 module Reuse = ReuseLocked(NoLock)
+
+module Circular( E : sig type t end ) = struct
+  type 'a t = E.t array
+  let idx = ref 0
+  let size = ref 0
+  let create size' initial : 'a t = size := size'; Array.create size' initial
+  let add cb elem = if !idx >= !size then idx := 0; cb.(!idx) <- elem; incr idx
+  let get cb idx = cb.(idx)
+  let length = Array.length
+  let fold_left = Array.fold_left
+end

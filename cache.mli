@@ -164,3 +164,22 @@ module Reuse(T : sig type t val create : unit -> t val reset : t -> unit end) : 
   val get : unit -> t
   val release : t -> unit
 end
+
+(** Efficient circular buffer *)
+module Circular( E : sig type t end ) : sig
+  type 'a t
+
+  (** [create size initial] Allocate a circular buffer with max [size] elements with [initial] value *)
+  val create : int -> E.t -> 'a t
+
+  (** [add buffer elem] Adds [elem] to the buffer. O(1) *)
+  val add : 'a t -> E.t -> unit
+
+  (** [get buffer idx] Gets element at [idx]. Throws out of bounds if [idx] is bad. O(1)*)
+  val get : 'a t -> int -> E.t
+
+  (** NB folds over all elements, including the initial elements if buffer has not looped yet  *)
+  val fold_left : ('a -> E.t -> 'a) -> 'a -> 'b t -> 'a
+
+  val length : 'a t -> int
+end
