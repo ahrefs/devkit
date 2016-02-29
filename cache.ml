@@ -451,13 +451,15 @@ end
 
 module Reuse = ReuseLocked(NoLock)
 
-module Circular( E : sig type t end ) = struct
-  type 'a t = E.t array
-  let idx = ref 0
-  let size = ref 0
-  let create size' initial : 'a t = size := size'; Array.create size' initial
-  let add cb elem = if !idx >= !size then idx := 0; cb.(!idx) <- elem; incr idx
-  let get cb idx = cb.(idx)
-  let length = Array.length
-  let fold_left = Array.fold_left
+module Circular = struct
+  type 'a t = { buffer: 'a array; mutable idx: int; size: int }
+  let create size initial : 'a t =
+    if size <= 0 then
+      raise @@ Invalid_argument "cannot create circular buffer of size 0"
+    else
+      let buffer = Array.create size initial in { buffer; idx = 0; size }
+  let add cb elem = if cb.idx >= cb.size then cb.idx <- 0; cb.buffer.(cb.idx) <- elem; cb.idx <- cb.idx + 1
+  let get cb idx = cb.buffer.(idx)
+  let length cb = cb.size
+  let fold_left f seed cb = Array.fold_left f seed cb.buffer
 end
