@@ -6,12 +6,18 @@ open Printf
 
 let log = Log.from "memory"
 
-type t = { rss : int; vsize : int; nr_maps : int; swap_used : int; }
+type t = {
+  rss : int; (** resident set size *)
+  vsize : int; (** virtual memory size *)
+  nr_maps : int; (** number of VM mappings *)
+  swap_used : int; (** used swap size *)
+}
 
 let get_num = int_of_string $ String.replace_chars (fun c -> if Stre.ASCII.is_digit c then String.of_char c else "")
 
 let pagesize = Int64.to_int ExtUnix.Specific.(sysconf PAGESIZE)
 
+(** @return virtual memory info *)
 let get_vm_info () =
   let (vsize,rss) =
     match Action.file_lines "/proc/self/statm" with
