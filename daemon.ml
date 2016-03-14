@@ -27,9 +27,14 @@ let signal_exit =
   let do_lwt = lazy (Lwt.wakeup signal_exit_lwt ()) in
   fun () -> Lazy.force do_lwt; should_exit_ := true
 
-(** raise [ShouldExit] if [should_exit] condition was set *)
+(** raise [ShouldExit] if [should_exit] condition is set, otherwise do nothing *)
 let break () = if !should_exit_ then raise ShouldExit
-let break_lwt () = Lwt.bind should_exit_lwt (fun () -> Lwt.fail ShouldExit)
+
+(** wait until [should_exit] is set and raise [ShouldExit] *)
+let wait_exit () = Lwt.bind should_exit_lwt (fun () -> Lwt.fail ShouldExit)
+
+(** obsolete, use [wait_exit] *)
+let break_lwt = wait_exit
 
 let get_args () =
   [
