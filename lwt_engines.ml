@@ -29,7 +29,10 @@ method poll fds timeout =
 end
 
 (** libevent-based engine for lwt *)
-class libevent = object(self)
+class libevent =
+let once_block = Ev.[ONCE] in
+let once_nonblock = Ev.[ONCE;NONBLOCK] in
+object(self)
   inherit Lwt_engine.abstract
 
   val events_ = Ev.init ()
@@ -41,7 +44,7 @@ class libevent = object(self)
   method private cleanup = Ev.free events_
 
   method iter block =
-    Ev.(loop self#events (if block then ONCE else NONBLOCK))
+    Ev.(loops self#events (if block then once_block else once_nonblock))
 
   method private register_readable fd f =
     let ev = Ev.create () in
