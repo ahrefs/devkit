@@ -47,7 +47,7 @@ object(self)
     try
       Ev.(loops self#events (if block then once_block else once_nonblock))
     with
-      Unix.Unix_error ((EAGAIN|EWOULDBLOCK),_,_) as exn -> Printf.eprintf "Lwt_engines.libevent: ignoring %s\n%!" (Exn.str exn)
+      exn -> Exn.fail ~exn "Lwt_engines.libevent#iter"
 
   method private register_readable fd f =
     let ev = Ev.create () in
