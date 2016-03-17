@@ -25,16 +25,16 @@ end
 
 type attributes = (string * string) list
 type t = Time of Time.t | Count of int | Bytes of int
-type group = { k : string; attr : Attr.t; mutable get : (unit -> (string * t) list) list; }
+type group = { k : string; attr : Attr.t; mutable get : (unit -> (string * t option) list) list; }
 
-let h_groups = Hashtbl.create 10
+let h_families = Hashtbl.create 10
 let register ~name ~k ~get ~attr =
-  let attr = Attr.make (("class",name)::attr) in
-  let (_:Attr.t) = Attr.add (k,"") attr in (* check that all keys are unique *)
-  match Hashtbl.find h_groups attr with
-  | exception Not_found -> Hashtbl.replace h_groups attr { k; attr; get = [get] }
-  | r ->
-    log #warn "duplicate Var %s" (show_a @@ Attr.get attr);
+  let family = Attr.make (("class",name)::attr) in
+  let (_:Attr.t) = Attr.add (k,"") family in (* check that all keys are unique *)
+  match Hashtbl.find h_families family with
+  | exception Not_found -> Hashtbl.replace h_families family { k; attr = family; get = [get] } (* register new family *)
+  | r -> (* expand existing family *)
+    log #warn "duplicate Var %s" (show_a @@ Attr.get family);
     r.get <- get :: r.get
 
 let make_cc f pp name ?(attr=[]) k =
@@ -43,60 +43,65 @@ let make_cc f pp name ?(attr=[]) k =
   register ~name ~k ~get ~attr;
   cc
 
-let cc f = make_cc (fun n -> Count n) f
-let cc_ms f = make_cc (fun n -> Time (float n /. 1000.)) f
+let cc f = make_cc (fun n -> Some (Count n)) f
+let cc_ms f = make_cc (fun n -> Some (Time (float n /. 1000.))) f
 
-class typ name ?(attr=[]) k_name =
+class typ name ?(attr=[]) k_name = (* name+attr - family of counters *)
 object(self)
   val h = Hashtbl.create 7
   initializer
-    let get () = Hashtbl.fold (fun k v acc ->
+    let get () = Hashtbl.fold (fun k v acc -> (* return all counters created for this instance *)
       match v () with
       | exception exn -> log #warn ~exn "variable %S %s failed" name (show_a @@ (k_name,k)::attr); acc
       | v -> (k, v) :: acc) h [] in
-    register ~k:k_name ~get ~attr ~name
+    register ~k:k_name ~get ~attr ~name (* register family *)
   method ref : 'a. 'a -> ('a -> t) -> string -> 'a ref = fun init f name ->
     let v = ref init in
-    Hashtbl.replace h name (fun () -> f !v);
+    Hashtbl.replace h name (fun () -> some @@ f !v);
     v
-  method get_count name f = Hashtbl.replace h name (fun () -> Count (f ()))
-  method get_bytes name f = Hashtbl.replace h name (fun () -> Bytes (f ()))
-  method get_time name f = Hashtbl.replace h name (fun () -> Time (f ()))
+  (* f() either returns Some value, either returns None, informing that value could not be obtained *)
+  method get_count name f = Hashtbl.replace h name (fun () -> match f() with | Some x -> Some (Count x) | _ -> None)
+  method get_bytes name f = Hashtbl.replace h name (fun () -> match f() with | Some x -> Some (Bytes x) | _ -> None)
+  method get_time name f = Hashtbl.replace h name (fun () -> match f() with | Some x -> Some (Time x) | _ -> None)
   method count name = self#ref 0 (fun x -> Count x) name
   method bytes name = self#ref 0 (fun x -> Bytes x) name
   method time name = self#ref 0. (fun x -> Time x) name
 end
 
 let iter f =
-  h_groups |> Hashtbl.iter begin fun _name g ->
+  h_families |> Hashtbl.iter begin fun _name g -> (* iterate over counter families *)
     match g.get with
-    | [get] ->
+    | [get] -> (* no duplicates in this family *)
       get () |> List.iter begin fun (k,v) ->
         let attr = (g.k, k) :: Attr.get g.attr in (* this was checked to be valid in [register] *)
-        f attr v
+        match v with Some v -> f attr v | _ -> ()
       end
-    | l ->
-      (* uh *)
+    | l -> (* list of getters for all instances created with this family name *)
       let h = Hashtbl.create 10 in
       l |> List.iter begin fun get ->
-        get () |> List.iter begin fun (k,v) ->
-          let r = match Hashtbl.find h k with
-          | exception Not_found -> v
-          | x ->
-            match x, v with
-            | Time a, Time b -> Time (a+.b)
-            | Count a, Count b -> Count (a+b)
-            | Bytes a, Bytes b -> Bytes (a+b)
-            | Count _, Bytes _ | Count _, Time _
-            | Bytes _, Count _ | Bytes _, Time _
-            | Time _, Count _ | Time _, Bytes _ -> log #warn "mismatched value type for %S in %s" k (show_a @@ Attr.get g.attr); v
-          in
-          Hashtbl.replace h k r
+        get () |> List.iter begin fun (k, vl) -> (* merge values of duplicated counters in family *)
+          match vl with
+          | Some v ->
+            let r = match Hashtbl.find h k with
+              | exception Not_found -> Some v
+              | Some x -> begin
+                match x, v with
+                | Time a, Time b -> Some (Time (a+.b))
+                | Count a, Count b -> Some (Count (a+b))
+                | Bytes a, Bytes b -> Some (Bytes (a+b))
+                | Count _, Bytes _ | Count _, Time _
+                | Bytes _, Count _ | Bytes _, Time _
+                | Time _, Count _ | Time _, Bytes _ -> log #warn "mismatched value type for %S in %s" k (show_a @@ Attr.get g.attr); Some v
+                end
+              | None -> None
+            in
+            Hashtbl.replace h k r
+          | None -> Hashtbl.replace h k None (* if at least one duplicate value is invalid - ignore all data for this counter *)
         end;
       end;
       h |> Hashtbl.iter begin fun k v ->
         let attr = (g.k, k) :: Attr.get g.attr in (* this was checked to be valid in [register] *)
-        f attr v
+        match v with Some v -> f attr v | _ -> ()
       end
   end
 
@@ -127,8 +132,8 @@ let show () =
   Buffer.contents b
 *)
 
-let system_memory = new typ "system_memory" "kind"
-
-let () = system_memory#get_bytes "rss" (fun () -> (Memory.get_vm_info ()).rss)
-let () = system_memory#get_bytes "vsize" (fun () -> (Memory.get_vm_info ()).vsize)
-let () = system_memory#get_bytes "ocaml_heap" (fun () -> let gc = Gc.quick_stat () in Action.bytes_of_words gc.heap_words)
+(* non-monotonic, pointless to log*)
+(* let system_memory = new typ "system_memory" "kind" *)
+(* let () = system_memory#get_bytes "rss" (fun () -> (Memory.get_vm_info ()).rss) *)
+(* let () = system_memory#get_bytes "vsize" (fun () -> (Memory.get_vm_info ()).vsize) *)
+(* let () = system_memory#get_bytes "ocaml_heap" (fun () -> let gc = Gc.quick_stat () in Action.bytes_of_words gc.heap_words) *)

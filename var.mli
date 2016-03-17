@@ -7,9 +7,9 @@ type t = Time of Time.t | Count of int | Bytes of int
 class typ : string -> ?attr:attributes -> string ->
 object
   method ref : 'a. 'a -> ('a -> t) -> string -> 'a ref
-  method get_count : string -> (unit -> int) -> unit
-  method get_bytes : string -> (unit -> int) -> unit
-  method get_time : string -> (unit -> Time.t) -> unit
+  method get_count : string -> (unit -> int option) -> unit
+  method get_bytes : string -> (unit -> int option) -> unit
+  method get_time : string -> (unit -> Time.t option) -> unit
   method count : string -> int ref
   method bytes : string -> int ref
   method time : string -> float ref

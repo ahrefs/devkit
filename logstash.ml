@@ -21,6 +21,7 @@ let common_fields () =
   ]
 
 let get () =
+  let open Var in
   let l = ref [] in
   Var.iter begin fun attr v ->
     let (previous,attr) =
