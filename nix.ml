@@ -15,7 +15,7 @@ let unparent () =
   | _ -> exit 0
 
 (*
-  http://www-theorie.physik.unizh.ch/~dpotter/howto/daemonize
+  http://www.itp.uzh.ch/~dpotter/howto/daemonize
 *)
 
 let daemonize () =
