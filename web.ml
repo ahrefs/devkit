@@ -118,10 +118,11 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) = struct
     end
 
   (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
-  let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) ?body (action:http_action) url =
+  (* Don't use curl_setheaders when using ?headers option *)
+  let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) ?(headers=[]) ?body (action:http_action) url =
     let open Curl in
     let set_body h ct body =
-      set_httpheader h ["Content-Type: "^ct];
+      set_httpheader h @@ ("Content-Type: "^ct)::headers;
       set_postfields h body;
       set_postfieldsize h (String.length body)
     in
@@ -154,16 +155,16 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) = struct
     end;
     http_gets ~setup url
 
-  let http_request ?ua ?timeout ?verbose ?setup ?http_1_0 ?body (action:http_action) url =
-    http_request' ?ua ?timeout ?verbose ?setup ?http_1_0 ?body action url >>= fun res ->
+  let http_request ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?body (action:http_action) url =
+    http_request' ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?body action url >>= fun res ->
     return @@ simple_result ?verbose res
 
-  let http_query ?ua ?timeout ?verbose ?setup ?http_1_0 ?body (action:http_action) url =
+  let http_query ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?body (action:http_action) url =
     let body = match body with Some (ct,s) -> Some (`Raw (ct,s)) | None -> None in
-    http_request ?ua ?timeout ?verbose ?setup ?http_1_0 ?body action url
+    http_request ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?body action url
 
-  let http_submit ?ua ?timeout ?verbose ?setup ?http_1_0 ?(action=`POST) url args =
-    http_request ?ua ?timeout ?verbose ?setup ?http_1_0 ~body:(`Form args) action url
+  let http_submit ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?(action=`POST) url args =
+    http_request ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ~body:(`Form args) action url
 
 end
 
