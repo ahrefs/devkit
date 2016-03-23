@@ -114,7 +114,7 @@ let round_to_midnight timestamp =
 let is_same_day timestamp =
   Time.now () -. Time.days 1 < timestamp
 
-let null = object method event _j = ()  method reload () = () end
+let null = object method event _j = () method write () = () method reload () = () end
 
 let log () =
   match get_basename () with
@@ -139,13 +139,17 @@ let log () =
             close_out_noerr prev
           with exn -> log #warn ~exn "failed to rotate log"
 
+        method private try_rotate () =
+          match timestamp with
+          | t when not @@ is_same_day t -> self#reload ()
+          | _ -> ()
+
+        method write () =
+          self#try_rotate ();
+          get () |> List.iter (write_json out nr)
+
         method event (j : (string * J.json) list) =
-          let () =
-            (* try rotate *)
-            match timestamp with
-            | t when not @@ is_same_day t -> self#reload ()
-            | _ -> ()
-          in
+          self#try_rotate ();
           let json = `Assoc (common_fields () @ j) in
           write_json out nr json
       end
