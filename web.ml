@@ -159,6 +159,10 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) = struct
     http_request' ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?body action url >>= fun res ->
     return @@ simple_result ?verbose res
 
+  let http_request_exn ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?body (action:http_action) url =
+    http_request ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?body action url
+    >>= function `Ok s -> return s | `Error error -> fail "%s" error
+
   let http_query ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?body (action:http_action) url =
     let body = match body with Some (ct,s) -> Some (`Raw (ct,s)) | None -> None in
     http_request ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?body action url
@@ -189,6 +193,7 @@ let with_curl_cache = Http_blocking.with_curl_cache
 let http_gets = Http_blocking.http_gets
 let http_request' = Http_blocking.http_request'
 let http_request = Http_blocking.http_request
+let http_request_exn = Http_blocking.http_request_exn
 let http_query = Http_blocking.http_query
 let http_submit = Http_blocking.http_submit
 
@@ -212,6 +217,7 @@ end
 module Http_lwt = Http(IO_lwt)(Curl_lwt_for_http)
 let http_request_lwt' = Http_lwt.http_request'
 let http_request_lwt = Http_lwt.http_request
+let http_request_lwt_exn = Http_lwt.http_request_exn
 let http_query_lwt = Http_lwt.http_query
 let http_submit_lwt = Http_lwt.http_submit
 
