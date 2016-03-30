@@ -4,7 +4,9 @@ open Prelude
 
 let log = Log.from "logstash"
 
-let state = Hashtbl.create 10
+let state = Hashtbl.create 100
+
+let dynamic = Hashtbl.create 100
 
 let escape k =
   if String.contains k ' ' then
@@ -13,6 +15,56 @@ let escape k =
     k
 
 let zero = Var.(function Count _ -> Count 0 | Time _ -> Time 0. | Bytes _ -> Bytes 0)
+
+module Dyn = struct
+  open Var
+  type t = (string * string) list
+  let make ?(attrs=[]) name =
+    match is_in_families name with
+    | true -> Exn.fail "static class with this name alreasdy exists: %s" name
+    | false ->
+      let family = ("class",name)::attrs in
+      let f = List.unique ~cmp:(fun (a,_) (b,_) -> a = b) family in
+      if List.length f <> List.length family then Exn.fail "duplicate attributes : %s" (show_a family);
+      List.sort ~cmp:compare family
+
+  let extend dyn attrs =
+    match attrs with
+    | [] -> dyn
+    | attrs ->
+      let family = dyn @ attrs in
+      let f = List.unique ~cmp:(fun (a,_) (b,_) -> a = b) family in
+      if List.length f <> List.length family then Exn.fail "duplicate attributes : %s" (show_a family);
+      List.sort ~cmp:compare family
+
+  let set dyn ?(attrs=[]) v =
+    let family = extend dyn attrs in
+    Hashtbl.replace dynamic family v
+
+  let add dyn ?(attrs=[]) v =
+    let family = extend dyn attrs in
+    match Hashtbl.find_default dynamic family (zero v),v with
+    | Count x, Count x' ->
+      let n = x + x' in
+      Hashtbl.replace dynamic family (Count n)
+    | Bytes x, Bytes x' ->
+      let n = x + x' in
+      Hashtbl.replace dynamic family (Bytes n)
+    | Time x, Time x' ->
+      let n = x +. x' in
+      Hashtbl.replace dynamic family (Time n)
+    | Count _, Bytes _ | Count _, Time _
+    | Bytes _, Count _ | Bytes _, Time _
+    | Time _, Count _ | Time _, Bytes _ -> log #warn "mismatched value type for %s" (show_a family)
+
+  let set_count dyn ?(attrs=[]) v = set dyn ~attrs (Count v)
+  let set_bytes dyn ?(attrs=[]) v = set dyn ~attrs (Bytes v)
+  let set_time dyn ?(attrs=[]) v = set dyn ~attrs (Time v)
+  let add_count dyn ?(attrs=[]) v = add dyn ~attrs (Count v)
+  let add_bytes dyn ?(attrs=[]) v = add dyn ~attrs (Bytes v)
+  let add_time dyn ?(attrs=[]) v = add dyn ~attrs (Time v)
+end
+
 
 let common_fields () =
   [
@@ -26,7 +78,10 @@ let get () =
   Var.iter begin fun attr v ->
     let (previous,attr) =
       try Hashtbl.find state attr with
-      | Not_found -> let x = ref (zero v), List.map (fun (k, s) -> escape k, `String s) attr in Hashtbl.add state attr x; x
+      | Not_found ->
+        let a = List.map (fun (k, s) -> escape k, `String s) attr in
+        let x = ref (zero v), a in
+        Hashtbl.add state attr x; x
     in
     let this = (common_fields () @ attr
       :  (string * [ `Floatlit of string | `Int of int | `String of string]) list
@@ -46,6 +101,19 @@ let get () =
     | Bytes _, Count _ | Bytes _, Time _
     | Time _, Count _ | Time _, Bytes _ -> () (* cannot happen *)
   end;
+  dynamic |> Hashtbl.iter begin fun attr v ->
+    let attr = List.map (fun (k, s) -> escape k, `String s) attr in
+    let this = (common_fields () @ attr
+      :  (string * [ `Floatlit of string | `Int of int | `String of string]) list
+      :> (string * [>`Floatlit of string | `Int of int | `String of string]) list)
+    in
+    let add c = tuck l @@ `Assoc (c :: this) in
+    match v with
+    | Count x -> add ("count", `Int x)
+    | Bytes x -> add ("bytes", `Int x)
+    | Time x -> add ("seconds", `Floatlit (sprintf "%g" x))
+  end;
+  Hashtbl.clear dynamic;
   !l
 
 let get_basename () =

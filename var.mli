@@ -3,6 +3,9 @@
 type attributes = (string * string) list
 type t = Time of Time.t | Count of int | Bytes of int
 
+val show_a : (string * string) list -> string
+val is_in_families : string -> bool
+
 (** [new typ type ?attr key] registers new [type] of counters with designated [attr]ibutes and [key] name *)
 class typ : string -> ?attr:attributes -> string ->
 object

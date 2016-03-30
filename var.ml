@@ -28,6 +28,7 @@ type t = Time of Time.t | Count of int | Bytes of int
 type group = { k : string; attr : Attr.t; mutable get : (unit -> (string * t option) list) list; }
 
 let h_families = Hashtbl.create 10
+
 let register ~name ~k ~get ~attr =
   let family = Attr.make (("class",name)::attr) in
   let (_:Attr.t) = Attr.add (k,"") family in (* check that all keys are unique *)
@@ -36,6 +37,13 @@ let register ~name ~k ~get ~attr =
   | r -> (* expand existing family *)
     log #warn "duplicate Var %s" (show_a @@ Attr.get family);
     r.get <- get :: r.get
+
+let is_in_families name =
+  Hashtbl.fold begin fun k _ a ->
+    match a with
+    | true -> true
+    | false -> List.exists (fun e -> e = ("class",name)) (Attr.get k)
+  end h_families false
 
 let make_cc f pp name ?(attr=[]) k =
   let cc = Cache.Count.create () in
