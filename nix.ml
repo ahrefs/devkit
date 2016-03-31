@@ -39,7 +39,13 @@ let daemonize () =
   ()
 
 let write_pidfile path =
-  Control.with_open_out_txt path (fun ch -> Printf.fprintf ch "%u\n" (getpid ()))
+  Control.bracket (open_out_gen [Open_wronly;Open_creat;Open_excl;Open_text] 0o644 path) close_out begin fun ch ->
+    try
+      Printf.fprintf ch "%u\n" (getpid ());
+      flush ch
+    with
+      exn -> log #warn ~exn "cannot write pidfile %s, will remove" path; Sys.remove path; raise exn
+  end
 
 let read_pidfile path =
   Control.with_open_in_txt path (fun ch -> Scanf.fscanf ch " %u " Prelude.id)
@@ -59,15 +65,17 @@ let probe_pidfile path =
 let check_pidfile path =
   match probe_pidfile path with
   | `Missing -> () (* free to go *)
-  | `Stale -> log #info "removing stale pidfile at %s" path; Exn.suppress Sys.remove path
+  | `Stale -> log #info "removing stale pidfile at %s" path; Sys.remove path
   | `Alive pid -> log #info "pid %d at %s is alive, exiting" pid path; exit 133
   | `Error exn -> log #warn ~exn "wrong pid file at %s, exiting" path; exit 3
 
-let manage_pidfile path =
+let rec manage_pidfile path =
   check_pidfile path;
-  write_pidfile path;
-  let pid = getpid () in
-  at_exit (fun () -> if getpid () = pid then Exn.suppress Sys.remove path (* else forked child *))
+  match write_pidfile path with
+  | exception exn -> log #warn ~exn "failed to write pidfile %s, will retry" path; manage_pidfile path
+  | () ->
+    let pid = getpid () in
+    at_exit (fun () -> if getpid () = pid then Exn.suppress Sys.remove path (* else forked child *))
 
 let restart f x = let rec loop () = try f x with Unix.Unix_error (EINTR,_,_) -> loop () in loop ()
 
