@@ -8,6 +8,8 @@ open Control
 open Prelude
 open ExtLib
 
+let log = Log.from "nix"
+
 let unparent () =
   match Lwt_unix.fork () with  (* fork off and die *)
   | 0 -> ()
@@ -57,9 +59,9 @@ let probe_pidfile path =
 let check_pidfile path =
   match probe_pidfile path with
   | `Missing -> () (* free to go *)
-  | `Stale -> Log.self #info "removing stale pidfile at %s" path; Exn.suppress Sys.remove path
-  | `Alive pid -> Log.self #info "pid %d at %s is alive, exiting" pid path; exit 133
-  | `Error exn -> Log.self #warn ~exn "wrong pid file at %s, exiting" path; exit 3
+  | `Stale -> log #info "removing stale pidfile at %s" path; Exn.suppress Sys.remove path
+  | `Alive pid -> log #info "pid %d at %s is alive, exiting" pid path; exit 133
+  | `Error exn -> log #warn ~exn "wrong pid file at %s, exiting" path; exit 3
 
 let manage_pidfile path =
   check_pidfile path;
@@ -78,9 +80,9 @@ let handle_sig_exit_with ~exit fin =
   List.iter
     (fun signal -> Sys.set_signal signal (Sys.Signal_handle
       (fun _signo ->
-(*         Log.self #info "Received signal %i (exit)..." n; *)
-        (try fin () with exn -> Log.self #warn ~exn "handle_sig_exit");
-(*         Log.self #info "Signal handler done.%s" (if exit then " Exiting." else ""); *)
+(*         log #info "Received signal %i (exit)..." n; *)
+        (try fin () with exn -> log #warn ~exn "handle_sig_exit");
+(*         log #info "Signal handler done.%s" (if exit then " Exiting." else ""); *)
         if exit then Pervasives.exit 0)))
     [Sys.sigint; Sys.sigterm]
 
@@ -91,9 +93,9 @@ let handle_sig_reload_with fin =
   List.iter
     (fun signal -> Sys.set_signal signal (Sys.Signal_handle
       (fun _signo ->
-(*         Log.self #info "Received signal %i (reload)..." n;  *)
-        (try fin () with exn -> Log.self #warn ~exn "handle_sig_reload");
-(*         Log.self #info "Signal handler done." *)
+(*         log #info "Received signal %i (reload)..." n;  *)
+        (try fin () with exn -> log #warn ~exn "handle_sig_reload");
+(*         log #info "Signal handler done." *)
         )))
     [Sys.sighup]
 
@@ -183,7 +185,7 @@ let read_process_exn ?timeout cmd =
       | `Limit q -> assert false
       | `Part s -> Buffer.add_string b s
     with
-      exn -> Log.self#warn ~exn "event"; fin false);
+      exn -> log#warn ~exn "event"; fin false);
   Ev.add ev timeout;
   Ev.dispatch base;
   if !ok then
