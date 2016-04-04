@@ -69,13 +69,11 @@ let check_pidfile path =
   | `Alive pid -> log #info "pid %d at %s is alive, exiting" pid path; exit 133
   | `Error exn -> log #warn ~exn "wrong pid file at %s, exiting" path; exit 3
 
-let rec manage_pidfile path =
+let manage_pidfile path =
   check_pidfile path;
-  match write_pidfile path with
-  | exception exn -> log #warn ~exn "failed to write pidfile %s, will retry" path; manage_pidfile path
-  | () ->
-    let pid = getpid () in
-    at_exit (fun () -> if getpid () = pid then Exn.suppress Sys.remove path (* else forked child *))
+  write_pidfile path;
+  let pid = getpid () in
+  at_exit (fun () -> if getpid () = pid then Exn.suppress Sys.remove path (* else forked child *))
 
 let restart f x = let rec loop () = try f x with Unix.Unix_error (EINTR,_,_) -> loop () in loop ()
 
