@@ -734,40 +734,39 @@ let run ?(ip=Unix.inet_addr_loopback) port answer =
 
 (** {2 Forked workers} *)
 
-let answer_forked ?(debug=false) srv req answer k =
-  let do_fork () =
-    let check () = match Unix.getsockopt_int req.socket Unix.SO_ERROR with
-    | 0 -> `Ok
-    | n -> `Error n
+let check_req req = match Unix.getsockopt_int req.socket Unix.SO_ERROR with 0 -> `Ok | n -> `Error n
+let check_req_exn req = match check_req req with `Ok -> () | `Error n -> Exn.fail "socket error %d" n
+
+let answer_blocking ?(debug=false) srv req answer k =
+  let count = ref 0L in
+  let code = try
+  if debug then Printexc.record_backtrace true;
+  Control.with_output (set_blocking req) begin fun io ->
+    let io = Action.count_bytes_to count io in
+    let pre h =
+      k (`Ok, ("X-Disable-Log", "true") :: h,"");
+      check_req_exn req
     in
-    match check () with
+    check_req_exn req;
+    let () = answer pre io in
+    200
+  end
+  with exn ->
+    let saved_backtrace = Exn.get_backtrace () in
+    log #warn ~exn ~backtrace:debug ~saved_backtrace "answer forked %s" (show_request req);
+    -1
+  in
+  log_access_apache !(srv.config.access_log) code (Int64.to_int !count) req
+
+let answer_forked ?debug srv req answer k =
+  let do_fork () =
+    match check_req req with
     | `Error n -> Exn.fail "pre fork %s : socket error %d" (show_request req) n
     | `Ok ->
     begin match Lwt_unix.fork () with
     | 0 ->
       Exn.suppress Unix.close srv.listen_socket;
-      let count = ref 0L in
-      let code = try
-      if debug then Printexc.record_backtrace true;
-      Control.with_output (set_blocking req) begin fun io ->
-        let check_exn () =
-          match check () with `Ok -> () | `Error n -> Exn.fail "socket error %d" n
-        in
-        let io = Action.count_bytes_to count io in
-        let pre h =
-          k (`Ok, ("X-Disable-Log", "true") :: h,"");
-          check_exn ()
-        in
-        check_exn ();
-        let () = answer pre io in
-        200
-      end
-      with exn ->
-        let saved_backtrace = Exn.get_backtrace () in
-        log #warn ~exn ~backtrace:debug ~saved_backtrace "answer forked %s" (show_request req);
-        -1
-      in
-      log_access_apache !(srv.config.access_log) code (Int64.to_int !count) req;
+      answer_blocking ?debug srv req answer k;
       U.sys_exit 0
     | -1 -> Exn.fail "fork failed : %s" (show_request req)
     | pid ->
