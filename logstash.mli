@@ -15,10 +15,10 @@ module Dyn : sig
   val make : ?attrs:(string * string) list -> string -> t
   (* val add : t -> ?attrs:(string * string) list -> Var.t -> unit *)
   (* val set : t -> ?attrs:(string * string) list -> Var.t -> unit *)
-  val set_count : t -> ?attrs:(string * string) list -> int -> unit
-  val set_bytes : t -> ?attrs:(string * string) list -> int -> unit
-  val set_time : t -> ?attrs:(string * string) list -> Time.t -> unit
-  val add_count : t -> ?attrs:(string * string) list -> int -> unit
-  val add_bytes : t -> ?attrs:(string * string) list -> int -> unit
-  val add_time : t -> ?attrs:(string * string) list -> Time.t -> unit
+  val set_count : t -> (string * string) list -> int -> unit
+  val set_bytes : t -> (string * string) list -> int -> unit
+  val set_time : t -> (string * string) list -> Time.t -> unit
+  val add_count : t -> (string * string) list -> int -> unit
+  val add_bytes : t -> (string * string) list -> int -> unit
+  val add_time : t -> (string * string) list -> Time.t -> unit
 end

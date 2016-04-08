@@ -19,23 +19,21 @@ let zero = Var.(function Count _ -> Count 0 | Time _ -> Time 0. | Bytes _ -> Byt
 module Dyn = struct
   open Var
   type t = (string * string) list
+
+  let make_family family =
+    let f = List.unique ~cmp:(fun (a,_) (b,_) -> a = b) family in
+      if List.length f <> List.length family then log #warn "duplicate attributes : %s" (show_a family);
+      List.sort ~cmp:compare family
+
   let make ?(attrs=[]) name =
     match is_in_families name with
     | true -> Exn.fail "static class with this name alreasdy exists: %s" name
-    | false ->
-      let family = ("class",name)::attrs in
-      let f = List.unique ~cmp:(fun (a,_) (b,_) -> a = b) family in
-      if List.length f <> List.length family then Exn.fail "duplicate attributes : %s" (show_a family);
-      List.sort ~cmp:compare family
+    | false -> make_family (("class",name)::attrs)
 
   let extend dyn attrs =
     match attrs with
     | [] -> dyn
-    | attrs ->
-      let family = dyn @ attrs in
-      let f = List.unique ~cmp:(fun (a,_) (b,_) -> a = b) family in
-      if List.length f <> List.length family then Exn.fail "duplicate attributes : %s" (show_a family);
-      List.sort ~cmp:compare family
+    | attrs -> make_family dyn @ attrs
 
   let set dyn ?(attrs=[]) v =
     let family = extend dyn attrs in
@@ -57,12 +55,12 @@ module Dyn = struct
     | Bytes _, Count _ | Bytes _, Time _
     | Time _, Count _ | Time _, Bytes _ -> log #warn "mismatched value type for %s" (show_a family)
 
-  let set_count dyn ?(attrs=[]) v = set dyn ~attrs (Count v)
-  let set_bytes dyn ?(attrs=[]) v = set dyn ~attrs (Bytes v)
-  let set_time dyn ?(attrs=[]) v = set dyn ~attrs (Time v)
-  let add_count dyn ?(attrs=[]) v = add dyn ~attrs (Count v)
-  let add_bytes dyn ?(attrs=[]) v = add dyn ~attrs (Bytes v)
-  let add_time dyn ?(attrs=[]) v = add dyn ~attrs (Time v)
+  let set_count dyn attrs v = set dyn ~attrs (Count v)
+  let set_bytes dyn attrs v = set dyn ~attrs (Bytes v)
+  let set_time dyn attrs v = set dyn ~attrs (Time v)
+  let add_count dyn attrs v = add dyn ~attrs (Count v)
+  let add_bytes dyn attrs v = add dyn ~attrs (Bytes v)
+  let add_time dyn attrs v = add dyn ~attrs (Time v)
 end
 
 
