@@ -36,6 +36,7 @@ type config =
     yield : bool;
       (** do [Lwt_unix.yield ()] after accepting connection to give other lwt threads chance to run (set to [true] when http requests
           processing causes other threads to stuck) *)
+    reuseport : bool;
   }
 
 let default =
@@ -54,6 +55,7 @@ let default =
     max_data_childs = 50;
     max_data_waiting = 200;
     yield = true;
+    reuseport = false;
   }
 
 include Httpev_common
@@ -532,11 +534,12 @@ module Tcp = struct
 
 open Unix
 
-let listen ~name ?(backlog=100) addr port =
+let listen ~name ?(backlog=100) ?(reuseport=false) addr port =
   let addr = ADDR_INET (addr,port) in
   let fd = socket PF_INET SOCK_STREAM 0 in
   try
     setsockopt fd SO_REUSEADDR true;
+    if reuseport then U.setsockopt fd SO_REUSEPORT true;
     bind fd addr;
     listen fd backlog;
     log #info "%s listen TCP %s" name (Nix.show_addr addr);
@@ -608,7 +611,7 @@ let reap_orphans srv =
   in loop ()
 
 let start_listen config =
-  Tcp.listen ~name:config.name ~backlog:config.backlog config.ip config.port
+  Tcp.listen ~name:config.name ~backlog:config.backlog ~reuseport:config.reuseport config.ip config.port
 
 let setup_server_fd fd config answer =
   let server = make_server_state fd config in
