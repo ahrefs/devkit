@@ -37,6 +37,7 @@ type config =
       (** do [Lwt_unix.yield ()] after accepting connection to give other lwt threads chance to run (set to [true] when http requests
           processing causes other threads to stuck) *)
     reuseport : bool;
+    nodelay : bool;
   }
 
 let default =
@@ -56,6 +57,7 @@ let default =
     max_data_waiting = 200;
     yield = true;
     reuseport = false;
+    nodelay = false;
   }
 
 include Httpev_common
@@ -999,6 +1001,8 @@ let setup_fd_lwt fd config answer =
         log #warn "error for %s : %s" (show_client client) msg;
         Lwt.return @@ `Body (http_error,[],"")
     in
+    if config.nodelay then
+      Lwt_unix.setsockopt fd TCP_NODELAY true;
     (* reusing same buffer! *)
     let cout = Lwt_io.(of_fd ~buffer ~close:Lwt.return ~mode:output fd) in
     try_lwt
