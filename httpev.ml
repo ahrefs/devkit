@@ -27,6 +27,7 @@ type config =
     mutable debug : bool; (** more logging *)
     events : Ev.event_base;
     access_log : out_channel ref;
+    access_log_enabled : bool;
     name : string;
     max_request_size : int;
     auth : (string * string * string) option;
@@ -53,6 +54,7 @@ let default =
     auth = None;
     max_clients = 10_000;
     access_log = ref stdout;
+    access_log_enabled = true;
     max_data_childs = 50;
     max_data_waiting = 200;
     yield = true;
@@ -424,7 +426,7 @@ let send_reply_user c req (code,hdrs,body) =
     (* hack for answer_forked, which logs on its own *)
     | ("X-Disable-Log", "true") :: hs -> hs
     | _ ->
-      log_status_apache !(c.server.config.access_log) code (String.length body) req;
+      if c.server.config.access_log_enabled then log_status_apache !(c.server.config.access_log) code (String.length body) req;
       hdrs
   in
   let blocking = Option.is_some req.blocking in
@@ -761,7 +763,7 @@ let answer_blocking ?(debug=false) srv req answer k =
     log #warn ~exn ~backtrace:debug ~saved_backtrace "answer forked %s" (show_request req);
     -1
   in
-  log_access_apache !(srv.config.access_log) code (Int64.to_int !count) req
+  if srv.config.access_log_enabled then log_access_apache !(srv.config.access_log) code (Int64.to_int !count) req
 
 let answer_forked ?debug srv req answer k =
   let do_fork () =
@@ -810,7 +812,9 @@ let send_reply c cout reply =
   | `Chunks (code,hdrs,gen) -> code, hdrs, `Chunks gen
   in
   begin match c.req with
-  | Ready req -> log_status_apache !(c.server.config.access_log) code (match body with `Body s -> String.length s | `Chunks _ -> 0) req
+  | Ready req ->
+    let size = match body with `Body s -> String.length s | `Chunks _ -> 0 in
+    if c.server.config.access_log_enabled then log_status_apache !(c.server.config.access_log) code size req
   | _ -> () (* this can happen when sending back error reply on malformed HTTP input *)
   end;
   (* filter headers *)
