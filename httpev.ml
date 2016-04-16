@@ -897,7 +897,7 @@ let read_headers cin limit =
     match String.length buf >= limit with
     | true -> Exn_lwt.fail "request larger than max_request_size %s" (Action.bytes_string limit)
     | false ->
-      match_lwt Lwt_io.read ~count:(limit - String.length buf) cin with
+      match_lwt Lwt_io.read ~count:2048 cin with
       | "" -> Exn_lwt.fail "client disconnected prior to sending full request"
       | s ->
       let buf = buf ^ s in
