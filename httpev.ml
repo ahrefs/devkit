@@ -892,20 +892,35 @@ let handle_request_lwt c req answer =
     log #info "version %u.%u not supported from %s" (fst req.version) (snd req.version) (show_request req);
     return (`Version_not_supported,[],"HTTP/1.0 is supported")
 
+let read_buf ic buf =
+  let len = Bytes.length buf in
+  lwt real_len = Lwt_io.read_into ic buf 0 len in
+  if real_len < len then
+    Lwt.return Bytes.(sub buf 0 real_len |> unsafe_to_string)
+  else
+    Lwt.return (Bytes.unsafe_to_string buf)
+
+module ReqBuffersCache = Cache.Reuse(struct type t = Bytes.t let create () = Bytes.create 2048 let reset = ignore end)
+
 let read_headers cin limit =
-  let rec loop buf =
-    match String.length buf >= limit with
-    | true -> Exn_lwt.fail "request larger than max_request_size %s" (Action.bytes_string limit)
-    | false ->
-      match_lwt Lwt_io.read ~count:2048 cin with
+  let rec loop ?acc temp =
+    match acc with
+    | Some acc when String.length acc >= limit -> Exn_lwt.fail "request larger than max_request_size %s" (Action.bytes_string limit)
+    | _ ->
+      match_lwt read_buf cin temp with
       | "" -> Exn_lwt.fail "client disconnected prior to sending full request"
-      | s ->
-      let buf = buf ^ s in
-      match String.split buf "\r\n\r\n" with
-      | exception _ -> loop buf
+      | buf ->
+      let acc = match acc with None -> buf | Some acc -> acc ^ buf in
+      match String.split acc "\r\n\r\n" with
+      | exception _ -> loop ~acc (if acc == temp then Bytes.create 2048 else temp)
       | (headers,body) -> Lwt.return (String.nsplit headers "\r\n", body)
   in
-  loop ""
+  let temp = ReqBuffersCache.get () in
+  try_lwt
+    loop temp
+  finally
+    ReqBuffersCache.release temp;
+    Lwt.return_unit
 
 let handle_client_lwt client cin answer =
   lwt (headers,data) = read_headers cin client.server.config.max_request_size in
