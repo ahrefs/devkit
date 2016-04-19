@@ -70,15 +70,6 @@ let show_lwt_info () =
 let show_crt_info = ref (fun () -> "MALLOC: ?")
 let malloc_release = ref (ignore : unit -> unit)
 
-let show_all_info () =
-  [
-    sprintf "%s. %s" (show_vm_info ()) (!show_crt_info ());
-    show_gc_info ();
-    show_lwt_info ();
-  ]
-
-let log_all_info () = show_all_info () |> List.iter log#info_s
-
 let reclaim_s () =
   let open Gc in
   let module A = Action in
@@ -106,8 +97,27 @@ let reclaim_silent () =
   Gc.compact ();
   !malloc_release ()
 
-let (add_stats,log_stats) =
-  let f_stats = ref [] in (* called in reverse - and it is fine *)
-  (tuck f_stats), (fun () -> List.iter (fun f -> f ()) !f_stats)
+let (add_stats,new_stats,log_stats,get_stats) =
+  let f_print = ref [] in (* called in reverse - and it is fine *)
+  let f_get = ref [] in
+  let log_stats () =
+    List.iter (fun f -> f ()) !f_print;
+    List.iter (fun f -> log #info_s @@ f ()) !f_get
+  in
+  let get_stats () = List.map (fun f -> f ()) !f_get in
+  (tuck f_print), (tuck f_get), log_stats, get_stats
 
-let () = add_stats log_all_info
+let show_c_info () = sprintf "%s. %s" (show_vm_info ()) (!show_crt_info ())
+
+let show_all_info () =
+  [
+    show_c_info ();
+    show_gc_info ();
+    show_lwt_info ();
+  ]
+
+let log_all_info () = show_all_info () |> List.iter log#info_s
+
+let () = new_stats show_c_info
+let () = new_stats show_gc_info
+let () = new_stats show_lwt_info
