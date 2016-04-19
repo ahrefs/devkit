@@ -139,20 +139,21 @@ end
 
 module Count = struct
   open Hashtbl
-  type 'a t = ('a,int) Hashtbl.t
+  type 'a t = ('a, int ref) Hashtbl.t
   let create () : 'a t = create 16
   let clear = Hashtbl.clear
-  let plus t x n = try replace t x (find t x + n) with Not_found -> Hashtbl.add t x n
-  let minus t x n = try replace t x (find t x - n) with Not_found -> Hashtbl.add t x (0 - n)
+  let entry t x = match find t x with r -> r | exception Not_found -> let r = ref 0 in Hashtbl.add t x r; r
+  let plus t x n = entry t x += n
+  let minus t x n = entry t x -= n
   let of_enum e = let h = create () in Enum.iter (fun (k,n) -> plus h k n) e; h
   let of_list l = of_enum @@ List.enum l
   let add t x = plus t x 1
   let del t x = minus t x 1
-  let enum t = enum t
-  let iter t k = iter k t
-  let fold t f acc = Hashtbl.fold f t acc
-  let count t k = Option.default 0 @@ Hashtbl.find_option t k
-  let count_all t = Hashtbl.fold (fun _ n acc -> acc + n) t 0
+  let enum t = enum t |> Enum.map (fun (k,n) -> k, !n)
+  let iter t f = iter (fun k n -> f k !n) t
+  let fold t f acc = Hashtbl.fold (fun k n acc -> f k !n acc) t acc
+  let count t k = match Hashtbl.find t k with n -> !n | exception Not_found -> 0
+  let count_all t = Hashtbl.fold (fun _ n acc -> acc + !n) t 0
   let size = Hashtbl.length
   let show t ?(sep=" ") f = enum t |>
     List.of_enum |> List.sort ~cmp:(Action.compare_by fst) |>
