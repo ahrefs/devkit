@@ -24,24 +24,34 @@ let parse_exn s =
    if name = "" then Exn.fail "empty name";
    { id; host=String.lowercase host; name=get_name @@ String.lowercase name; stamp; })
 
-let self_stamp = ref None
-let self_name = ref @@ sanitize_name @@ Filename.basename Sys.executable_name
+let self_stamp = ref @@ Time.(int @@ now ())
+let self_id = ref @@ Unix.getpid ()
 
-let self_as name =
-  let id = Unix.getpid () in
-  let stamp = match !self_stamp with
-  | Some (pid,stamp) when pid = id -> stamp
-  | _ -> let stamp = Time.(int @@ now ()) in self_stamp := Some (id,stamp); stamp
-  in
+let compute_self name =
+  let id = !self_id in
+  let stamp = !self_stamp in
   let host = String.lowercase @@ Unix.gethostname () in
   (* cf parse_exn *)
   validate_name "host" host;
   validate_name "name" name;
   { host; id; name=String.lowercase name; stamp; }
 
+let self = ref @@ compute_self @@ sanitize_name @@ Filename.basename Sys.executable_name
+let self_s = ref @@ show !self
+
 let set_name name =
   validate_name "name" name;
-  self_name := name
+  self := compute_self name;
+  self_s := show !self
 
-let self () = self_as !self_name
-let show_self () = show @@ self ()
+let update () =
+  match !self_id = Unix.getpid () with (* fork *)
+  | true -> ()
+  | false ->
+    self_id := Unix.getpid ();
+    self_stamp := Time.(int @@ now ());
+    set_name (!self).name
+
+let self () = update (); !self
+let show_self () = update (); !self_s
+let self_as name = set_name name; self ()
