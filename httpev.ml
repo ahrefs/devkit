@@ -85,7 +85,7 @@ type partial_body = {
   buf : Buffer.t;
 }
 
-type request_state = Headers of Buffer.t | Body of partial_body | Ready of request
+type request_state = Headers of Buffer.t | Body of partial_body | Body_lwt of int | Ready of request
 
 (** client state *)
 type client = {
@@ -133,6 +133,7 @@ let show_client c =
   match c.req with
   | Headers b -> sprintf "%s headers %s" (show_peer c) (Action.bytes_string @@ Buffer.length b)
   | Body b -> sprintf "%s body %s" (show_peer c) (Action.bytes_string @@ Buffer.length b.buf)
+  | Body_lwt n -> sprintf "%s body %s" (show_peer c) (Action.bytes_string n)
   | Ready req -> show_request req
 
 type ('a,'b) result = [ `Ok of 'a | `Error of 'b ]
@@ -190,7 +191,7 @@ let acceptable_encoding headers =
     else Exn.fail "not acceptable : %S" str
   | None -> Identity
 
-let make_request_exn c { line1; parsed_headers=headers; buf; _ } =
+let make_request_exn ~line1 ~headers ~body c =
   match Pcre.split ~rex:space line1 with
   | [meth;url;version] ->
     if url.[0] <> '/' then (* abs_path *)
@@ -208,7 +209,6 @@ let make_request_exn c { line1; parsed_headers=headers; buf; _ } =
     | _ -> failed Method meth
     in
     let (path,args) = try String.split url "?" with _ -> url,"" in
-    let body = Buffer.contents buf in
     if version = (1,1) && not (List.mem_assoc "host" headers) then failed Header "Host is required for HTTP/1.1";
     let args = match meth with
     | `POST ->
@@ -268,7 +268,7 @@ let finish c =
   DEC c.server.active;
   teardown c.fd;
   match c.req with
-  | Headers _ | Body _ -> ()
+  | Headers _ | Body _ | Body_lwt _ -> ()
   | Ready req ->
     Hashtbl.remove c.server.reqs req.id;
     if c.server.config.debug then
@@ -465,7 +465,10 @@ let send_reply_limit c n =
   send_reply_async c Identity (`Request_too_large,[],"request entity too large")
 
 let handle_request c body answer =
-  let req = make_request_exn c body in
+  let req =
+    let { line1; parsed_headers=headers; buf; _ } = body in
+    make_request_exn c ~line1 ~headers ~body:(Buffer.contents buf)
+  in
   Hashtbl.replace c.server.reqs req.id req;
   c.req <- Ready req;
   try
@@ -491,6 +494,7 @@ let handle_request c body answer =
 
 let rec process_chunk c ev answer data final =
   match c.req with
+  | Body_lwt _ -> assert false
   | Headers buf | Body { buf; _ } when String.length data + Buffer.length buf > c.server.config.max_request_size ->
     Ev.del ev;
     send_reply_limit c (String.length data + Buffer.length buf)
@@ -943,10 +947,8 @@ let handle_client_lwt client cin answer =
       Lwt.return (data ^ s)
   in
   (* TODO check that no extra bytes arrive *)
-  let body = { line1; parsed_headers=headers; content_length; buf = Buffer.create (String.length data); } in
-  client.req <- Body body;
-  Buffer.add_string body.buf data;
-  let req = make_request_exn client body in
+  client.req <- Body_lwt (String.length data);
+  let req = make_request_exn client ~line1 ~headers ~body:data in
   client.req <- Ready req;
   Hashtbl.replace client.server.reqs req.id req;
   try_lwt
