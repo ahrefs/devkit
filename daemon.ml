@@ -108,10 +108,10 @@ let manage () =
   Signal.set [Sys.sigusr1] (fun _ -> Log.reopen !logfile);
   Signal.set [Sys.sigusr2] begin fun _ ->
     match Signal.is_safe_output () with
-    | true -> Memory.log_all_info (); Memory.reclaim ()
+    | true -> Memory.log_stats (); Memory.reclaim ()
     | false ->
       (* output directly to fd to prevent deadlock, but breaks buffering *)
-      Memory.show_all_info () |> List.iter unix_stderr;
+      Memory.get_stats () |> List.iter unix_stderr;
       Memory.reclaim_s () |> unix_stderr
   end;
   Signal.set_exit signal_exit;
