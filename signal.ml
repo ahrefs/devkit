@@ -89,6 +89,8 @@ let set sigs f =
     Hashtbl.replace h signo f; !do_install signo f
   end
 
+let set1 signal f = set [signal] (fun _ -> f ())
+
 let replace sigs f =
   sigs |> List.iter (fun signo -> Hashtbl.replace h signo f; !do_install signo f)
 

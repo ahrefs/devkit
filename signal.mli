@@ -27,6 +27,7 @@ val is_safe_output : unit -> bool
 
 (** add signal handler for specified signals *)
 val set : int list -> (int -> unit) -> unit
+val set1 : int -> (unit -> unit) -> unit
 val set_exit : (unit -> unit) -> unit
 val set_reload : (unit -> unit) -> unit
 
