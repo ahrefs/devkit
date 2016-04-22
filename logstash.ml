@@ -18,17 +18,19 @@ let zero = Var.(function Count _ -> Count 0 | Time _ -> Time 0. | Bytes _ -> Byt
 
 module Dyn = struct
   open Var
-  type t = (string * string) list
+  type t = (string * [`Floatlit of string | `Int of int | `String of string ]) list
+
+  let show_a = Action.strl (fun (c,_) -> sprintf "%S:''" c)
 
   let make_family family =
     let f = List.unique ~cmp:(fun (a,_) (b,_) -> a = b) family in
       if List.length f <> List.length family then log #warn "duplicate attributes : %s" (show_a family);
-      List.sort ~cmp:compare family
+      List.sort ~cmp:(fun (a,_) (b,_) -> String.compare a b) family
 
   let make ?(attrs=[]) name =
     match is_in_families name with
     | true -> Exn.fail "static class with this name alreasdy exists: %s" name
-    | false -> make_family (("class",name)::attrs)
+    | false -> make_family (("class", `String name)::attrs)
 
   let extend dyn attrs =
     match attrs with
@@ -39,7 +41,7 @@ module Dyn = struct
     let family = extend dyn attrs in
     Hashtbl.replace dynamic family v
 
-  let add dyn ?(attrs=[]) v =
+  let add dyn ?(attrs =[]) v =
     let family = extend dyn attrs in
     match Hashtbl.find_default dynamic family (zero v),v with
     | Count x, Count x' ->
@@ -100,7 +102,7 @@ let get () =
     | Time _, Count _ | Time _, Bytes _ -> () (* cannot happen *)
   end;
   dynamic |> Hashtbl.iter begin fun attr v ->
-    let attr = List.map (fun (k, s) -> escape k, `String s) attr in
+    let attr = List.map (fun (k, s) -> escape k, s) attr in
     let this = (common_fields () @ attr
       :  (string * [ `Floatlit of string | `Int of int | `String of string]) list
       :> (string * [>`Floatlit of string | `Int of int | `String of string]) list)
