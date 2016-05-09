@@ -6,6 +6,11 @@ type ipv4 = int32
 type ipv4_cidr = int32 * int32
 
 let ipv4_null = 0l
+let ipv4_to_yojson ip = `Int (Int32.to_int ip)
+let ipv4_of_yojson j =
+  match j with
+  | `Int i -> `Ok (Int32.of_int i)
+  | _ -> `Error "ipv4: expected int"
 
 let bytes_of_ipv4 addr =
   let a = Int32.to_int @@ Int32.shift_right_logical (Int32.logand 0xFF000000l addr) 24 in
