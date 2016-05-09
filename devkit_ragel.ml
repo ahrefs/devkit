@@ -67,9 +67,9 @@ let ipv4_error : int = 0
 let ipv4_en_main : int = 1
 
 type _ipv4_state = { mutable keys : int; mutable trans : int; }
-exception Goto_match
-exception Goto_again
-exception Goto_eof_trans
+exception Goto_match_ipv4
+exception Goto_again_ipv4
+exception Goto_eof_trans_ipv4
 
 # 7 "devkit_ragel.ml.rl"
 
@@ -112,13 +112,13 @@ and do_resume () =
 		Char.code data.[p.contents] <= _ipv4_trans_keys.(keys+1) then
 		Char.code data.[p.contents] - _ipv4_trans_keys.(keys) else slen));
 
-	with Goto_match -> () end;
+	with Goto_match_ipv4 -> () end;
 	do_eof_trans ()
 and do_eof_trans () =
 	cs.contents <- _ipv4_trans_targs.(state.trans);
 
 	begin try if _ipv4_trans_actions.(state.trans) = 0 then
-		raise Goto_again;
+		raise Goto_again_ipv4;
 
 	match _ipv4_trans_actions.(state.trans) with
 	| 3 ->
@@ -145,7 +145,7 @@ and do_eof_trans () =
 	()
 # 147 "devkit_ragel.ml"
 		| _ -> ()
-	with Goto_again -> () end;
+	with Goto_again_ipv4 -> () end;
 
 	do_again ()
 	and do_again () =
@@ -167,8 +167,8 @@ and do_test_eof () =
 # 168 "devkit_ragel.ml"
 		| _ -> ()
 	end
-	with Goto_again -> do_again ()
-	| Goto_eof_trans -> do_eof_trans () end
+	with Goto_again_ipv4 -> do_again ()
+	| Goto_eof_trans_ipv4 -> do_eof_trans () end
 
 	and do_out () = ()
 	in do_start ()
@@ -212,13 +212,13 @@ and do_resume () =
 		Char.code data.[p.contents] <= _ipv4_trans_keys.(keys+1) then
 		Char.code data.[p.contents] - _ipv4_trans_keys.(keys) else slen));
 
-	with Goto_match -> () end;
+	with Goto_match_ipv4 -> () end;
 	do_eof_trans ()
 and do_eof_trans () =
 	cs.contents <- _ipv4_trans_targs.(state.trans);
 
 	begin try if _ipv4_trans_actions.(state.trans) = 0 then
-		raise Goto_again;
+		raise Goto_again_ipv4;
 
 	match _ipv4_trans_actions.(state.trans) with
 	| 3 ->
@@ -245,7 +245,7 @@ and do_eof_trans () =
 	()
 # 247 "devkit_ragel.ml"
 		| _ -> ()
-	with Goto_again -> () end;
+	with Goto_again_ipv4 -> () end;
 
 	do_again ()
 	and do_again () =
@@ -267,8 +267,8 @@ and do_test_eof () =
 # 268 "devkit_ragel.ml"
 		| _ -> ()
 	end
-	with Goto_again -> do_again ()
-	| Goto_eof_trans -> do_eof_trans () end
+	with Goto_again_ipv4 -> do_again ()
+	| Goto_eof_trans_ipv4 -> do_eof_trans () end
 
 	and do_out () = ()
 	in do_start ()
@@ -347,9 +347,9 @@ let is_ipv4_error : int = 0
 let is_ipv4_en_main : int = 1
 
 type _is_ipv4_state = { mutable keys : int; mutable trans : int; }
-exception Goto_match
-exception Goto_again
-exception Goto_eof_trans
+exception Goto_match_is_ipv4
+exception Goto_again_is_ipv4
+exception Goto_eof_trans_is_ipv4
 
 # 36 "devkit_ragel.ml.rl"
 
@@ -386,7 +386,7 @@ and do_resume () =
 		Char.code data.[p.contents] <= _is_ipv4_trans_keys.(keys+1) then
 		Char.code data.[p.contents] - _is_ipv4_trans_keys.(keys) else slen));
 
-	with Goto_match -> () end;
+	with Goto_match_is_ipv4 -> () end;
 	do_eof_trans ()
 and do_eof_trans () =
 	cs.contents <- _is_ipv4_trans_targs.(state.trans);
@@ -521,9 +521,9 @@ let compact_duration_error : int = 0
 let compact_duration_en_main : int = 1
 
 type _compact_duration_state = { mutable keys : int; mutable trans : int; }
-exception Goto_match
-exception Goto_again
-exception Goto_eof_trans
+exception Goto_match_compact_duration
+exception Goto_again_compact_duration
+exception Goto_eof_trans_compact_duration
 
 # 53 "devkit_ragel.ml.rl"
 
@@ -563,13 +563,13 @@ and do_resume () =
 		Char.code data.[p.contents] <= _compact_duration_trans_keys.(keys+1) then
 		Char.code data.[p.contents] - _compact_duration_trans_keys.(keys) else slen));
 
-	with Goto_match -> () end;
+	with Goto_match_compact_duration -> () end;
 	do_eof_trans ()
 and do_eof_trans () =
 	cs.contents <- _compact_duration_trans_targs.(state.trans);
 
 	begin try if _compact_duration_trans_actions.(state.trans) = 0 then
-		raise Goto_again;
+		raise Goto_again_compact_duration;
 
 	match _compact_duration_trans_actions.(state.trans) with
 	| 3 ->
@@ -622,7 +622,7 @@ and do_eof_trans () =
 	()
 # 624 "devkit_ragel.ml"
 		| _ -> ()
-	with Goto_again -> () end;
+	with Goto_again_compact_duration -> () end;
 
 	do_again ()
 	and do_again () =
@@ -662,8 +662,8 @@ and do_test_eof () =
 # 663 "devkit_ragel.ml"
 		| _ -> ()
 	end
-	with Goto_again -> do_again ()
-	| Goto_eof_trans -> do_eof_trans () end
+	with Goto_again_compact_duration -> do_again ()
+	| Goto_eof_trans_compact_duration -> do_eof_trans () end
 
 	and do_out () = ()
 	in do_start ()
