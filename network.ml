@@ -6,12 +6,6 @@ type ipv4 = int32
 type ipv4_cidr = int32 * int32
 
 let ipv4_null = 0l
-let ipv4_to_yojson ip = `Int (Int32.to_int ip)
-let ipv4_of_yojson j =
-  match j with
-  | `Int i -> `Ok (Int32.of_int i)
-  | _ -> `Error "ipv4: expected int"
-
 let bytes_of_ipv4 addr =
   let a = Int32.to_int @@ Int32.shift_right_logical (Int32.logand 0xFF000000l addr) 24 in
   let b = Int32.to_int @@ Int32.shift_right_logical (Int32.logand 0x00FF0000l addr) 16 in
@@ -109,3 +103,10 @@ let private_network_ip () =
   match ips with
   | [] -> Unix.inet_addr_loopback
   | (_,ip)::_ -> Unix.inet_addr_of_string ip
+
+let ipv4_to_yojson ip = `String (string_of_ipv4 ip)
+let ipv4_of_yojson j =
+  match j with
+  | `String i -> begin try `Ok (ipv4_of_string_exn i) with exn -> `Error ("ipv4: cannot parse " ^  (Exn.to_string exn)) end
+  | _ -> `Error "ipv4: expected int"
+
