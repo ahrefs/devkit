@@ -39,6 +39,7 @@ type config =
           processing causes other threads to stuck) *)
     reuseport : bool;
     nodelay : bool;
+    strict_args : bool;
   }
 
 let default =
@@ -60,6 +61,7 @@ let default =
     yield = true;
     reuseport = false;
     nodelay = false;
+    strict_args = true;
   }
 
 include Httpev_common
@@ -161,14 +163,6 @@ let get_content_length headers =
 let decode_args s =
   try Netencoding.Url.dest_url_encoded_parameters s with exn -> Exn.fail ~exn "decode_args : %S" s
 
-(** Minimum strictness, Neturl will fail on malformed parameters in url *)
-let decode_args_soft s =
-  try
-    String.nsplit s "&" |>
-    List.filter_map (fun s -> try String.split s "=" |> apply2 Web.urldecode |> some with _ -> None)
-  with
-    exn -> Exn.fail ~exn "decode_args_soft : %S" s
-
 let acceptable_encoding headers =
   let split s c = List.map (String.strip ~chars:" \t\r\n") @@ Stre.nsplitc s c in
   match Exn.catch (List.assoc "accept-encoding") headers with
@@ -212,12 +206,13 @@ let make_request_exn ~line1 ~headers ~body c =
     in
     let (path,args) = try String.split url "?" with _ -> url,"" in
     if version = (1,1) && not (List.mem_assoc "host" headers) then failed Header "Host is required for HTTP/1.1";
+    let decode_args = if c.server.config.strict_args then decode_args else Web.parse_url_args $ String.strip in
+    let args = decode_args args in
     let args = match meth with
     | `POST ->
-      let args = decode_args args in
       let cont_type = try List.assoc "content-type" headers with _ -> "" in
       if cont_type = "application/x-www-form-urlencoded" then List.append args @@ decode_args body else args
-    | `GET | `HEAD -> decode_args args
+    | `GET | `HEAD -> args
     in
     let encoding = try acceptable_encoding headers with Failure s -> failed NotAcceptable s in
     {
