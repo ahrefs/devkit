@@ -32,7 +32,7 @@ let level = function
 module type Target =
 sig
   val format : level -> facil -> string -> string
-  val output : string -> unit
+  val output : level -> facil -> string -> unit
 end
 
 module type Put = sig
@@ -44,7 +44,7 @@ struct
 
   let put level facil str =
     if allowed facil level then
-      T.output (T.format level facil str)
+      T.output level facil (T.format level facil str)
 
 end
 
@@ -66,12 +66,12 @@ struct
       begin
         if !n <> 0 then
         begin
-         T.output (sprintf
+         T.output level facil (sprintf
           "last message repeated %u times, suppressed\n" !n);
           n := 0
         end;
         last := this;
-        T.output (T.format level facil str);
+        T.output level facil (T.format level facil str);
       end
 
 end
