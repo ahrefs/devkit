@@ -184,8 +184,9 @@ let is_same_day timestamp =
 
 let null = object method event _j = () method write () = () method reload () = () end
 
-let log () =
-  match get_basename () with
+let log ?name () =
+  let name = match name with None -> get_basename () | Some _ -> name in
+  match name with
   | None -> null
   | Some stat_basename ->
     match open_logstash_exn stat_basename with

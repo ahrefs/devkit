@@ -7,7 +7,7 @@ val setup : ?pause:Time.t -> Libevent.event_base -> unit
 val setup_lwt : ?pause:Time.t -> unit -> unit
 
 (* Setup logger for a stream of events *)
-val log : unit -> < event : (string * Yojson.json) list -> unit; write : unit -> unit; reload : unit -> unit >
+val log : ?name:string -> unit -> < event : (string * Yojson.json) list -> unit; write : unit -> unit; reload : unit -> unit >
 
 (** Counters with arbitrary attributes *)
 module Dyn : sig
