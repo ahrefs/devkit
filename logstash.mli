@@ -9,6 +9,8 @@ val setup_lwt : ?pause:Time.t -> unit -> unit
 (* Setup logger for a stream of events *)
 val log : ?name:string -> unit -> < event : (string * Yojson.json) list -> unit; write : unit -> unit; reload : unit -> unit >
 
+val setup_error_log : unit -> unit
+
 (** Counters with arbitrary attributes *)
 module Dyn : sig
   type t = private (string * [`Floatlit of string | `Int of int | `String of string ]) list
