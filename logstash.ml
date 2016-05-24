@@ -223,7 +223,7 @@ let log ?name () =
           write_json out nr json
       end
 
-let logstash_err = Lazy.from_fun @@ log ~name:"errors"
+let logstash_err = Lazy.from_fun @@ log ~name:"log/errors"
 
 let setup_error_log () =
   Signal.set_reload !!logstash_err#reload;
