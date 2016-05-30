@@ -91,6 +91,12 @@ let set sigs f =
 
 let set1 signal f = set [signal] (fun _ -> f ())
 
+type state = (int, int -> unit) Hashtbl.t
+let save () = Hashtbl.copy h
+let restore x =
+  Hashtbl.clear h;
+  Hashtbl.iter (Hashtbl.add h) x
+
 let replace sigs f =
   sigs |> List.iter (fun signo -> Hashtbl.replace h signo f; !do_install signo f)
 

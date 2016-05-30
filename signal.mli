@@ -42,3 +42,7 @@ val setup_libevent : t -> unit
 
 (** setup signals via lwt, requires {!Lwt_main.run} *)
 val setup_lwt : unit -> unit
+
+type state
+val save : unit -> state
+val restore : state -> unit
