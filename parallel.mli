@@ -7,13 +7,19 @@ val invoke : ('a -> 'b) -> 'a -> unit -> 'b
   Does not wait for children to finish - returns immediately. *)
 val launch_forks : ('a -> unit) -> 'a list -> unit
 
-(** Launch forks for each element of the list or the specified number of [workers] if given and wait for all
-  workers to finish. Pass exit signals to the workers, see {!Forks.stop} for the description of [wait] parameter.
+(** Launch forks for each element of the list and wait for all workers to finish.
+  Pass exit signals to the workers, see {!Forks.stop} for the description of [wait_stop] parameter.
+  @param revive to keep workers running (restarting with same param if exited) [default: false]
 *)
-val run_forks : ?wait:int -> ?workers:int -> ('a -> unit) -> 'a list -> unit
+val run_forks : ?wait_stop:int -> ?revive:bool -> ?wait:int -> ?workers:int -> ('a -> unit) -> 'a list -> unit
 
 (** Same as [run_forks] but do not fork for one worker *)
 val run_forks' : ('a -> unit) -> 'a list -> unit
+
+(** Process list with specified number of workers.
+  Pass exit signals to the workers, see {!Forks.stop} for the description of [wait_stop] parameter.
+*)
+val run_workers : int -> ?wait_stop:int -> ('a -> unit) -> 'a list -> unit
 
 module Thread : sig
 

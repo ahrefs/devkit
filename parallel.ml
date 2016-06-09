@@ -58,6 +58,42 @@ let perform (qi,qo,n) ?autoexit:_ e f =
 
 end
 
+(** @return list of reaped and live pids *)
+let reap l =
+  let open Unix in
+  List.partition (fun pid ->
+  try
+    pid = fst (waitpid [WNOHANG] pid)
+  with
+  | Unix_error (ECHILD,_,_) -> true (* exited *)
+  | exn -> log #warn ~exn "Worker PID %d lost (wait)" pid; true) l
+
+let hard_kill l =
+  let open Unix in
+  let (_,live) = reap l in
+  live |> List.iter begin fun pid ->
+    try
+      kill pid Sys.sigkill; log #warn "Worker PID %d killed with SIGKILL" pid
+    with
+    | Unix_error (ESRCH,_,_) -> ()
+    | exn -> log #warn ~exn "Worker PID %d (SIGKILL)" pid end
+
+let killall signo pids =
+  pids |> List.iter begin fun pid ->
+    try Unix.kill pid signo with exn -> log #warn ~exn "PID %d lost (trying to send signal %d)" pid signo
+  end
+
+let do_stop ?wait pids =
+  let rec reap_loop timeout l =
+    let (_,live) = reap l in
+    match timeout, live with
+    | _, [] -> `Done
+    | Some 0, l -> hard_kill l; `Killed (List.length l)
+    | _, l -> Nix.sleep 1.; reap_loop (Option.map pred timeout) l
+  in
+  killall Sys.sigterm pids;
+  reap_loop wait pids
+
 module Forks(T:WorkerT) =
 struct
 
@@ -111,46 +147,21 @@ let create execute n =
   let running = List.init n (fun _ -> worker execute) in
   { running; execute; alive=true; gone=0; }
 
-open Unix
-
 let close_ch w =
   match w.ch with
   | Some (cin,cout) -> w.ch <- None; close_in_noerr cin; close_out_noerr cout
   | None -> ()
 
 let stop ?wait t =
-  let reap l =
-    List.filter_map (fun pid ->
-    try
-      if pid = fst (waitpid [WNOHANG] pid) then None (* exited *) else Some pid
-    with
-    | Unix_error (ECHILD,_,_) -> None (* exited *)
-    | exn -> log #warn ~exn "Worker PID %d lost (wait)" pid; None) l
-  in
-  let hard_kill l =
-      List.iter (fun pid ->
-      try
-        kill pid Sys.sigkill; log #warn "Worker PID %d killed with SIGKILL" pid
-      with
-      | Unix_error (ESRCH,_,_) -> ()
-      | exn -> log #warn ~exn "Worker PID %d (SIGKILL)" pid) (reap l)
-  in
   let gone () = if t.gone = 0 then "" else sprintf " (%d workers vanished)" t.gone in
-  let rec reap_loop timeout l =
-    match timeout, reap l with
-    | _, [] -> log #info "Stopped %d workers properly%s" (List.length l) (gone ())
-    | Some 0, l -> log #info "Timeouted, killing %d workers with SIGKILL%s" (List.length l) (gone ()); hard_kill l
-    | _, l -> Nix.sleep 1.; reap_loop (Option.map pred timeout) l
-  in
   log #info "Stopping %d workers%s" (List.length t.running) (gone ());
   t.alive <- false;
   let l = t.running |> List.map (fun w -> close_ch w; w.pid) in
   Nix.sleep 0.1; (* let idle workers detect EOF and exit peacefully (frequent io-in-signal-handler deadlock problem) *)
-  l |> List.iter begin fun pid ->
-    try kill pid Sys.sigterm with exn -> log #warn ~exn "Worker PID %d lost (SIGTERM)" pid
-  end;
   t.running <- [];
-  reap_loop wait l
+  match do_stop ?wait l with
+  | `Done -> log #info "Stopped %d workers properly%s" (List.length l) (gone ())
+  | `Killed killed -> log #info "Timeouted, killing %d (of %d) workers with SIGKILL%s" killed (List.length l) (gone ())
 
 let perform t ?(autoexit=false) e finish =
     match t.running with
@@ -325,7 +336,61 @@ let mapn ?(n=8) f l =
   Action.partition n l |> map (List.map @@ Exn.map f) |> Action.unpartition
 end
 
-let run_forks ?wait ?workers (type t) (f : t -> unit) l =
+(** keep the specifed number of workers running *)
+let run_forks_simple ?(revive=false) ?wait_stop f args =
+  let workers = Hashtbl.create 1 in
+  let launch f x =
+    match Lwt_unix.fork () with
+    | 0 ->
+      let () = try f x with exn -> log #warn ~exn "worker failed" in
+      exit 0
+    | -1 -> Exn.fail "failed to fork"
+    | pid -> Hashtbl.add workers pid x; pid
+  in
+  args |> List.iter (fun x -> let (_:int) = launch f x in ());
+  let pids () = Hashtbl.keys workers |> List.of_enum in
+  let deads = ref [] in
+  let rec loop pause =
+    Nix.sleep pause;
+    if !deads <> [] then log #warn "%d dead workers (PIDs: %s)" (List.length !deads) (Action.strl string_of_int !deads);
+    match Daemon.should_exit () with
+    | true ->
+      let total = Hashtbl.length workers in
+      log #info "Stopping %d workers" total;
+      begin match do_stop ?wait:wait_stop (Hashtbl.keys workers |> List.of_enum) with
+      | `Done -> log #info "Stopped %d workers" total
+      | `Killed n -> log #info "Killed %d (of %d) workers with SIGKILL" n total
+      end
+    | false ->
+    let (dead,_live) = reap (pids ()) in
+    match dead with
+    | [] -> loop (max 1. (pause /. 2.))
+    | dead when revive ->
+      let pause = min 10. (pause *. 1.5) in
+      dead |> List.iter begin fun pid ->
+        match Hashtbl.find workers pid with
+        | exception Not_found -> log #warn "WUT? Not my worker %d" pid
+        | x ->
+        Hashtbl.remove workers pid;
+        match launch f x with
+        | exception exn -> log #error ~exn "restart"
+        | pid' -> log #info "worker %d exited, replaced with %d" pid pid';
+      end;
+      loop pause
+    | dead ->
+      log #info "%d child workers exited (PIDs: %s)" (List.length dead) (Action.strl string_of_int dead);
+      List.iter (Hashtbl.remove workers) dead;
+      List.iter (tuck deads) dead;
+      loop pause
+  in
+  Control.bracket (Signal.save ()) Signal.restore begin fun _ ->
+    let forward signo = killall signo (pids ()) in
+    Signal.set Sys.[sigusr1;sigusr2;sighup] forward;
+    loop 1.
+  end
+
+let run_workers workers ?wait_stop (type t) (f : t -> unit) l =
+  assert (workers > 0);
   let module Worker = struct type task = t type result = unit end in
   let module W = Forks(Worker) in
   let worker x =
@@ -333,10 +398,16 @@ let run_forks ?wait ?workers (type t) (f : t -> unit) l =
     Signal.set_exit Daemon.signal_exit;
     f x
   in
-  let proc = W.create worker (match workers with Some n -> assert (n > 0); n | None -> List.length l) in
-  Nix.handle_sig_exit_with ~exit:true (fun () -> W.stop ?wait proc); (* FIXME: output in signal handler *)
+  let proc = W.create worker workers in
+  Nix.handle_sig_exit_with ~exit:true (fun () -> W.stop ?wait:wait_stop proc); (* FIXME: output in signal handler *)
   W.perform ~autoexit:true proc (List.enum l) id;
   W.stop proc
+
+let run_forks ?wait_stop ?revive ?wait ?workers (type t) (f : t -> unit) l =
+  let wait_stop = if wait_stop = None then wait else wait_stop in
+  match workers with
+  | None -> run_forks_simple ?wait_stop ?revive f l
+  | Some n -> run_workers n ?wait_stop f l
 
 let run_forks' f l =
   match l with
