@@ -159,7 +159,7 @@ let to_rfc2822 secs =
   sprintf "%s, %02u %s %04u %02u:%02u:%02u GMT" wday t.U.tm_mday mon (1900 + t.U.tm_year) t.U.tm_hour t.U.tm_min t.U.tm_sec
 
 (** @param cut - only show this number of most significant components *)
-let duration_str ?cut t =
+let show_duration ?cut t =
   let factors = [60; 60; 24; 30; 12;] in
   let names = ["secs"; "min"; "hours"; "days"; "months";] in
   let rec loop t acc = function
@@ -174,8 +174,10 @@ let duration_str ?cut t =
   (match cut with Some n -> List.take n | None -> id) |>
   List.map (fun (n,x) -> sprintf "%u %s" x n) |> String.concat " "
 
+let duration_str = show_duration
+
 (* 1m10s *)
-let compact_duration ?(full=false) ?cut t =
+let show_compact_duration ?(full=false) ?cut t =
   let factors = [60; 60; 24; ] in
   let names = ["s"; "m"; "h"; "d"; ] in
   let rec loop t acc = function
@@ -193,6 +195,8 @@ let compact_duration ?(full=false) ?cut t =
   List.dropwhile (fun (_,x) -> x = 0) |>
   (match cut with Some n -> List.take n | None -> id) |>
   List.mapi (fun i (n,x) -> sprintf (if i = 0 then "%u%s" else "%02u%s") x n) |> String.concat ""
+
+let compact_duration = show_compact_duration
 
 (** parse compact_duration representation (except for fractional seconds) *)
 let of_compact_duration s = Devkit_ragel.parse_compact_duration s
