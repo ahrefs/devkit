@@ -198,7 +198,9 @@ let make_request_exn ~line1 ~headers ~body c =
       failed Url url;
     let version =
       try
-        Scanf.sscanf version "HTTP/%u.%u" (fun ma mi -> ma,mi)
+        match String.split version "/" with
+        | "HTTP", version -> apply2 int_of_string (String.split version ".")
+        | _ -> raise Not_found
       with
         _ -> failed Version version
     in
