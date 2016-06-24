@@ -349,10 +349,8 @@ let run_forks_simple ?(revive=false) ?wait_stop f args =
   in
   args |> List.iter (fun x -> let (_:int) = launch f x in ());
   let pids () = Hashtbl.keys workers |> List.of_enum in
-  let deads = ref [] in
   let rec loop pause =
     Nix.sleep pause;
-    if !deads <> [] then log #warn "%d dead workers (PIDs: %s)" (List.length !deads) (Action.strl string_of_int !deads);
     let total = Hashtbl.length workers in
     if total = 0 && not revive then
       log #info "All workers dead, stopping"
@@ -383,7 +381,6 @@ let run_forks_simple ?(revive=false) ?wait_stop f args =
     | dead ->
       log #info "%d child workers exited (PIDs: %s)" (List.length dead) (Action.strl string_of_int dead);
       List.iter (Hashtbl.remove workers) dead;
-      List.iter (tuck deads) dead;
       loop pause
   in
   Control.bracket (Signal.save ()) Signal.restore begin fun _ ->
