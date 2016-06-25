@@ -353,9 +353,12 @@ let run_forks_simple ?(revive=false) ?wait_stop f args =
   let rec loop pause =
     Nix.sleep pause;
     if !deads <> [] then log #warn "%d dead workers (PIDs: %s)" (List.length !deads) (Action.strl string_of_int !deads);
+    let total = Hashtbl.length workers in
+    if total = 0 && not revive then
+      log #info "All workers dead, stopping"
+    else
     match Daemon.should_exit () with
     | true ->
-      let total = Hashtbl.length workers in
       log #info "Stopping %d workers" total;
       begin match do_stop ?wait:wait_stop (Hashtbl.keys workers |> List.of_enum) with
       | `Done -> log #info "Stopped %d workers" total
