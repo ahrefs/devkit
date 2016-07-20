@@ -42,6 +42,9 @@ let unsafe_from_to s a b =
   String.unsafe_blit s a r 0 (b - a);
   Bytes.unsafe_to_string r
 
+let upto s p = String.sub s 0 p
+let from s p = from_to s p (String.length s)
+
 let slice =
   let clip n len = if n < 0 then Int.max 0 (len + n) else Int.min n len in
   fun ?first ?last s ->
