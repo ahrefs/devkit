@@ -254,7 +254,7 @@ let is_body_ready { line1; content_length; parsed_headers=_; buf; } final =
     (* workaround MSIE 6 *)
     | 2 when String.starts_with line1 "POST" && body.[body_len - 2] = '\r' && body.[body_len - 1] = '\n' ->
       Buffer.clear buf;
-      Buffer.add_string buf (String.slice ~last:(-2) body);
+      Buffer.add_string buf (Stre.slice ~last:(-2) body);
       true
     | n when final || n > 0 -> Exn.fail "wrong content-length : %d <> %d" length body_len
     | _ -> false
@@ -941,7 +941,7 @@ let handle_client_lwt client cin answer =
     match content_length with
     | None when data = "" -> Lwt.return ""
     | None -> failed Extra data
-    | Some n when String.length data > n -> failed Extra (String.slice ~first:n data)
+    | Some n when String.length data > n -> failed Extra (Stre.slice ~first:n data)
     | Some n when String.length data = n -> Lwt.return data
     | Some n ->
       let s = Bytes.create (n - String.length data) in

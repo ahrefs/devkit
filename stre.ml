@@ -86,14 +86,13 @@ let after s sep = try String.(let i = find s sep + length sep in sub s i (length
 let divide s sep = try String.split s sep with Invalid_string -> s, ""
 
 (** remove prefix from string if present *)
-let drop_prefix s pre = if String.starts_with s pre then String.slice s ~first:(String.length pre) else s
-let drop_suffix s suf = if String.ends_with s suf then String.slice ~last:(String.length s - String.length suf) s else s
-
-let replace_all ~str ~sub ~by =
-  Str.global_substitute (Str.regexp_string sub) (fun _ -> by) str
+let drop_prefix s pre = if String.starts_with s pre then slice s ~first:(String.length pre) else s
+let drop_suffix s suf = if String.ends_with s suf then slice ~last:(- String.length suf) s else s
 
 let qreplace str sub by =
   Pcre.qreplace ~rex:(Pcre.regexp @@ Pcre.quote sub) ~templ:by str
+
+let replace_all ~str ~sub ~by = qreplace str sub by
 
 (** contents of the first submatch *)
 let extract rex str =
@@ -174,7 +173,7 @@ let shorten limit s =
   if String.length s <= limit then s
   else
     let limit = limit - 20 in
-    Printf.sprintf "%s..[+%d bytes]..%s" (String.slice ~last:limit s) (String.length s - limit - 4) (String.slice ~first:(-4) s)
+    Printf.sprintf "%s..[+%d bytes]..%s" (slice ~last:limit s) (String.length s - limit - 4) (slice ~first:(-4) s)
 
 let array_concat sep a =
   match a with
