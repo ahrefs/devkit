@@ -12,6 +12,8 @@ let add = (+)
 let zero = 0
 let mul = ( * )
 let neg = (~-)
+let min (x : int) y = if x < y then x else y
+let max (x : int) y = if x > y then x else y
 end
 
 module Float = struct
