@@ -36,6 +36,20 @@ let nsplitc str sep = List.rev (nsplitc_rev str sep)
 
 let countc s c = String.fold_left (fun acc c' -> if c = c' then acc+1 else acc) 0 s
 
+let from_to s a b = String.sub s a (b - a)
+let unsafe_from_to s a b =
+  let r = Bytes.create (b - a) in
+  String.unsafe_blit s a r 0 (b - a);
+  Bytes.unsafe_to_string r
+
+let slice =
+  let clip n len = if n < 0 then Int.max 0 (len + n) else Int.min n len in
+  fun ?first ?last s ->
+    let len = String.length s in
+    let i = match first with None -> 0 | Some n -> clip n len in
+    let j = match last with None -> len | Some n -> clip n len in
+    if i < j then unsafe_from_to s i j else ""
+
 (** split by delimiter
   @raise Not_found if [sep] is not found in [str] *)
 let splitc str sep =
