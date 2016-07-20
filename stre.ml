@@ -36,15 +36,25 @@ let nsplitc str sep = List.rev (nsplitc_rev str sep)
 
 let countc s c = String.fold_left (fun acc c' -> if c = c' then acc+1 else acc) 0 s
 
+(** [from_to s a b]
+  @return substring of [s] from position [a] (including) up to position [b] (excluding).
+  @raise Invalid_argument if [a] is greater than [b] or any position is out of bounds *)
 let from_to s a b = String.sub s a (b - a)
+
+(** [from_to] without safety checks *)
 let unsafe_from_to s a b =
   let r = Bytes.create (b - a) in
   String.unsafe_blit s a r 0 (b - a);
   Bytes.unsafe_to_string r
 
+(** [upto s p] @return prefix of [s] up to position [p] (excluding) *)
 let upto s p = String.sub s 0 p
+
+(** [from s p] @return suffix of [s] from position [p] (including) *)
 let from s p = from_to s p (String.length s)
 
+(** safe (lazy) way to cut substring
+  same as extlib [String.slice] *)
 let slice =
   let clip n len = if n < 0 then Int.max 0 (len + n) else Int.min n len in
   fun ?first ?last s ->
