@@ -24,7 +24,7 @@ let should_run () = not !should_exit_
 exception ShouldExit
 
 let signal_exit =
-  let do_lwt = lazy (Lwt.wakeup signal_exit_lwt ()) in
+  let do_lwt = lazy (Lwt.wakeup_later signal_exit_lwt ()) in
   fun () -> Lazy.force do_lwt; should_exit_ := true
 
 (** raise [ShouldExit] if [should_exit] condition is set, otherwise do nothing *)
