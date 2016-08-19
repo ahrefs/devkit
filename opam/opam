@@ -32,10 +32,13 @@ depends: [
   "pcre"
   "extunix" {>= "0.1.2"}
   "xmlm"
-  "lwt" {>= "2.5.0"}
+  "lwt" {>="2.5.0"}
   "base-bytes"
   "base-unix"
   "base-threads"
   "yojson"
+]
+depopts: [
+  "gperftools"
 ]
 available: [ocaml-version >= "4.02.0"]
