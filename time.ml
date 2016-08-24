@@ -8,6 +8,8 @@ open Prelude
 (** unix timestamp or duration in seconds *)
 type t = float
 
+let compare = Float.compare
+
 let get = Unix.gettimeofday
 let now = Unix.gettimeofday
 
