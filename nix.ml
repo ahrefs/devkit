@@ -109,6 +109,12 @@ let show_addr = function
   | ADDR_UNIX s -> Printf.sprintf "unix:%s" s
   | ADDR_INET (addr,port) -> Printf.sprintf "%s:%u" (string_of_inet_addr addr) port
 
+let get_inet_addr_exn = function
+  | ADDR_INET (addr,_) -> addr
+  | addr -> Exn.fail "get_inet_addr %s" (show_addr addr)
+
+let show_inet_addr_exn addr = string_of_inet_addr (get_inet_addr_exn addr)
+
 let make_inet_addr_exn host port =
   let a = (gethostbyname host).h_addr_list in
   if Array.length a = 0 then Exn.fail "make_inet_addr %s %d" host port else
