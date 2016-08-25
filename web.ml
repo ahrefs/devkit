@@ -78,6 +78,7 @@ module type IO_TYPE = sig
   val sleep : Time.t -> unit t
   val fail : ?exn:exn -> ('a, unit, string, 'b t) format4 -> 'a
   val raise : exn -> 'a t
+  val map_s : ('a -> 'b t) -> 'a list -> 'b list t
 end
 
 module type CURL = sig
@@ -86,6 +87,8 @@ module type CURL = sig
 end
 
 module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) = struct
+
+  module IO = IO
 
   open IO
 
@@ -180,22 +183,8 @@ module IO_blocking = struct
   let fail = Exn.fail
   let raise = raise
   let sleep = Nix.sleep
+  let map_s = List.map
 end
-
-module Curl_blocking = struct
-  type 'a t = 'a
-  let perform h = try Curl.perform h; Curl.CURLE_OK with Curl.CurlException (code,_,_) -> code
-end
-
-module Http_blocking = Http(IO_blocking)(Curl_blocking)
-let with_curl = Http_blocking.with_curl
-let with_curl_cache = Http_blocking.with_curl_cache
-let http_gets = Http_blocking.http_gets
-let http_request' = Http_blocking.http_request'
-let http_request = Http_blocking.http_request
-let http_request_exn = Http_blocking.http_request_exn
-let http_query = Http_blocking.http_query
-let http_submit = Http_blocking.http_submit
 
 module IO_lwt = struct
   type 'a t = 'a Lwt.t
@@ -207,6 +196,13 @@ module IO_lwt = struct
   let fail = Exn_lwt.fail
   let raise = Lwt.fail
   let sleep = Lwt_unix.sleep
+  let map_s = Lwt_list.map_s
+end
+
+
+module Curl_blocking = struct
+  type 'a t = 'a
+  let perform h = try Curl.perform h; Curl.CURLE_OK with Curl.CurlException (code,_,_) -> code
 end
 
 module Curl_lwt_for_http = struct
@@ -214,7 +210,18 @@ module Curl_lwt_for_http = struct
   include Curl_lwt
 end
 
+module Http_blocking = Http(IO_blocking)(Curl_blocking)
 module Http_lwt = Http(IO_lwt)(Curl_lwt_for_http)
+
+let with_curl = Http_blocking.with_curl
+let with_curl_cache = Http_blocking.with_curl_cache
+let http_gets = Http_blocking.http_gets
+let http_request' = Http_blocking.http_request'
+let http_request = Http_blocking.http_request
+let http_request_exn = Http_blocking.http_request_exn
+let http_query = Http_blocking.http_query
+let http_submit = Http_blocking.http_submit
+
 let http_request_lwt' = Http_lwt.http_request'
 let http_request_lwt = Http_lwt.http_request
 let http_request_lwt_exn = Http_lwt.http_request_exn
