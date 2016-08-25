@@ -12,7 +12,7 @@ let period n f =
 let timely period f =
   assert (period > 0.);
   let next = ref (Time.get () +. period) in
-  (fun () -> if Time.get () > !next then begin Std.finally (fun () -> next := Time.get () +. period) f () end)
+  (fun x -> if Time.get () > !next then begin Std.finally (fun () -> next := Time.get () +. period) f x end)
 
 let timely_counter period f =
   let cnt = ref 0 in

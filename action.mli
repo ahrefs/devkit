@@ -7,10 +7,10 @@ val period : int -> (int -> unit) -> (unit -> unit)
 
 (** [timely p f]
 
-    @return a function [pf] such that [pf ()] = [f ()] if the
-    last execution of [pf ()] was done more than [p] seconds ago, or
+    @return a function [pf] such that [pf x] = [f x] if the
+    last execution of [pf x] was done more than [p] seconds ago, or
     [()] otherwise. *)
-val timely : float -> (unit -> unit) -> (unit -> unit)
+val timely : float -> ('a -> unit) -> ('a -> unit)
 
 (** Combination of the above, see the code for more info. *)
 val timely_counter : float -> (int -> unit) -> (unit -> unit)
