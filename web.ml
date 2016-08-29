@@ -61,6 +61,7 @@ type http_action =
 [ `GET
 | `POST
 | `PUT
+| `PATCH
 | `DELETE
 ]
 
@@ -68,6 +69,7 @@ let string_of_http_action : http_action -> string = function
   | `GET -> "GET"
   | `POST -> "POST"
   | `PUT -> "PUT"
+  | `PATCH -> "PATCH"
   | `DELETE -> "DELETE"
 
 module type IO_TYPE = sig
@@ -135,6 +137,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) = struct
       | `DELETE -> set_customrequest h "DELETE"
       | `POST -> set_post h true
       | `PUT -> set_post h true; set_customrequest h "PUT"
+      | `PATCH -> set_post h true; set_customrequest h "PATCH"
       end;
       begin match body with
       | Some (`Form args) -> set_body h "application/x-www-form-urlencoded" (make_url_args args)
