@@ -10,11 +10,17 @@ open ExtLib
 
 let log = Log.from "nix"
 
+let fork () =
+  match Lwt_unix.fork() with
+  | -1 -> Exn.fail "failed to fork"
+  | 0 -> Random.self_init (); `Child
+  | pid -> `Forked pid
+
+(** fork off and die *)
 let unparent () =
-  match Lwt_unix.fork () with  (* fork off and die *)
-  | 0 -> ()
-  | -1 -> failwith "Fork failed"
-  | _ -> exit 0
+  match fork () with
+  | `Child -> ()
+  | `Forked _ -> exit 0
 
 (*
   http://www.itp.uzh.ch/~dpotter/howto/daemonize

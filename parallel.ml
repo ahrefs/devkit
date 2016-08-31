@@ -105,9 +105,8 @@ type t = { mutable running : instance list; execute : (task -> result); mutable 
 let worker (execute : task -> result) =
   let main_read, child_write = Unix.pipe () in
   let child_read, main_write = Unix.pipe () in
-  match Lwt_unix.fork() with
-  | -1 -> assert false
-  | 0 -> (* child *)
+  match Nix.fork () with
+  | `Child -> (* child *)
       Unix.close main_read; Unix.close main_write;
       Unix.set_close_on_exec child_read;
       Unix.set_close_on_exec child_write;
@@ -134,7 +133,7 @@ let worker (execute : task -> result) =
       close_in_noerr input;
       close_out_noerr output;
       exit 0
-  | pid ->
+  | `Forked pid ->
       Unix.close child_read; Unix.close child_write;
       (* prevent sharing these pipes with other children *)
       Unix.set_close_on_exec main_write;
@@ -222,15 +221,15 @@ end
 
 let invoke (f : 'a -> 'b) x : unit -> 'b =
   let input, output = Unix.pipe() in
-  match Lwt_unix.fork() with
-  | -1 -> Unix.close input; Unix.close output; (let v = f x in fun () -> v)
-  | 0 ->
+  match Nix.fork () with
+  | exception _ -> Unix.close input; Unix.close output; (let v = f x in fun () -> v)
+  | `Child ->
       Unix.close input;
       let output = Unix.out_channel_of_descr output in
         Marshal.to_channel output (try `Res(f x) with e -> `Exn e) [];
         close_out output;
         exit 0
-  | pid ->
+  | `Forked pid ->
       Unix.close output;
       let input = Unix.in_channel_of_descr input in fun () ->
         let v = Marshal.from_channel input in
@@ -318,10 +317,9 @@ end
 let rec launch_forks f = function
 | [] -> ()
 | x::xs ->
-  match Lwt_unix.fork () with
-  | 0 -> f x
-  | -1 -> log #warn "failed to fork"
-  | _ -> launch_forks f xs
+  match Nix.fork () with
+  | `Child -> f x
+  | `Forked _ -> launch_forks f xs
 
 module Thread = struct
 type 'a t = [ `Exn of exn | `None | `Ok of 'a ] ref * Thread.t
@@ -340,12 +338,11 @@ end
 let run_forks_simple ?(revive=false) ?wait_stop f args =
   let workers = Hashtbl.create 1 in
   let launch f x =
-    match Lwt_unix.fork () with
-    | 0 ->
+    match Nix.fork () with
+    | `Child ->
       let () = try f x with exn -> log #warn ~exn "worker failed" in
       exit 0
-    | -1 -> Exn.fail "failed to fork"
-    | pid -> Hashtbl.add workers pid x; pid
+    | `Forked pid -> Hashtbl.add workers pid x; pid
   in
   args |> List.iter (fun x -> let (_:int) = launch f x in ());
   let pids () = Hashtbl.keys workers |> List.of_enum in
