@@ -29,14 +29,19 @@ type group = { k : string; attr : Attr.t; mutable get : (unit -> (string * t opt
 
 let h_families = Hashtbl.create 10
 
-let register ~name ~k ~get ~attr =
+let make_family ~name ~k ~attr =
   let family = Attr.make (("class",name)::attr) in
   let (_:Attr.t) = Attr.add (k,"") family in (* check that all keys are unique *)
+  (k,family)
+
+let register (k,family) get =
   match Hashtbl.find h_families family with
   | exception Not_found -> Hashtbl.replace h_families family { k; attr = family; get = [get] } (* register new family *)
   | r -> (* expand existing family *)
     log #warn "duplicate Var %s" (show_a @@ Attr.get family);
     r.get <- get :: r.get
+
+let unregister (_k,family) = Hashtbl.remove h_families family
 
 let is_in_families name =
   Hashtbl.fold begin fun k _ a ->
@@ -48,7 +53,7 @@ let is_in_families name =
 let make_cc f pp name ?(attr=[]) k =
   let cc = Cache.Count.create () in
   let get () = Cache.Count.fold cc (fun k n acc -> (pp k, f n) :: acc) [] in
-  register ~name ~k ~get ~attr;
+  register (make_family ~name ~k ~attr) get;
   cc
 
 let cc f = make_cc (fun n -> Some (Count n)) f
@@ -57,12 +62,15 @@ let cc_ms f = make_cc (fun n -> Some (Time (float n /. 1000.))) f
 class typ name ?(attr=[]) k_name = (* name+attr - family of counters *)
 object(self)
   val h = Hashtbl.create 7
+  val family = make_family ~k:k_name ~attr ~name
   initializer
-    let get () = Hashtbl.fold (fun k v acc -> (* return all counters created for this instance *)
-      match v () with
-      | exception exn -> log #warn ~exn "variable %S %s failed" name (show_a @@ (k_name,k)::attr); acc
-      | v -> (k, v) :: acc) h [] in
-    register ~k:k_name ~get ~attr ~name (* register family *)
+    let get () =
+      Hashtbl.fold begin fun k v acc -> (* return all counters created for this instance *)
+        match v () with
+        | exception exn -> log #warn ~exn "variable %S %s failed" name (show_a @@ (k_name,k)::attr); acc
+        | v -> (k, v) :: acc end h []
+    in
+    register family get
   method ref : 'a. 'a -> ('a -> t) -> string -> 'a ref = fun init f name ->
     let v = ref init in
     Hashtbl.replace h name (fun () -> some @@ f !v);
@@ -74,6 +82,7 @@ object(self)
   method count name = self#ref 0 (fun x -> Count x) name
   method bytes name = self#ref 0 (fun x -> Bytes x) name
   method time name = self#ref 0. (fun x -> Time x) name
+  method unregister () = unregister family
 end
 
 let iter f =
