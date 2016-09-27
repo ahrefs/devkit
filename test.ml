@@ -50,6 +50,13 @@ let () = test "iequal" begin fun () ->
   fail (Stre.iequal "hello1" "hello!");
 end
 
+let () = test "Nix.read_pidfile" begin fun () ->
+  let f = ref "" in
+  let pid = 42 in
+  Control.with_open_out_temp_txt (fun (tmp, oc) -> f := tmp; Printf.fprintf oc "%d\n" pid);
+  assert_equal (Nix.read_pidfile !f) pid
+end
+
 let () = test "Stre.iexists" begin fun () ->
   let f = Stre.iexists in
   let t = let n = ref 0 in fun x -> assert_bool (sprintf "testcase %d" !n) x; incr n in

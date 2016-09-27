@@ -40,7 +40,7 @@ let highparse str curlist  =
 let digest_request_from_string s =
    if String.length s < 6 then Exn.fail "Digest string too short";
    let s1 = String.sub s 0 6 in
-   if String.lowercase s1 <> "digest" then Exn.fail "Authorization fail - non-digest trying to connect";
+   if String.lowercase_ascii s1 <> "digest" then Exn.fail "Authorization fail - non-digest trying to connect";
    let str = String.sub s 6 ((String.length s) - 6) in
    let tmpstr = ref "" in
    let a = str^"," in
