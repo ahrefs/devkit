@@ -88,16 +88,66 @@ module type CURL = sig
   val perform : Curl.t -> Curl.curlCode t
 end
 
-module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) = struct
+module type HTTP = sig
+  module IO : IO_TYPE
+  val with_curl : (Curl.t -> 'a IO.t) -> 'a IO.t
+  val with_curl_cache : (Curl.t -> 'a IO.t) -> 'a IO.t
+  val http_gets :
+    ?setup:(CurlCache.t -> unit) ->
+    ?check:(CurlCache.t -> bool) ->
+    ?result:(CurlCache.t -> Curl.curlCode -> unit IO.t) ->
+    string -> [ `Error of Curl.curlCode | `Ok of int * string ] IO.t
+
+  type ('body,'ret) http_request_ =
+    ?ua:string ->
+    ?timeout:int ->
+    ?verbose:bool ->
+    ?setup:(CurlCache.t -> unit) ->
+    ?http_1_0:bool ->
+    ?headers:string list ->
+    ?body:'body ->
+    http_action -> string -> 'ret IO.t
+
+  type 'ret http_request = ([ `Form of (string * string) list | `Raw of string * string ], 'ret)  http_request_
+
+  val http_request' : [> `Error of Curl.curlCode | `Ok of int * string ] http_request
+  val http_request :  [> `Error of string | `Ok of string ] http_request
+  val http_request_exn : string http_request
+  val http_query : (string * string, [> `Error of string | `Ok of string ]) http_request_
+  val http_submit :
+    ?ua:string ->
+    ?timeout:int ->
+    ?verbose:bool ->
+    ?setup:(CurlCache.t -> unit) ->
+    ?http_1_0:bool ->
+    ?headers:string list ->
+    ?action:http_action ->
+    string ->
+    (string * string) list -> [> `Error of string | `Ok of string ] IO.t
+end
+
+let simple_result ?(verbose=false) = function
+  | `Ok (code, s) when code / 100 = 2 -> `Ok s
+  | `Error code -> `Error (sprintf "(%d) %s" (Curl.errno code) (Curl.strerror code))
+  | `Ok (n, content) -> `Error (sprintf "http %d%s" n (if verbose then ": " ^ content else ""))
+
+module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with type 'a IO.t = 'a IO.t = struct
 
   module IO = IO
 
-  open IO
+  type ('body,'ret) http_request_ =
+    ?ua:string ->
+    ?timeout:int ->
+    ?verbose:bool ->
+    ?setup:(CurlCache.t -> unit) ->
+    ?http_1_0:bool ->
+    ?headers:string list ->
+    ?body:'body ->
+    http_action -> string -> 'ret IO.t
 
-  let simple_result ?(verbose=false) = function
-    | `Ok (code, s) when code / 100 = 2 -> `Ok s
-    | `Error code -> `Error (sprintf "(%d) %s" (Curl.errno code) (Curl.strerror code))
-    | `Ok (n, content) -> `Error (sprintf "http %d%s" n (if verbose then ": " ^ content else ""))
+  type 'ret http_request = ([ `Form of (string * string) list | `Raw of string * string ], 'ret)  http_request_
+
+  open IO
 
   let return_unit = return ()
 
