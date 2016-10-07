@@ -281,19 +281,26 @@ let http_request_lwt_exn = Http_lwt.http_request_exn
 let http_query_lwt = Http_lwt.http_query
 let http_submit_lwt = Http_lwt.http_submit
 
-let http_get_io_exn ?(setup=ignore) ?(check=(fun h -> Curl.get_httpcode h = 200)) url out =
+let http_get_io_exn ?(setup=ignore) ?max_size ?(check=(fun h -> Curl.get_httpcode h = 200)) url out =
   let inner = ref None in
   try
     with_curl_cache begin fun h ->
       Curl.set_url h url;
       curl_default_setup h;
       setup h;
-      Curl.set_writefunction h (fun s ->
+      let read_size = ref 0 in
+      Curl.set_writefunction h begin fun s ->
         try
           match check h with
           | false -> 0
-          | true -> IO.nwrite out s; String.length s
-        with exn -> inner := Some exn; 0);
+          | true ->
+            IO.nwrite out s;
+            let l = String.length s in
+            read_size += l;
+            match max_size with
+            | Some max_size when !read_size > max_size -> Exn.fail "received data too long"
+            | _ -> l
+        with exn -> inner := Some exn; 0 end;
       let result = Curl.perform h in
       IO.flush out;
       result
@@ -301,14 +308,14 @@ let http_get_io_exn ?(setup=ignore) ?(check=(fun h -> Curl.get_httpcode h = 200)
   with
   | exn -> raise (Option.default exn !inner)
 
-let http_get_io url ?(verbose=true) ?setup out =
+let http_get_io url ?(verbose=true) ?setup ?max_size out =
   try
-    http_get_io_exn url ?setup out
+    http_get_io_exn url ?setup ?max_size out
   with
   | Curl.CurlException(Curl.CURLE_WRITE_ERROR,_,_) -> ()
   | exn -> if verbose then Log.main #warn ~exn "http_get_io(%s)" url else ()
 
-let http_get ?verbose ?setup url = wrapped (IO.output_string ()) IO.close_out (http_get_io ?verbose ?setup url)
+let http_get ?verbose ?setup ?max_size url = wrapped (IO.output_string ()) IO.close_out (http_get_io ?verbose ?setup ?max_size url)
 
 let http_get_io_lwt ?body ?timeout ?(setup=ignore) ?(check=(fun h -> Curl.get_httpcode h = 200)) url out =
   let inner_error = ref `None in
