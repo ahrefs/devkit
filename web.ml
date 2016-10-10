@@ -94,6 +94,7 @@ module type HTTP = sig
   val with_curl_cache : (Curl.t -> 'a IO.t) -> 'a IO.t
   val http_gets :
     ?setup:(CurlCache.t -> unit) ->
+    ?max_size:int ->
     ?check:(CurlCache.t -> bool) ->
     ?result:(CurlCache.t -> Curl.curlCode -> unit IO.t) ->
     string -> [ `Error of Curl.curlCode | `Ok of int * string ] IO.t
@@ -103,6 +104,7 @@ module type HTTP = sig
     ?timeout:int ->
     ?verbose:bool ->
     ?setup:(CurlCache.t -> unit) ->
+    ?max_size:int ->
     ?http_1_0:bool ->
     ?headers:string list ->
     ?body:'body ->
@@ -140,6 +142,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     ?timeout:int ->
     ?verbose:bool ->
     ?setup:(CurlCache.t -> unit) ->
+    ?max_size:int ->
     ?http_1_0:bool ->
     ?headers:string list ->
     ?body:'body ->
@@ -154,16 +157,23 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
   let with_curl f = bracket (return @@ Curl.init ()) (fun h -> Curl.cleanup h; return_unit) f
   let with_curl_cache f = bracket (return @@ CurlCache.get ()) (fun h -> CurlCache.release h; return_unit) f
 
-  let http_gets ?(setup=ignore) ?(check=(fun _ -> true)) ?(result=(fun _ _ -> return_unit)) url =
+  let http_gets ?(setup=ignore) ?max_size ?(check=(fun _ -> true)) ?(result=(fun _ _ -> return_unit)) url =
     with_curl_cache begin fun h ->
       Curl.set_url h url;
       curl_default_setup h;
       let () = setup h in
       let b = Buffer.create 10 in
+      let read_size = ref 0 in
       Curl.set_writefunction h begin fun s ->
         match check h with
-        | true -> Buffer.add_string b s; String.length s
         | false -> 0
+        | true ->
+          Buffer.add_string b s;
+          let l = String.length s in
+          read_size += l;
+          match max_size with
+          | Some max_size when !read_size > max_size -> Exn.fail "received too much data (%db) when max is %db" !read_size max_size
+          | _ -> l
       end;
       Curl_IO.perform h >>= fun code ->
       result h code >>= fun () ->
@@ -174,7 +184,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
 
   (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
   (* Don't use curl_setheaders when using ?headers option *)
-  let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) ?(headers=[]) ?body (action:http_action) url =
+  let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?max_size ?(http_1_0=false) ?(headers=[]) ?body (action:http_action) url =
     let open Curl in
     let set_body h ct body =
       set_httpheader h @@ ("Content-Type: "^ct)::headers;
@@ -209,19 +219,19 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       in
       log #info "%s %s %s" action url body
     end;
-    http_gets ~setup url
+    http_gets ~setup ?max_size url
 
-  let http_request ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?body (action:http_action) url =
-    http_request' ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?body action url >>= fun res ->
+  let http_request ?ua ?timeout ?verbose ?setup ?max_size ?http_1_0 ?headers ?body (action:http_action) url =
+    http_request' ?ua ?timeout ?verbose ?setup ?max_size ?http_1_0 ?headers ?body action url >>= fun res ->
     return @@ simple_result ?verbose res
 
-  let http_request_exn ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?body (action:http_action) url =
-    http_request ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?body action url
+  let http_request_exn ?ua ?timeout ?verbose ?setup ?max_size ?http_1_0 ?headers ?body (action:http_action) url =
+    http_request ?ua ?timeout ?verbose ?setup ?max_size ?http_1_0 ?headers ?body action url
     >>= function `Ok s -> return s | `Error error -> fail "%s" error
 
-  let http_query ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?body (action:http_action) url =
+  let http_query ?ua ?timeout ?verbose ?setup ?max_size ?http_1_0 ?headers ?body (action:http_action) url =
     let body = match body with Some (ct,s) -> Some (`Raw (ct,s)) | None -> None in
-    http_request ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?body action url
+    http_request ?ua ?timeout ?verbose ?setup ?max_size ?http_1_0 ?headers ?body action url
 
   let http_submit ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ?(action=`POST) url args =
     http_request ?ua ?timeout ?verbose ?setup ?http_1_0 ?headers ~body:(`Form args) action url
@@ -298,7 +308,7 @@ let http_get_io_exn ?(setup=ignore) ?max_size ?(check=(fun h -> Curl.get_httpcod
             let l = String.length s in
             read_size += l;
             match max_size with
-            | Some max_size when !read_size > max_size -> Exn.fail "received data too long"
+            | Some max_size when !read_size > max_size -> Exn.fail "received too much data (%db) when max is %db" !read_size max_size
             | _ -> l
         with exn -> inner := Some exn; 0 end;
       let result = Curl.perform h in
