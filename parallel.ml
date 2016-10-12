@@ -114,12 +114,12 @@ let worker (execute : task -> result) =
       let input = Unix.in_channel_of_descr child_read in
       let rec loop () =
         let (r,_,e) = Nix.restart (fun () -> Unix.select [child_read] [] [child_read] (-1.)) () in
-        assert (e=[]);
-        assert (r<>[]);
-        let v = try Some (Marshal.from_channel input : task) with End_of_file -> None in
-        match v with
-        | None -> ()
-        | Some v ->
+        assert (e = []);
+        assert (r <> []);
+        match (Marshal.from_channel input : task) with
+        | exception End_of_file -> ()
+        | exception exn -> log #error ~exn "Parallel.worker failed to unmarshal task"
+        | v ->
           let r = execute v in
           Marshal.to_channel output (r : result) [];
           flush output;
@@ -162,16 +162,16 @@ let stop ?wait t =
   | `Done -> log #info "Stopped %d workers properly%s" (List.length l) (gone ())
   | `Killed killed -> log #info "Timeouted, killing %d (of %d) workers with SIGKILL%s" killed (List.length l) (gone ())
 
-let perform t ?(autoexit=false) e finish =
+let perform t ?(autoexit=false) tasks finish =
     match t.running with
-    | [] -> Enum.iter (fun x -> finish (t.execute x)) e (* no workers *)
+    | [] -> Enum.iter (fun x -> finish (t.execute x)) tasks (* no workers *)
     | _ ->
       let workers = ref 0 in
       t.running |> List.iter begin fun w ->
         match w.ch with
         | None -> ()
         | Some (_,cout) ->
-        match Enum.get e with
+        match Enum.get tasks with
         | None -> ()
         | Some x -> incr workers; Marshal.to_channel cout (x : task) []; flush cout
       end;
@@ -183,33 +183,32 @@ let perform t ?(autoexit=false) e finish =
         let channels = r |> List.map (fun fd ->
           t.running |> List.find (function {ch=Some (cin,_); _} -> Unix.descr_of_in_channel cin = fd | _ -> false))
         in
-        let answers = List.filter_map (fun w ->
+        let answers = channels |> List.filter_map begin fun w ->
           match w.ch with
           | None -> None
           | Some (cin,cout) ->
-          let task = Enum.get e in
           try
-            match try Some (Marshal.from_channel cin : result) with End_of_file -> None with
-            | None ->
-              log #warn "PID %d gone, what now?" w.pid;
+            match (Marshal.from_channel cin : result) with
+            | exception exn ->
+              log #warn ~exn "no result from PID %d" w.pid;
               t.gone <- t.gone + 1;
               decr workers;
               (* close pipes and forget dead child, do not reap zombie so that premature exit is visible in process list *)
               close_ch w;
               t.running <- List.filter (fun w' -> w'.pid <> w.pid) t.running;
               None
-            | Some answer ->
-            begin match task with
-            | None ->
-              if autoexit then close_ch w;
-              decr workers
-            | Some x ->
-              Marshal.to_channel cout (x : task) []; flush cout;
-            end;
-            Some answer
+            | answer ->
+              begin match Enum.get tasks with
+              | None ->
+                if autoexit then close_ch w;
+                decr workers
+              | Some x ->
+                Marshal.to_channel cout (x : task) []; flush cout;
+              end;
+              Some answer
           with
-          | exn -> log #warn ~exn "perform (from PID %d)" w.pid; decr workers; None)
-        channels
+          | exn -> log #warn ~exn "perform (from PID %d)" w.pid; decr workers; None
+        end
         in
         List.iter finish answers;
       done;
