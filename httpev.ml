@@ -311,12 +311,13 @@ let header_safe req name = try find_header req name with _ -> ""
 let header_referer req =
   try find_header req "Referer" with _ -> try find_header req "Referrer" with _ -> ""
 
-let log_access_apache ch code size req =
+let log_access_apache ch code size ?(background=false) req =
   try
     let now = Time.now () in
-    fprintf ch "%s - - [%s] %S %d %dB . %S %S %.3f %s\n%!"
+    fprintf ch "%s - - [%s] %S %d %dB . %S %S %.3f %s%s\n%!"
       (show_client_addr req) (Time.to_string now) req.line code size
       (header_referer req) (header_safe req "user-agent") (now -. req.conn) (header_safe req "host")
+      (if background then " (BG)" else "")
   with exn ->
     log #warn ~exn "access log : %s" @@ show_request req
 
@@ -745,26 +746,33 @@ let run ?(ip=Unix.inet_addr_loopback) port answer =
 let check_req req = match Unix.getsockopt_int req.socket Unix.SO_ERROR with 0 -> `Ok | n -> `Error n
 let check_req_exn req = match check_req req with `Ok -> () | `Error n -> Exn.fail "socket error %d" n
 
+exception Continue of (unit -> unit)
+
 let answer_blocking ?(debug=false) srv req answer k =
   let count = ref 0L in
-  let code = try
-  if debug then Printexc.record_backtrace true;
-  Control.with_output (set_blocking req) begin fun io ->
-    let io = Action.count_bytes_to count io in
-    let pre h =
-      k (`Ok, ("X-Disable-Log", "true") :: h,"");
-      check_req_exn req
-    in
-    check_req_exn req;
-    let () = answer pre io in
-    200
-  end
-  with exn ->
-    let saved_backtrace = Exn.get_backtrace () in
-    log #warn ~exn ~backtrace:debug ~saved_backtrace "answer forked %s" (show_request req);
-    -1
+  let (code, continue) =
+    try
+      if debug then Printexc.record_backtrace true;
+      Control.with_output (set_blocking req) begin fun io ->
+        let io = Action.count_bytes_to count io in
+        let pre h =
+          k (`Ok, ("X-Disable-Log", "true") :: h,"");
+          check_req_exn req
+        in
+        check_req_exn req;
+        let () = answer pre io in
+        200, None
+      end
+    with
+    | Continue continue -> 200, Some continue
+    | exn ->
+      let saved_backtrace = Exn.get_backtrace () in
+      log #warn ~exn ~backtrace:debug ~saved_backtrace "answer forked %s" (show_request req);
+      -1, None
   in
-  if srv.config.access_log_enabled then log_access_apache !(srv.config.access_log) code (Int64.to_int !count) req
+  if srv.config.access_log_enabled then
+    log_access_apache !(srv.config.access_log) code (Int64.to_int !count) ~background:(continue <> None) req;
+  call_me_maybe continue ()
 
 let answer_forked ?debug srv req answer k =
   let do_fork () =
