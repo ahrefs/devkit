@@ -93,7 +93,7 @@ and server = {
   clients : (int,client) Hashtbl.t;
   config : config;
   digest_auth : Digest_auth.t option;
-  h_childs : (int,reply -> unit) Hashtbl.t; (** currently running forked childs *)
+  h_childs : (int,unit) Hashtbl.t; (** currently running forked childs *)
   q_wait : (unit -> unit) Stack.t; (** the stack of requests to fork *)
 }
 
@@ -266,10 +266,10 @@ let teardown fd =
   Exn.suppress (Unix.shutdown fd) Unix.SHUTDOWN_ALL;
   Unix.close fd
 
-let finish c =
+let finish ?(shutdown=true) c =
   decr_active c.server;
   Hashtbl.remove c.server.clients c.req_id;
-  teardown c.fd;
+  if shutdown then teardown c.fd else Unix.close c.fd;
   match c.req with
   | Headers _ | Body _ | Body_lwt _ -> ()
   | Ready req ->
@@ -423,7 +423,7 @@ let send_reply_blocking c (code,hdrs) =
 (* this function is called back by user to actually send data *)
 let send_reply_user c req (code,hdrs,body) =
   match code with
-  | `No_reply -> finish c
+  | `No_reply -> finish ~shutdown:false c
   | #reply_status as code ->
   let hdrs =
     match hdrs with
@@ -609,9 +609,8 @@ let check_waiting_requests srv =
 let finish_child srv pid =
 (*     log #info "child %d reaped" pid; *)
     match Hashtbl.find_option srv.h_childs pid with
-    | Some k ->
+    | Some () ->
       Hashtbl.remove srv.h_childs pid;
-      k (`No_reply,[],""); (* just close socket *)
       check_waiting_requests srv
     | None -> log #warn "no handler for child %d" pid
 
@@ -764,7 +763,7 @@ let answer_blocking ?(debug=false) srv req answer k =
   let (code, continue) =
     try
       if debug then Printexc.record_backtrace true;
-      Control.with_output (set_blocking req) begin fun io ->
+      Control.with_output (set_blocking req) begin fun io -> (* TODO EPIPE closes fd, EBADF afterwards *)
         let io = Action.count_bytes_to count io in
         let pre h =
           k (`Ok, ("X-Disable-Log", "true") :: h,"");
@@ -798,7 +797,8 @@ let answer_forked ?debug srv req answer k =
     | -1 -> Exn.fail "fork failed : %s" (show_request req)
     | pid ->
       log #info "forked %d : %s" pid (show_request req);
-      Hashtbl.add srv.h_childs pid k
+      k (`No_reply,[],""); (* close socket in parent immediately *)
+      Hashtbl.add srv.h_childs pid ()
     end
   in
   let do_fork () =
