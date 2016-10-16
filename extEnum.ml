@@ -33,7 +33,7 @@ let of_dynarray ?(start=0) ?n d =
     let next () =
       if !idxref >= last then
         raise Enum.No_more_elements;
-      let retval = DynArray.unsafe_get d !idxref in
+      let retval = DynArray.get d !idxref in
       incr idxref;
       retval
     and count () =
