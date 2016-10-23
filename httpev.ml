@@ -507,7 +507,7 @@ let rec process_chunk c ev answer data final =
     | Some (headers,part) ->
       let (line1,headers) = extract_headers headers in
       let content_length = get_content_length headers in
-      (** TODO transfer-encoding *)
+      (* TODO transfer-encoding *)
       if List.mem_assoc "transfer-encoding" headers then Exn.fail "Transfer-Encoding not supported";
       Buffer.clear buf;
       let body = { line1; parsed_headers=headers; content_length; buf; } in
@@ -682,12 +682,16 @@ module Args(T : sig val req : request end) : sig
   exception Bad of string
   val get : string -> string option
   (** Get optional parameter. @return None if parameter is missing *)
+
   val str : ?default:string -> string -> string
   (** Get required parameter. @raise Bad if parameter is missing and no [default] provided *)
+
   val get_int : string -> int option
   (** Get optional integer parameter *)
+
   val int : ?default:int -> string -> int
   (** Get integer parameter. @raise Bad if parameter is missing and no [default] provided *)
+
   val float : ?default:float -> string -> float
   val int64 : ?default:int64 -> string -> int64
   val array : string -> string list
@@ -937,7 +941,7 @@ let handle_client_lwt client cin answer =
   | line1::headers ->
   let headers = List.map extract_header headers in
   let content_length = get_content_length headers in
-  (** TODO transfer-encoding *)
+  (* TODO transfer-encoding *)
   if List.mem_assoc "transfer-encoding" headers then Exn.fail "Transfer-Encoding not supported";
   let%lwt data =
     match content_length with
