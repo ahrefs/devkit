@@ -55,6 +55,7 @@ type http_action_old =
 type http_body =
 [ `Raw of string * string (* content-type and body *)
 | `Form of (string * string) list (* key value *)
+| `Chunked of (string * (unit -> string)) (* content-type and body readfunction *)
 ]
 
 type http_action =
@@ -202,6 +203,9 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       begin match body with
       | Some (`Form args) -> set_body h "application/x-www-form-urlencoded" (make_url_args args)
       | Some (`Raw (ct,body)) -> set_body h ct body
+      | Some (`Chunked (ct,f)) ->
+        set_httpheader h (("Content-Type: " ^ ct) :: "Transfer-Encoding: chunked" :: headers);
+        set_readfunction h f
       | None -> set_readfunction h (fun _ -> "") (* prevent reading from stdin with POST without body *)
       end;
       if http_1_0 then set_httpversion h HTTP_VERSION_1_0;
@@ -216,6 +220,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       | None -> ""
       | Some (`Form args) -> String.concat " " @@ List.map (fun (k,v) -> sprintf "%s=%S" k (Stre.shorten 64 v)) args
       | Some (`Raw (ct,body)) -> sprintf "%s %s" ct (Stre.shorten 64 body)
+      | Some (`Chunked (ct,_f)) -> sprintf "%s chunked" ct
       in
       log #info "%s %s %s" action url body
     end;
