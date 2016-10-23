@@ -861,20 +861,20 @@ let send_reply c cout reply =
       (show_peer c)
       (String.length headers)
       (match body with `Body s -> sprintf "%d" (String.length s) | `Chunks _ -> "...");
-  lwt () = Lwt_io.write cout headers in
-  lwt () =
+  let%lwt () = Lwt_io.write cout headers in
+  let%lwt () =
     match body with
     | `Body s -> Lwt_io.write cout s
     | `Chunks gen ->
       let push = function
       | "" -> Lwt.return ()
       | s ->
-        lwt () = Lwt_io.write cout (sprintf "%x\r\n" (String.length s)) in
-        lwt () = Lwt_io.write cout s in
+        let%lwt () = Lwt_io.write cout (sprintf "%x\r\n" (String.length s)) in
+        let%lwt () = Lwt_io.write cout s in
         Lwt_io.write cout "\r\n"
       in
-      try_lwt
-        lwt () = gen push in
+      try%lwt
+        let%lwt () = gen push in
         Lwt_io.write cout "0\r\n\r\n"
       with exn ->
         (* do not write trailer on error - let the peer notice the breakage *)
@@ -894,7 +894,7 @@ let handle_request_lwt c req answer =
     begin match auth with
     | `Unauthorized header -> return (`Unauthorized, [header], "Unauthorized")
     | `Ok ->
-      try_lwt
+      try%lwt
         answer c.server req
       with exn ->
         log #error ~exn "answer %s" @@ show_request req;
@@ -906,7 +906,7 @@ let handle_request_lwt c req answer =
 
 let read_buf ic buf =
   let len = Bytes.length buf in
-  lwt real_len = Lwt_io.read_into ic buf 0 len in
+  let%lwt real_len = Lwt_io.read_into ic buf 0 len in
   if real_len < len then
     Lwt.return Bytes.(sub buf 0 real_len |> unsafe_to_string)
   else
@@ -919,7 +919,7 @@ let read_headers cin limit =
     match acc with
     | Some acc when String.length acc >= limit -> Exn_lwt.fail "request larger than max_request_size %s" (Action.bytes_string limit)
     | _ ->
-      match_lwt read_buf cin temp with
+      match%lwt read_buf cin temp with
       | "" -> Exn_lwt.fail "client disconnected prior to sending full request"
       | buf ->
       let acc = match acc with None -> buf | Some acc -> acc ^ buf in
@@ -928,14 +928,10 @@ let read_headers cin limit =
       | (headers,body) -> Lwt.return (String.nsplit headers "\r\n", body)
   in
   let temp = ReqBuffersCache.get () in
-  try_lwt
-    loop temp
-  finally
-    ReqBuffersCache.release temp;
-    Lwt.return_unit
+  (loop temp)[%lwt.finally ReqBuffersCache.release temp; Lwt.return_unit]
 
 let handle_client_lwt client cin answer =
-  lwt (headers,data) = read_headers cin client.server.config.max_request_size in
+  let%lwt (headers,data) = read_headers cin client.server.config.max_request_size in
   match headers with
   | [] -> failed RequestLine "missing"
   | line1::headers ->
@@ -943,7 +939,7 @@ let handle_client_lwt client cin answer =
   let content_length = get_content_length headers in
   (** TODO transfer-encoding *)
   if List.mem_assoc "transfer-encoding" headers then Exn.fail "Transfer-Encoding not supported";
-  lwt data =
+  let%lwt data =
     match content_length with
     | None when data = "" -> Lwt.return ""
     | None -> failed Extra data
@@ -951,7 +947,7 @@ let handle_client_lwt client cin answer =
     | Some n when String.length data = n -> Lwt.return data
     | Some n ->
       let s = Bytes.create (n - String.length data) in
-      lwt () = Lwt_io.read_into_exactly cin s 0 (n - String.length data) in
+      let%lwt () = Lwt_io.read_into_exactly cin s 0 (n - String.length data) in
       Lwt.return (data ^ s)
   in
   (* TODO check that no extra bytes arrive *)
@@ -959,17 +955,13 @@ let handle_client_lwt client cin answer =
   let req = make_request_exn client ~line1 ~headers ~body:data in
   client.req <- Ready req;
   Hashtbl.replace client.server.reqs req.id req;
-  try_lwt
-    handle_request_lwt client req answer
-  finally
-    Hashtbl.remove client.server.reqs req.id;
-    Lwt.return ()
+  (handle_request_lwt client req answer)[%lwt.finally Hashtbl.remove client.server.reqs req.id; Lwt.return ()]
 
 let accept_hook = ref (fun () -> ())
 
 let handle_lwt fd k =
   !accept_hook ();
-  match_lwt Exn_lwt.map Lwt_unix.accept fd with
+  match%lwt Exn_lwt.map Lwt_unix.accept fd with
   | `Exn (Unix.Unix_error (Unix.EMFILE,_,_)) ->
     let pause = 2. in
     log #error "too many open files, disabling accept for %s" (Time.duration_str pause);
@@ -977,22 +969,24 @@ let handle_lwt fd k =
   | `Exn exn -> log #warn ~exn "accept"; Lwt.return ()
   | `Ok (fd,addr as peer) ->
     let task =
-      try_lwt k peer
-      with exn -> log #warn ~exn "accepted (%s)" (Nix.show_addr addr); Lwt.return ()
-      finally
+      begin
+        try%lwt k peer
+        with exn -> log #warn ~exn "accepted (%s)" (Nix.show_addr addr); Lwt.return ()
+      end [%lwt.finally
         Lwt_unix.(Exn.suppress (shutdown fd) SHUTDOWN_ALL);
         Lwt_unix.close fd
+      ]
     in
     Lwt.ignore_result task; (* "fork" processing *)
     Lwt.return ()
 
 let handle_lwt config fd k =
   let rec loop () =
-    lwt () = handle_lwt fd k in
-    lwt () = if config.yield then Lwt_unix.yield () else Lwt.return_unit in
+    let%lwt () = handle_lwt fd k in
+    let%lwt () = if config.yield then Lwt_unix.yield () else Lwt.return_unit in
     loop ()
   in
-  lwt () = Lwt.choose [Daemon.should_exit_lwt; loop ()] in
+  let%lwt () = Lwt.choose [Daemon.should_exit_lwt; loop ()] in
   log #info "%s %s:%d exit" config.name (Unix.string_of_inet_addr config.ip) config.port;
   Lwt.return_unit
 
@@ -1001,8 +995,8 @@ module BuffersCache = Cache.Reuse(struct type t = Lwt_bytes.t let create () = Lw
 let setup_fd_lwt fd config answer =
   let server = make_server_state (Lwt_unix.unix_file_descr fd (* will not be used *) ) config in
   Lwt.ignore_result begin
-    while_lwt true do
-      lwt () = Lwt_unix.sleep @@ Time.minutes 1 in
+    while%lwt true do
+      let%lwt () = Lwt_unix.sleep @@ Time.minutes 1 in
       Lwt.wrap1 check_hung_requests server
     done
   end;
@@ -1021,8 +1015,8 @@ let setup_fd_lwt fd config answer =
     if config.debug then log #info "accepted #%d %s" req_id (Nix.show_addr sockaddr);
     let buffer = BuffersCache.get () in
     let cin = Lwt_io.(of_fd ~buffer ~close:Lwt.return ~mode:input fd) in
-    lwt reply =
-      try_lwt
+    let%lwt reply =
+      try%lwt
         handle_client_lwt client cin answer
       with exn ->
         !!error;
@@ -1034,16 +1028,13 @@ let setup_fd_lwt fd config answer =
       Lwt_unix.setsockopt fd TCP_NODELAY true;
     (* reusing same buffer! *)
     let cout = Lwt_io.(of_fd ~buffer ~close:Lwt.return ~mode:output fd) in
-    try_lwt
+    begin try%lwt
       send_reply client cout reply
     with exn ->
       !!error;
       log #warn ~exn "send_reply %s" (show_client client);
       Lwt.return ()
-    finally
-      decr_active server;
-      BuffersCache.release buffer;
-      Lwt.return ()
+    end [%lwt.finally decr_active server; BuffersCache.release buffer; Lwt.return ()]
   end
 
 let setup_lwt config answer =
