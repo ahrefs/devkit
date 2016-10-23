@@ -12,9 +12,6 @@ let buffer_size = 4096
 module Hidden = struct let log = Log.from "httpev" end
 open Hidden
 
-DEFINE INC(x) = x <- x + 1
-DEFINE DEC(x) = x <- x - 1
-
 (** {2 Server} *)
 
 (** server configuration *)
@@ -79,6 +76,12 @@ type server = {
   h_childs : (int,reply -> unit) Hashtbl.t; (** currently running forked childs *)
   q_wait : (unit -> unit) Stack.t; (** the stack of requests to fork *)
 }
+
+let incr_active s = s.active <- s.active + 1
+let decr_active s = s.active <- s.active - 1
+let incr_total  s = s.total <- s.total + 1
+let incr_errors s = s.errors <- s.errors + 1
+let incr_reject s = s.reject <- s.reject + 1
 
 type partial_body = {
   line1 : string;
@@ -262,7 +265,7 @@ let teardown fd =
   Unix.close fd
 
 let finish c =
-  DEC c.server.active;
+  decr_active c.server;
   teardown c.fd;
   match c.req with
   | Headers _ | Body _ | Body_lwt _ -> ()
@@ -294,7 +297,7 @@ let write_f c (data,ack) ev fd _flags =
     ack := a
   with
   exn ->
-    INC c.server.errors;
+    incr_errors c.server;
     finish ();
     match c.server.config.log_epipe, exn with
     | false, Unix.Unix_error (Unix.EPIPE,_,_) -> ()
@@ -345,7 +348,7 @@ let write_some fd s =
 
 (** close transport connection, count as error *)
 let abort c exn msg =
-  INC c.server.errors;
+  incr_errors c.server;
   finish c;
   match c.server.config.log_epipe, exn with
   | false, Unix.Unix_error (Unix.EPIPE,_,_) -> ()
@@ -624,15 +627,15 @@ let setup_server_fd fd config answer =
   Async.setup_periodic_timer_wait config.events (Time.minutes 1) (fun () -> check_hung_requests server);
   Async.setup_periodic_timer_now config.events 10. (fun () -> reap_orphans server);
   Tcp.handle config.events fd begin fun (fd,sockaddr) ->
-    INC server.total;
+    incr_total server;
     let req_id = server.total in
     match server.active >= config.max_clients with
     | true ->
-      INC server.reject;
+      incr_reject server;
       if config.debug then log #info "rejected #%d %s" req_id (Nix.show_addr sockaddr);
       teardown fd
     | false ->
-      INC server.active;
+      incr_active server;
       let client = { fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 1024); } in
       Unix.set_nonblock fd;
       if config.debug then log #info "accepted #%d %s" req_id (Nix.show_addr sockaddr);
@@ -1004,13 +1007,13 @@ let setup_fd_lwt fd config answer =
     done
   end;
   handle_lwt config fd begin fun (fd,sockaddr) ->
-    INC server.total;
+    incr_total server;
     let req_id = server.total in
     match server.active >= config.max_clients with
-    | true -> INC server.reject; if config.debug then log #info "rejected #%d %s" req_id (Nix.show_addr sockaddr); Lwt.return_unit
+    | true -> incr_reject server; if config.debug then log #info "rejected #%d %s" req_id (Nix.show_addr sockaddr); Lwt.return_unit
     | false ->
-    INC server.active;
-    let error = lazy (INC server.errors) in
+    incr_active server;
+    let error = lazy (incr_errors server) in
     let client =
       (* used only in show_socket_error *)
       { fd = Lwt_unix.unix_file_descr fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 0); }
@@ -1038,7 +1041,7 @@ let setup_fd_lwt fd config answer =
       log #warn ~exn "send_reply %s" (show_client client);
       Lwt.return ()
     finally
-      DEC server.active;
+      decr_active server;
       BuffersCache.release buffer;
       Lwt.return ()
   end

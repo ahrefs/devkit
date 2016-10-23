@@ -17,8 +17,6 @@ dispatch begin function
     flag ["thread"; "doc"; "ocaml"] (S[A"-thread"]);
     flag ["thread"; "link"; "ocaml"] (S[A"-thread"]);
 
-(*     flag ["ocaml"; "compile"; "dversion"] (S[A"-ppopt"; A dversion]); *)
-
     flag ["ocaml"; "infer_interface"; "syntax_camlp4o"] (S[A"-syntax"; A"camlp4o"]);
     flag ["ocaml"; "compile"; "syntax_camlp4o"] (S[A"-syntax"; A"camlp4o"]);
     flag ["ocaml"; "ocamldep"; "syntax_camlp4o"] (S[A"-syntax"; A"camlp4o"]);
