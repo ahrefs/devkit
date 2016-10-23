@@ -185,10 +185,10 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
 
   (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
   (* Don't use curl_setheaders when using ?headers option *)
-  let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?max_size ?(http_1_0=false) ?(headers=[]) ?body (action:http_action) url =
+  let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?max_size ?(http_1_0=false) ?headers ?body (action:http_action) url =
     let open Curl in
-    let set_body h ct body =
-      set_httpheader h @@ ("Content-Type: "^ct)::headers;
+    let set_body_and_headers h ct body =
+      set_httpheader h (("Content-Type: "^ct) :: Option.default [] headers);
       set_postfields h body;
       set_postfieldsize h (String.length body)
     in
@@ -201,12 +201,14 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       | `PATCH -> set_post h true; set_customrequest h "PATCH"
       end;
       begin match body with
-      | Some (`Form args) -> set_body h "application/x-www-form-urlencoded" (make_url_args args)
-      | Some (`Raw (ct,body)) -> set_body h ct body
+      | Some (`Form args) -> set_body_and_headers h "application/x-www-form-urlencoded" (make_url_args args)
+      | Some (`Raw (ct,body)) -> set_body_and_headers h ct body
       | Some (`Chunked (ct,f)) ->
-        set_httpheader h (("Content-Type: " ^ ct) :: "Transfer-Encoding: chunked" :: headers);
+        set_httpheader h (("Content-Type: " ^ ct) :: "Transfer-Encoding: chunked" :: Option.default [] headers);
         set_readfunction h f
-      | None -> set_readfunction h (fun _ -> "") (* prevent reading from stdin with POST without body *)
+      | None ->
+        Option.may (set_httpheader h) headers;
+        set_readfunction h (fun _ -> "") (* prevent reading from stdin with POST without body *)
       end;
       if http_1_0 then set_httpversion h HTTP_VERSION_1_0;
       Option.may (set_timeout h) timeout;
