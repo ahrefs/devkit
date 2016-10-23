@@ -5,8 +5,11 @@ open ExtLib
 
 open Prelude
 
-(** unix timestamp or duration in seconds *)
+(** unix timestamp *)
 type t = float
+
+(* duration in seconds *)
+type duration = float
 
 let compare = Float.compare
 
