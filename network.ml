@@ -93,6 +93,11 @@ let special_cidr = List.map cidr_of_string_exn [
 let is_ipv4_special ip = List.exists (ipv4_matches ip) special_cidr
 let ipv4_special = is_ipv4_special
 
+let public_network_ips () =
+  U.getifaddrs () |> List.filter begin fun (_,ip) ->
+    not (List.exists (ipv4_matches (ipv4_of_string_exn ip)) special_cidr)
+  end |> List.map (fun (iface,ip) -> iface, Unix.inet_addr_of_string ip)
+
 let private_network_ips () =
   (* RFC 1918 *)
   let private_net = List.map cidr_of_string_exn [ "10.0.0.0/8"; "172.16.0.0/12"; "192.168.0.0/16"; ] in
@@ -111,4 +116,3 @@ let ipv4_of_yojson j =
   match j with
   | `String i -> begin try Result.Ok (ipv4_of_string_exn i) with exn -> Result.Error (Printf.sprintf "ipv4: cannot parse %S (%s)" i (Exn.to_string exn)) end
   | _ -> Result.Error "ipv4: expected string"
-

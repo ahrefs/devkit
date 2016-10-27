@@ -46,5 +46,8 @@ val special_cidr : ipv4_cidr list
 (** @return ip address of this machine on private network, with 127.0.0.1 as a fallback *)
 val private_network_ip : unit -> Unix.inet_addr
 
+(** @return interfaces and associated ip addresses of this machine on public network *)
+val public_network_ips : unit -> (string * Unix.inet_addr) list
+
 (** @return interfaces and associated ip addresses of this machine on private network *)
 val private_network_ips : unit -> (string * Unix.inet_addr) list
