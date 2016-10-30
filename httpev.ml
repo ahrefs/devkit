@@ -63,26 +63,6 @@ let default =
 
 include Httpev_common
 
-(** server state *)
-type server = {
-  listen_socket : Unix.file_descr;
-  mutable total : int;
-  mutable active : int;
-  mutable errors : int;
-  mutable reject : int;
-  reqs : (int,request) Hashtbl.t;
-  config : config;
-  digest_auth : Digest_auth.t option;
-  h_childs : (int,reply -> unit) Hashtbl.t; (** currently running forked childs *)
-  q_wait : (unit -> unit) Stack.t; (** the stack of requests to fork *)
-}
-
-let incr_active s = s.active <- s.active + 1
-let decr_active s = s.active <- s.active - 1
-let incr_total  s = s.total <- s.total + 1
-let incr_errors s = s.errors <- s.errors + 1
-let incr_reject s = s.reject <- s.reject + 1
-
 type partial_body = {
   line1 : string;
   content_length : int option;
@@ -102,6 +82,27 @@ type client = {
   server : server;
 }
 
+(** server state *)
+and server = {
+  listen_socket : Unix.file_descr;
+  mutable total : int;
+  mutable active : int;
+  mutable errors : int;
+  mutable reject : int;
+  reqs : (int,request) Hashtbl.t;
+  clients : (int,client) Hashtbl.t;
+  config : config;
+  digest_auth : Digest_auth.t option;
+  h_childs : (int,reply -> unit) Hashtbl.t; (** currently running forked childs *)
+  q_wait : (unit -> unit) Stack.t; (** the stack of requests to fork *)
+}
+
+let incr_active s = s.active <- s.active + 1
+let decr_active s = s.active <- s.active - 1
+let incr_total  s = s.total <- s.total + 1
+let incr_errors s = s.errors <- s.errors + 1
+let incr_reject s = s.reject <- s.reject + 1
+
 let make_server_state fd config =
   let digest_auth =
     match config.auth with
@@ -114,6 +115,7 @@ let make_server_state fd config =
     errors = 0;
     reject = 0;
     reqs = Hashtbl.create 10;
+    clients = Hashtbl.create 10;
     config;
     digest_auth;
     listen_socket = fd;
@@ -266,6 +268,7 @@ let teardown fd =
 
 let finish c =
   decr_active c.server;
+  Hashtbl.remove c.server.clients c.req_id;
   teardown c.fd;
   match c.req with
   | Headers _ | Body _ | Body_lwt _ -> ()
@@ -637,6 +640,7 @@ let setup_server_fd fd config answer =
     | false ->
       incr_active server;
       let client = { fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 1024); } in
+      Hashtbl.replace server.clients req_id client;
       Unix.set_nonblock fd;
       if config.debug then log #info "accepted #%d %s" req_id (Nix.show_addr sockaddr);
       handle_client client answer
@@ -1010,35 +1014,38 @@ let setup_fd_lwt fd config answer =
     match server.active >= config.max_clients with
     | true -> incr_reject server; if config.debug then log #info "rejected #%d %s" req_id (Nix.show_addr sockaddr); Lwt.return_unit
     | false ->
-    incr_active server;
     let error = lazy (incr_errors server) in
     let client =
       (* used only in show_socket_error *)
       { fd = Lwt_unix.unix_file_descr fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 0); }
     in
     if config.debug then log #info "accepted #%d %s" req_id (Nix.show_addr sockaddr);
+    incr_active server;
+    Hashtbl.replace server.clients req_id client;
     let buffer = BuffersCache.get () in
-    let cin = Lwt_io.(of_fd ~buffer ~close:Lwt.return ~mode:input fd) in
-    let%lwt reply =
-      try%lwt
-        handle_client_lwt client cin answer
+    begin
+      let cin = Lwt_io.(of_fd ~buffer ~close:Lwt.return ~mode:input fd) in
+      let%lwt reply =
+        try%lwt
+          handle_client_lwt client cin answer
+        with exn ->
+          !!error;
+          let (http_error,msg) = make_error exn in
+          log #warn "error for %s : %s" (show_client client) msg;
+          Lwt.return @@ `Body (http_error,[],"")
+      in
+      if config.nodelay then
+        Lwt_unix.setsockopt fd TCP_NODELAY true;
+      (* reusing same buffer! *)
+      let cout = Lwt_io.(of_fd ~buffer ~close:Lwt.return ~mode:output fd) in
+      begin try%lwt
+        send_reply client cout reply
       with exn ->
         !!error;
-        let (http_error,msg) = make_error exn in
-        log #warn "error for %s : %s" (show_client client) msg;
-        Lwt.return @@ `Body (http_error,[],"")
-    in
-    if config.nodelay then
-      Lwt_unix.setsockopt fd TCP_NODELAY true;
-    (* reusing same buffer! *)
-    let cout = Lwt_io.(of_fd ~buffer ~close:Lwt.return ~mode:output fd) in
-    begin try%lwt
-      send_reply client cout reply
-    with exn ->
-      !!error;
-      log #warn ~exn "send_reply %s" (show_client client);
-      Lwt.return ()
-    end [%lwt.finally decr_active server; BuffersCache.release buffer; Lwt.return ()]
+        log #warn ~exn "send_reply %s" (show_client client);
+        Lwt.return ()
+      end
+    end [%lwt.finally decr_active server; Hashtbl.remove server.clients req_id; BuffersCache.release buffer; Lwt.return ()]
   end
 
 let setup_lwt config answer =
