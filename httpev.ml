@@ -822,8 +822,7 @@ let answer_forked ?debug srv req answer k =
 
 (** {2 Lwt support} *)
 
-let default_timeout = 30.
-let timeout thread = Lwt_unix.with_timeout default_timeout (fun () -> thread)
+let timeout tm thread = Lwt_unix.with_timeout tm (fun () -> thread)
 
 let send_reply c cout reply =
   (* repack *)
@@ -939,7 +938,7 @@ let read_headers cin limit =
   (loop temp)[%lwt.finally ReqBuffersCache.release temp; Lwt.return_unit]
 
 let handle_client_lwt client cin answer =
-  let%lwt (headers,data) = read_headers cin client.server.config.max_request_size in
+  let%lwt (headers,data) = timeout 30. (read_headers cin client.server.config.max_request_size) in
   match headers with
   | [] -> failed RequestLine "missing"
   | line1::headers ->
@@ -955,7 +954,7 @@ let handle_client_lwt client cin answer =
     | Some n when String.length data = n -> Lwt.return data
     | Some n ->
       let s = Bytes.create (n - String.length data) in
-      let%lwt () = Lwt_io.read_into_exactly cin s 0 (n - String.length data) in
+      let%lwt () = timeout 60. (Lwt_io.read_into_exactly cin s 0 (n - String.length data)) in
       Lwt.return (data ^ s)
   in
   (* TODO check that no extra bytes arrive *)
@@ -1039,7 +1038,7 @@ let setup_fd_lwt fd config answer =
       (* reusing same buffer! *)
       let cout = Lwt_io.(of_fd ~buffer ~close:Lwt.return ~mode:output fd) in
       begin try%lwt
-        send_reply client cout reply
+        timeout 120. (send_reply client cout reply)
       with exn ->
         !!error;
         log #warn ~exn "send_reply %s" (show_client client);
