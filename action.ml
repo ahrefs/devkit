@@ -226,16 +226,20 @@ let caml_words_f = bytes_string_f $ bytes_of_words_f
 
 (* EMXIF *)
 
-class timer =
-let tm = Unix.gettimeofday  in
-object
-
-val mutable start = tm ()
-method reset = start <- tm ()
-method get = tm () -. start
-method get_str = Time.duration_str (tm () -. start)
-
+class timer_start start =
+  object
+    val mutable start = start
+    val mutable l = []
+    method reset = start <- Time.now (); l <- []
+    method record name t = l <- (name, t) :: l
+    method mark name = l <- (name, Time.now ()) :: l
+    method show = List.rev l |> List.map (fun (name, t) -> sprintf "%s:%s" name (Time.compact_duration @@ t -. start)) |> String.concat " "
+    method json : (string * Yojson.json) list = List.rev l |> List.map (fun (name, t) -> name, (`Int (Time.to_ms (t -. start))))
+    method get = Time.ago start
+    method get_str = Time.ago_str start
 end
+
+class timer = object inherit timer_start (Time.now ()) end
 
 let uptime = new timer
 

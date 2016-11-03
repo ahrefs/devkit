@@ -203,12 +203,23 @@ val config_lines : string -> string list
 
 (** Time utilities *)
 
-class timer :
+(** Basic timer. Also allows recording a sequence of interesting times from the given start point.
+    Can serialize recorded events to json (useful for Logstash events) *)
+class timer_start : Time.t ->
   object
-    method get : float
+    method record : string -> Time.t -> unit
+    method mark : string -> unit
+    method show : string
+    method json : (string * Yojson.json) list
+    method get : Time.t
     method get_str : string
+
+    (** Resets both the internal start value, in addition to the list of recorded events *)
     method reset : unit
   end
+
+(** Convenience wrapper to start timer_start with Time.now() *)
+class timer : object inherit timer_start end
 
 (** Timer running from the start of the program execution. *)
 val uptime : timer

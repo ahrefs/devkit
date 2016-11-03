@@ -454,6 +454,20 @@ module LRU = struct
     end
 end
 
+module Timer = struct
+  open OUnit
+  let () = test "Timer.start" begin fun () ->
+      let timer = new Action.timer_start 0.5 in
+      assert_bool "timer initially not empty" (timer#json = []);
+      timer#record "mark" 0.5;
+      assert_bool "timer mark not 0" (timer#json = [("mark", `Int 0)]);
+      timer#record "mark2" 1.0;
+      assert_bool "timer mark2 not 500ms" (timer#json = [("mark", `Int 0); ("mark2", `Int 500)]);
+      timer#reset;
+      assert_bool "timer not empty" (timer#json = []);
+    end
+end
+
 let tests () =
   let (_:test_results) = run_test_tt_main ("devkit" >::: List.rev !tests) in
   ()
