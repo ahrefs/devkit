@@ -237,6 +237,7 @@ class timer_start start =
     method json : (string * Yojson.json) list = List.rev l |> List.map (fun (name, t) -> name, (`Int (Time.to_ms (t -. start))))
     method get = Time.ago start
     method get_str = Time.ago_str start
+    method get_state = (start, l)
 end
 
 class timer = object inherit timer_start (Time.now ()) end

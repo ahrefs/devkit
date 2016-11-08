@@ -213,6 +213,7 @@ class timer_start : Time.t ->
     method json : (string * Yojson.json) list
     method get : Time.t
     method get_str : string
+    method get_state : Time.t * (string * Time.t) list
 
     (** Resets both the internal start value, in addition to the list of recorded events *)
     method reset : unit
