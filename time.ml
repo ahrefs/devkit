@@ -205,7 +205,6 @@ let compact_duration = show_compact_duration
 
 (** parse compact_duration representation (except for fractional seconds) *)
 let of_compact_duration s = Devkit_ragel.parse_compact_duration s
-(* TODO ms ns not parsed *)
 
 let minutes x = float @@ 60 * x
 let hours x = minutes @@ 60 * x
