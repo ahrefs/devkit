@@ -45,19 +45,21 @@ let is_ipv4 data =
  machine compact_duration;
  num = digit+ >{ n := 0; } ${ n := 10 * !n + (Char.code fc - Char.code '0') } ;
  frac = '.' digit{,3} >{ fn := 0; fna := 0 } ${ fn := 10 * !fn + (Char.code fc - Char.code '0') ; fna := !fna + 1; };
- main := (num 'd' %{ t := !t + !n*24*60*60; } )?
-         (num 'h' %{ t := !t + !n*60*60; } )?
-         (num 'm' %{ t := !t + !n*60; } )?
-         (num frac? 's' %{ f := !f +. float(!t + !n) +. (float(!fn) /. (10. ** float(!fna))); } )?
-         (num frac? 'm' 's' %{ f := (!f +. float(!n) /. 1_000.) +. (float(!fn) /. (1000. *. 10. ** float(!fna))); } )?
-         (num 'n' 's' %{ f := !f +. float(!n) /. 1_000_000_000.; } )?;
+ main := |*
+   num 'd' => { t := !t + !n*24*60*60; };
+   num 'h' => { t := !t + !n*60*60; };
+   num 'm' => { t := !t + !n*60; };
+   num frac? 's'?  => { f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0 };
+   num frac? 'm' 's' => { f := !f +. (float(!n) /. 1_000.) +. (float(!fn) /. (1000. *. 10. ** float(!fna))); };
+   num 'n' 's' => { f := !f +. float(!n) /. 1_000_000_000.; };
+ *|;
  write data;
 }%%
 
 let parse_compact_duration data =
   if data = "" then invalid_arg "parse_compact_duration: empty";
   let cs = ref 0 and p = ref 0 and pe = ref (String.length data) and eof = ref (String.length data) in
-  let n = ref 0 and f = ref 0. and fna = ref 0 and fn = ref 0 in
+  let n = ref 0 and f = ref 0. and fna = ref 0 and fn = ref 0 and ts = ref 0 and te = ref 0 and act = ref 0 in
   let t = ref 0 in
   %%write init;
   %%write exec;

@@ -412,136 +412,120 @@ and do_test_eof () =
 
 # 414 "devkit_ragel.ml"
 let _compact_duration_trans_keys : int array = Array.concat [ [|
-	0; 0; 48; 57; 46; 115; 48; 115; 48; 115; 48; 115; 115; 115; 0; 0; 
-	48; 57; 46; 115; 48; 57; 46; 115; 48; 57; 46; 115; 0
+	0; 0; 115; 115; 115; 115; 48; 57; 46; 115; 48; 115; 48; 115; 48; 115; 
+	109; 115; 115; 115; 0
 |] ]
 
 let _compact_duration_key_spans : int array = Array.concat [ [|
-	0; 10; 70; 68; 68; 68; 1; 0; 
-	10; 70; 10; 70; 10; 70
+	0; 1; 1; 10; 70; 68; 68; 68; 
+	7; 1
 |] ]
 
 let _compact_duration_index_offsets : int array = Array.concat [ [|
-	0; 0; 11; 82; 151; 220; 289; 291; 
-	292; 303; 374; 385; 456; 467
+	0; 0; 2; 4; 15; 86; 155; 224; 
+	293; 301
 |] ]
 
 let _compact_duration_indicies : int array = Array.concat [ [|
-	0; 0; 0; 0; 0; 0; 0; 
-	0; 0; 0; 1; 2; 1; 3; 3; 
-	3; 3; 3; 3; 3; 3; 3; 3; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 4; 1; 1; 1; 5; 1; 
-	1; 1; 1; 6; 1; 1; 1; 1; 
-	1; 7; 1; 8; 8; 8; 8; 8; 
-	8; 8; 8; 8; 8; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 9; 1; 
-	10; 10; 10; 10; 10; 10; 10; 10; 
-	10; 10; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 7; 1; 11; 11; 11; 
-	11; 11; 11; 11; 11; 11; 11; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	7; 1; 7; 1; 1; 12; 12; 12; 
-	12; 12; 12; 12; 12; 12; 12; 1; 
-	2; 1; 13; 13; 13; 13; 13; 13; 
-	13; 13; 13; 13; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 5; 1; 1; 1; 1; 6; 
-	1; 1; 1; 1; 1; 7; 1; 14; 
+	1; 0; 2; 0; 3; 3; 3; 
+	3; 3; 3; 3; 3; 3; 3; 4; 
+	6; 5; 7; 7; 7; 7; 7; 7; 
+	7; 7; 7; 7; 5; 5; 5; 5; 
+	5; 5; 5; 5; 5; 5; 5; 5; 
+	5; 5; 5; 5; 5; 5; 5; 5; 
+	5; 5; 5; 5; 5; 5; 5; 5; 
+	5; 5; 5; 5; 5; 5; 5; 5; 
+	5; 5; 5; 5; 5; 5; 8; 5; 
+	5; 5; 9; 5; 5; 5; 5; 10; 
+	11; 5; 5; 5; 5; 12; 5; 14; 
 	14; 14; 14; 14; 14; 14; 14; 14; 
-	14; 1; 2; 1; 15; 15; 15; 15; 
-	15; 15; 15; 15; 15; 15; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 6; 1; 1; 1; 1; 1; 7; 
-	1; 16; 16; 16; 16; 16; 16; 16; 
-	16; 16; 16; 1; 2; 1; 17; 17; 
-	17; 17; 17; 17; 17; 17; 17; 17; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 1; 1; 1; 1; 1; 1; 1; 
-	1; 7; 1; 0
+	14; 13; 13; 13; 13; 13; 13; 13; 
+	13; 13; 13; 13; 13; 13; 13; 13; 
+	13; 13; 13; 13; 13; 13; 13; 13; 
+	13; 13; 13; 13; 13; 13; 13; 13; 
+	13; 13; 13; 13; 13; 13; 13; 13; 
+	13; 13; 13; 13; 13; 13; 13; 13; 
+	13; 13; 13; 13; 15; 13; 13; 13; 
+	13; 13; 16; 13; 17; 17; 17; 17; 
+	17; 17; 17; 17; 17; 17; 5; 5; 
+	5; 5; 5; 5; 5; 5; 5; 5; 
+	5; 5; 5; 5; 5; 5; 5; 5; 
+	5; 5; 5; 5; 5; 5; 5; 5; 
+	5; 5; 5; 5; 5; 5; 5; 5; 
+	5; 5; 5; 5; 5; 5; 5; 5; 
+	5; 5; 5; 5; 5; 5; 5; 5; 
+	5; 18; 5; 5; 5; 5; 5; 12; 
+	5; 19; 19; 19; 19; 19; 19; 19; 
+	19; 19; 19; 5; 5; 5; 5; 5; 
+	5; 5; 5; 5; 5; 5; 5; 5; 
+	5; 5; 5; 5; 5; 5; 5; 5; 
+	5; 5; 5; 5; 5; 5; 5; 5; 
+	5; 5; 5; 5; 5; 5; 5; 5; 
+	5; 5; 5; 5; 5; 5; 5; 5; 
+	5; 5; 5; 5; 5; 5; 18; 5; 
+	5; 5; 5; 5; 12; 5; 18; 5; 
+	5; 5; 5; 5; 12; 5; 1; 20; 
+	0
 |] ]
 
 let _compact_duration_trans_targs : int array = Array.concat [ [|
-	2; 0; 3; 2; 8; 10; 12; 7; 
-	4; 7; 5; 6; 9; 9; 11; 11; 
-	13; 13
+	3; 3; 3; 4; 0; 3; 5; 4; 
+	3; 3; 9; 2; 3; 3; 6; 1; 
+	3; 7; 1; 8; 3
 |] ]
 
 let _compact_duration_trans_actions : int array = Array.concat [ [|
-	1; 0; 0; 3; 0; 0; 0; 0; 
-	5; 6; 7; 7; 9; 3; 11; 3; 
-	13; 3
+	1; 2; 3; 6; 0; 7; 8; 9; 
+	10; 11; 0; 0; 12; 13; 14; 15; 
+	16; 17; 0; 17; 18
 |] ]
 
-let _compact_duration_eof_actions : int array = Array.concat [ [|
-	0; 0; 2; 4; 2; 2; 2; 2; 
-	8; 2; 10; 2; 12; 2
+let _compact_duration_to_state_actions : int array = Array.concat [ [|
+	0; 0; 0; 4; 0; 0; 0; 0; 
+	0; 0
 |] ]
 
-let compact_duration_start : int = 1
-let compact_duration_first_final : int = 1
+let _compact_duration_from_state_actions : int array = Array.concat [ [|
+	0; 0; 0; 5; 0; 0; 0; 0; 
+	0; 0
+|] ]
+
+let _compact_duration_eof_trans : int array = Array.concat [ [|
+	0; 1; 1; 0; 6; 14; 6; 6; 
+	6; 21
+|] ]
+
+let compact_duration_start : int = 3
+let compact_duration_first_final : int = 3
 let compact_duration_error : int = 0
 
-let compact_duration_en_main : int = 1
+let compact_duration_en_main : int = 3
 
 type _compact_duration_state = { mutable keys : int; mutable trans : int; }
 exception Goto_match_compact_duration
 exception Goto_again_compact_duration
 exception Goto_eof_trans_compact_duration
 
-# 53 "devkit_ragel.ml.rl"
+# 57 "devkit_ragel.ml.rl"
 
 
 let parse_compact_duration data =
   if data = "" then invalid_arg "parse_compact_duration: empty";
   let cs = ref 0 and p = ref 0 and pe = ref (String.length data) and eof = ref (String.length data) in
-  let n = ref 0 and f = ref 0. and fn = ref 0. in
+  let n = ref 0 and f = ref 0. and fna = ref 0 and fn = ref 0 and ts = ref 0 and te = ref 0 and act = ref 0 in
   let t = ref 0 in
   
-# 538 "devkit_ragel.ml"
+# 519 "devkit_ragel.ml"
 	begin
 	cs.contents <- compact_duration_start;
+	ts.contents <- -1;
+	te.contents <- -1;
+	act.contents <- 0;
 	end;
 
-# 61 "devkit_ragel.ml.rl"
+# 65 "devkit_ragel.ml.rl"
   
-# 545 "devkit_ragel.ml"
+# 529 "devkit_ragel.ml"
 	begin
 	let state = { keys = 0; trans = 0; } in
 	let rec do_start () =
@@ -553,6 +537,15 @@ let parse_compact_duration data =
 	else
 	do_resume ()
 and do_resume () =
+	begin match _compact_duration_from_state_actions.(cs.contents) with
+	| 5 ->
+# 1 "NONE"
+		begin ts.contents <- p.contents;  end;
+	()
+# 546 "devkit_ragel.ml"
+		| _ -> ()
+	end;
+
 	begin try
 	let keys = cs.contents lsl 1 in
 	let inds = _compact_duration_index_offsets.(cs.contents) in
@@ -572,60 +565,101 @@ and do_eof_trans () =
 		raise Goto_again_compact_duration;
 
 	match _compact_duration_trans_actions.(state.trans) with
-	| 3 ->
-# 46 "devkit_ragel.ml.rl"
-		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
-	()
-	| 6 ->
+	| 15 ->
 # 47 "devkit_ragel.ml.rl"
-		begin  f := 0.; fn := 1.;  end;
+		begin  fn := 0; fna := 0  end;
 	()
-	| 7 ->
-# 47 "devkit_ragel.ml.rl"
-		begin  fn := !fn *. 10.; f := !f +. float (Char.code data.[p.contents] - Char.code '0') /. !fn;  end;
+	| 8 ->
+# 1 "NONE"
+		begin te.contents <- p.contents+1;  end;
 	()
-	| 1 ->
-# 46 "devkit_ragel.ml.rl"
-		begin  n := 0;  end;
-# 46 "devkit_ragel.ml.rl"
-		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
-	()
-	| 5 ->
-# 47 "devkit_ragel.ml.rl"
-		begin  f := 0.; fn := 1.;  end;
-# 47 "devkit_ragel.ml.rl"
-		begin  fn := !fn *. 10.; f := !f +. float (Char.code data.[p.contents] - Char.code '0') /. !fn;  end;
-	()
-	| 9 ->
-# 48 "devkit_ragel.ml.rl"
-		begin  t := !t + !n*24*60*60;  end;
-# 46 "devkit_ragel.ml.rl"
-		begin  n := 0;  end;
-# 46 "devkit_ragel.ml.rl"
-		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
+	| 10 ->
+# 49 "devkit_ragel.ml.rl"
+		begin te.contents <- p.contents+1; begin  t := !t + !n*24*60*60;  end end;
 	()
 	| 11 ->
-# 49 "devkit_ragel.ml.rl"
-		begin  t := !t + !n*60*60;  end;
-# 46 "devkit_ragel.ml.rl"
-		begin  n := 0;  end;
-# 46 "devkit_ragel.ml.rl"
-		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
+# 50 "devkit_ragel.ml.rl"
+		begin te.contents <- p.contents+1; begin  t := !t + !n*60*60;  end end;
+	()
+	| 12 ->
+# 52 "devkit_ragel.ml.rl"
+		begin te.contents <- p.contents+1; begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0  end end;
+	()
+	| 2 ->
+# 53 "devkit_ragel.ml.rl"
+		begin te.contents <- p.contents+1; begin  f := !f +. (float(!n) /. 1_000.) +. (float(!fn) /. (1000. *. 10. ** float(!fna)));  end end;
+	()
+	| 3 ->
+# 54 "devkit_ragel.ml.rl"
+		begin te.contents <- p.contents+1; begin  f := !f +. float(!n) /. 1_000_000_000.;  end end;
+	()
+	| 18 ->
+# 51 "devkit_ragel.ml.rl"
+		begin te.contents <- p.contents; p.contents <- p.contents - 1; begin  t := !t + !n*60;  end end;
+	()
+	| 7 ->
+# 52 "devkit_ragel.ml.rl"
+		begin te.contents <- p.contents; p.contents <- p.contents - 1; begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0  end end;
+	()
+	| 1 ->
+# 52 "devkit_ragel.ml.rl"
+		begin begin p.contents <- te.contents - 1 end; begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0  end end;
+	()
+	| 16 ->
+# 47 "devkit_ragel.ml.rl"
+		begin  fn := 0; fna := 0  end;
+# 52 "devkit_ragel.ml.rl"
+		begin te.contents <- p.contents+1; begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0  end end;
 	()
 	| 13 ->
-# 50 "devkit_ragel.ml.rl"
-		begin  t := !t + !n*60;  end;
+# 47 "devkit_ragel.ml.rl"
+		begin  fn := 0; fna := 0  end;
+# 52 "devkit_ragel.ml.rl"
+		begin te.contents <- p.contents; p.contents <- p.contents - 1; begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0  end end;
+	()
+	| 9 ->
+# 1 "NONE"
+		begin te.contents <- p.contents+1;  end;
+# 46 "devkit_ragel.ml.rl"
+		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
+	()
+	| 17 ->
+# 1 "NONE"
+		begin te.contents <- p.contents+1;  end;
+# 47 "devkit_ragel.ml.rl"
+		begin  fn := 10 * !fn + (Char.code data.[p.contents] - Char.code '0') ; fna := !fna + 1;  end;
+	()
+	| 6 ->
+# 1 "NONE"
+		begin te.contents <- p.contents+1;  end;
 # 46 "devkit_ragel.ml.rl"
 		begin  n := 0;  end;
 # 46 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
-# 624 "devkit_ragel.ml"
+	| 14 ->
+# 1 "NONE"
+		begin te.contents <- p.contents+1;  end;
+# 47 "devkit_ragel.ml.rl"
+		begin  fn := 0; fna := 0  end;
+# 47 "devkit_ragel.ml.rl"
+		begin  fn := 10 * !fn + (Char.code data.[p.contents] - Char.code '0') ; fna := !fna + 1;  end;
+	()
+# 649 "devkit_ragel.ml"
 		| _ -> ()
 	with Goto_again_compact_duration -> () end;
 
 	do_again ()
 	and do_again () =
+	begin match _compact_duration_to_state_actions.(cs.contents) with
+	| 4 ->
+# 1 "NONE"
+		begin ts.contents <- -1;  end;
+	()
+# 660 "devkit_ragel.ml"
+		| _ -> ()
+	end;
+
 	match cs.contents with
 	| 0 -> do_out ()
 	| _ ->
@@ -636,32 +670,11 @@ and do_eof_trans () =
 and do_test_eof () =
 	if p.contents = eof.contents then
 	begin try
-	begin match _compact_duration_eof_actions.(cs.contents) with
-	| 8 ->
-# 48 "devkit_ragel.ml.rl"
-		begin  t := !t + !n*24*60*60;  end;
-	()
-	| 10 ->
-# 49 "devkit_ragel.ml.rl"
-		begin  t := !t + !n*60*60;  end;
-	()
-	| 12 ->
-# 50 "devkit_ragel.ml.rl"
-		begin  t := !t + !n*60;  end;
-	()
-	| 2 ->
-# 51 "devkit_ragel.ml.rl"
-		begin  t := !t + !n;  end;
-	()
-	| 4 ->
-# 47 "devkit_ragel.ml.rl"
-		begin  f := 0.; fn := 1.;  end;
-# 51 "devkit_ragel.ml.rl"
-		begin  t := !t + !n;  end;
-	()
-# 663 "devkit_ragel.ml"
-		| _ -> ()
-	end
+	if _compact_duration_eof_trans.(cs.contents) > 0 then
+	begin
+   state.trans <- (_compact_duration_eof_trans.(cs.contents) - 1);
+		raise Goto_eof_trans_compact_duration;
+	end;
 	with Goto_again_compact_duration -> do_again ()
 	| Goto_eof_trans_compact_duration -> do_eof_trans () end
 
@@ -669,5 +682,5 @@ and do_test_eof () =
 	in do_start ()
 	end;
 
-# 62 "devkit_ragel.ml.rl"
+# 66 "devkit_ragel.ml.rl"
   if !cs >= compact_duration_first_final then float !t +. !f else invalid_arg "parse_compact_duration"
