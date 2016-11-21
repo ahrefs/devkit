@@ -49,8 +49,8 @@ let is_ipv4 data =
    num 'd' => { t := !t + !n*24*60*60; };
    num 'h' => { t := !t + !n*60*60; };
    num 'm' => { t := !t + !n*60; };
-   num frac? 's'?  => { f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0 };
-   num frac? 'm' 's' => { f := !f +. (float(!n) /. 1_000.) +. (float(!fn) /. (1000. *. 10. ** float(!fna))); };
+   num frac? 's'?  => { f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0; };
+   num frac? 'm' 's' => { f := !f +. (float(!n) /. 1_000.) +. (float(!fn) /. (1000. *. 10. ** float(!fna))); fn := 0; fna := 0; };
    num 'n' 's' => { f := !f +. float(!n) /. 1_000_000_000.; };
  *|;
  write data;

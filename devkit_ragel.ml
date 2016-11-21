@@ -583,11 +583,11 @@ and do_eof_trans () =
 	()
 	| 12 ->
 # 52 "devkit_ragel.ml.rl"
-		begin te.contents <- p.contents+1; begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0  end end;
+		begin te.contents <- p.contents+1; begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0;  end end;
 	()
 	| 2 ->
 # 53 "devkit_ragel.ml.rl"
-		begin te.contents <- p.contents+1; begin  f := !f +. (float(!n) /. 1_000.) +. (float(!fn) /. (1000. *. 10. ** float(!fna)));  end end;
+		begin te.contents <- p.contents+1; begin  f := !f +. (float(!n) /. 1_000.) +. (float(!fn) /. (1000. *. 10. ** float(!fna))); fn := 0; fna := 0;  end end;
 	()
 	| 3 ->
 # 54 "devkit_ragel.ml.rl"
@@ -599,23 +599,23 @@ and do_eof_trans () =
 	()
 	| 7 ->
 # 52 "devkit_ragel.ml.rl"
-		begin te.contents <- p.contents; p.contents <- p.contents - 1; begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0  end end;
+		begin te.contents <- p.contents; p.contents <- p.contents - 1; begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0;  end end;
 	()
 	| 1 ->
 # 52 "devkit_ragel.ml.rl"
-		begin begin p.contents <- te.contents - 1 end; begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0  end end;
+		begin begin p.contents <- te.contents - 1 end; begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0;  end end;
 	()
 	| 16 ->
 # 47 "devkit_ragel.ml.rl"
 		begin  fn := 0; fna := 0  end;
 # 52 "devkit_ragel.ml.rl"
-		begin te.contents <- p.contents+1; begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0  end end;
+		begin te.contents <- p.contents+1; begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0;  end end;
 	()
 	| 13 ->
 # 47 "devkit_ragel.ml.rl"
 		begin  fn := 0; fna := 0  end;
 # 52 "devkit_ragel.ml.rl"
-		begin te.contents <- p.contents; p.contents <- p.contents - 1; begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0  end end;
+		begin te.contents <- p.contents; p.contents <- p.contents - 1; begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0;  end end;
 	()
 	| 9 ->
 # 1 "NONE"
