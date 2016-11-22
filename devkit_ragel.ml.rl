@@ -52,10 +52,7 @@ let is_ipv4 data =
    (num 'd' %{ t := !t + !n*24*60*60;} )?
    (num 'h' %{ t := !t + !n*60*60; } )?
    (num 'm' %{ t := !t + !n*60; } )?
-   ((num frac?'s' %second )?
-   (num frac? 'm' 's' %millisecond )?
-   (num 'n' 's' %nanosecond )?)?
-   (num frac? %second )?;
+   ((num frac?'s' %second )? (num frac? 'm' 's' %millisecond )? (num 'n' 's' %nanosecond )? | (num frac? %second )?);
  write data;
 }%%
 

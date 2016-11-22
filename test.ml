@@ -209,6 +209,11 @@ let () = test "Time.compact_duration" begin fun () ->
     t n s;
     assert_equal ~printer:id s (Time.compact_duration n);
   in
+  let fail s =
+    match Time.of_compact_duration s with
+    | exception _ -> ()
+    | _ -> assert_failure s
+  in
   tt 10. "10s";
   t 70. "70s";
   tt 70. "1m10s";
@@ -239,6 +244,8 @@ let () = test "Time.compact_duration" begin fun () ->
   t 1.999 "1s999ms";
   t 1.999 "1.1s800.9ms98100000ns";
   t 93784.005000006 "1d2h3m4s5ms6ns";
+  fail "1ms2s";
+  fail "1s2";
 end
 
 let () = test "Action.stable_partition" begin fun () ->
