@@ -182,9 +182,9 @@ let round_to_midnight timestamp =
 let is_same_day timestamp =
   Time.now () -. Time.days 1 < timestamp
 
-let null = object method event _j = () method write () = () method reload () = () end
+let null = object method event _j = () method write () = () method reload () = () method autoflush () = () end
 
-let log ?name () =
+let log ?autoflush ?name () =
   let name = match name with None -> get_basename () | Some _ -> name in
   match name with
   | None -> null
@@ -196,6 +196,21 @@ let log ?name () =
         val mutable timestamp = round_to_midnight @@ Time.now ()
         val mutable out = out
         val nr = ref 0
+
+        method autoflush = match autoflush with
+          | None -> id
+          | Some delay ->
+          let autoflush_cond = Lwt_condition.create () in
+          fun () ->
+          Lwt_condition.signal autoflush_cond ();
+          if !nr <= 0 then () else
+            Lwt.async @@ fun () ->
+            Lwt.pick
+              [
+                Lwt_condition.wait autoflush_cond;
+                (let%lwt () = Lwt_unix.sleep delay in flush out; nr := 0; Lwt.return ());
+              ]
+
         method reload () =
           try
             log #info "rotate log";
@@ -220,7 +235,8 @@ let log ?name () =
         method event (j : (string * J.json) list) =
           self#try_rotate ();
           let json = `Assoc (common_fields () @ j) in
-          write_json out nr json
+          write_json out nr json;
+          self#autoflush ()
       end
 
 let logstash_err = Lazy.from_fun @@ log ~name:"log/errors"
