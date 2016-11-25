@@ -196,20 +196,22 @@ let log ?autoflush ?name () =
         val mutable timestamp = round_to_midnight @@ Time.now ()
         val mutable out = out
         val nr = ref 0
+        val mutable activity = false
 
-        method autoflush = match autoflush with
-          | None -> id
-          | Some delay ->
-          let autoflush_cond = Lwt_condition.create () in
-          fun () ->
-          Lwt_condition.signal autoflush_cond ();
-          if !nr <= 0 then () else
-            Lwt.async @@ fun () ->
-            Lwt.pick
-              [
-                Lwt_condition.wait autoflush_cond;
-                (let%lwt () = Lwt_unix.sleep delay in flush out; nr := 0; Lwt.return ());
-              ]
+        method autoflush =
+          let l = lazy (
+            match autoflush with
+            | None -> ()
+            | Some delay ->
+              let rec l () =
+                activity <- false;
+                let%lwt () = Lwt_unix.sleep delay in
+                if !nr > 0 && not activity then (flush out; nr := 0);
+                l ()
+              in
+              Lwt.async l)
+          in
+          fun () -> Lazy.force l
 
         method reload () =
           try
@@ -233,10 +235,12 @@ let log ?autoflush ?name () =
           get () |> List.iter (write_json out nr)
 
         method event (j : (string * J.json) list) =
+          self#autoflush ();
           self#try_rotate ();
           let json = `Assoc (common_fields () @ j) in
           write_json out nr json;
-          self#autoflush ()
+          activity <- true
+
       end
 
 let logstash_err = Lazy.from_fun @@ log ~name:"log/errors"
