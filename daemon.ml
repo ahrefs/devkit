@@ -25,7 +25,8 @@ exception ShouldExit
 
 let signal_exit =
   let do_lwt = lazy (Lwt.wakeup_later signal_exit_lwt ()) in
-  fun () -> Lazy.force do_lwt; should_exit_ := true
+  (* invariant: should_exit_ = (Lwt.state should_exit_lwt = Lwt.Return) *)
+  fun () -> should_exit_ := true; Lazy.force do_lwt
 
 (** raise [ShouldExit] if [should_exit] condition is set, otherwise do nothing *)
 let break () = if !should_exit_ then raise ShouldExit
