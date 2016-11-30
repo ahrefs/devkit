@@ -97,6 +97,7 @@ let after s sep = try String.(let i = find s sep + length sep in sub s i (length
   [divide s sep] is equal to [String.split] but doesn't throw if [sep] is not a substring of [s]
 *)
 let divide s sep = try String.split s sep with Invalid_string -> s, ""
+let dividec s sep = try splitc s sep with Not_found -> s, ""
 
 (** remove prefix from string if present *)
 let drop_prefix s pre = if String.starts_with s pre then slice s ~first:(String.length pre) else s

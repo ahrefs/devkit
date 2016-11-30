@@ -22,12 +22,12 @@ let urldecode s = try Netencoding.Url.decode ~plus:true s with _ -> s
 
 let htmlencode = Netencoding.Html.encode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
 let htmldecode = Netencoding.Html.decode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
-let make_url_args = String.concat "&" $ List.map (fun (k, v) -> urlencode k ^ "=" ^ urlencode v)
+let make_url_args = String.concat "&" $ List.map (function (k, "") -> urlencode k | (k,v) -> urlencode k ^ "=" ^ urlencode v)
 
 (** Minimum strictness, Neturl will fail on malformed parameters in url *)
 let parse_url_args args =
-  String.nsplit args "&" |>
-  List.filter_map (fun s -> try String.split s "=" |> apply2 urldecode |> some with _ -> None)
+  Stre.nsplitc_rev args '&' |>
+  List.rev_map (fun s -> Stre.dividec s '=' |> apply2 urldecode)
 
 let url_get_args url = try String.split url "?" |> snd |> parse_url_args with _ -> []
 
