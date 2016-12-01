@@ -59,6 +59,11 @@ let may_int = make_arg int_option
 let may_str = make_arg str_option
 let positive_int = make_arg (test_int (fun x -> x > 0))
 
+let bool name var desc =
+  "-"^name,
+  Arg.Set var,
+  (if desc = "" then sprintf " enable %s" name else desc)
+
 let usage_header = "Available options are:"
 
 let align ?(sep="#") args =
