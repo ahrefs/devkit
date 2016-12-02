@@ -37,6 +37,7 @@ type config =
     reuseport : bool;
     nodelay : bool;
     strict_args : bool;
+      (** default false, if enabled - will in particular fail on "/path?arg1&arg2", why would anyone want that? *)
   }
 
 let default =
@@ -58,7 +59,7 @@ let default =
     yield = true;
     reuseport = false;
     nodelay = false;
-    strict_args = true;
+    strict_args = false;
   }
 
 include Httpev_common
