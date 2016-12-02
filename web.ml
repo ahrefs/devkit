@@ -22,7 +22,8 @@ let urldecode s = try Netencoding.Url.decode ~plus:true s with _ -> s
 
 let htmlencode = Netencoding.Html.encode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
 let htmldecode = Netencoding.Html.decode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
-let make_url_args = String.concat "&" $ List.map (function (k, "") -> urlencode k | (k,v) -> urlencode k ^ "=" ^ urlencode v)
+(* TODO uncomment when httpev becomes less strict everywhere *)
+let make_url_args = String.concat "&" $ List.map (function (* (k, "") -> urlencode k | *) (k,v) -> urlencode k ^ "=" ^ urlencode v)
 
 (** Minimum strictness, Neturl will fail on malformed parameters in url *)
 let parse_url_args args =
