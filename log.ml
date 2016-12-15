@@ -39,7 +39,7 @@ open Prelude
 (** Global logger state *)
 module State = struct
 
-  let process_name = ref "DEVKIT"
+  let process_name = ref @@ String.uppercase @@ Pid.name @@ Pid.self ()
   let all = Hashtbl.create 10
   let default_level = ref (`Info : Logger.level)
 
