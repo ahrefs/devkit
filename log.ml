@@ -58,7 +58,7 @@ module State = struct
     | Some name -> Logger.set_filter (facility name) level
 
   let set_process_name name =
-    process_name := name
+    process_name := (String.uppercase name)
 
   let read_env_config () =
     let facilities =
