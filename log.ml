@@ -39,7 +39,6 @@ open Prelude
 (** Global logger state *)
 module State = struct
 
-  let process_name = ref @@ String.uppercase @@ Pid.name @@ Pid.self ()
   let all = Hashtbl.create 10
   let default_level = ref (`Info : Logger.level)
 
@@ -57,10 +56,12 @@ module State = struct
     | None -> default_level := level; Hashtbl.iter (fun _ x -> Logger.set_filter x level) all
     | Some name -> Logger.set_filter (facility name) level
 
-  let set_process_name name =
-    process_name := String.uppercase name
-
-  let read_env_config ?(process_name=(!process_name)) () =
+  let read_env_config ?process_name () =
+    let process_name =
+      match process_name with
+      | None -> Pid.name @@ Pid.self ()
+      | Some name -> name
+    in
     let process_name = String.uppercase process_name in
     let facilities =
       try
@@ -76,7 +77,6 @@ module State = struct
         set_filter ~name level
       with
       | Not_found | Failure _ -> ()
-
     end facilities
 
   let output_ch ch =
@@ -166,7 +166,17 @@ include State.M
 
 let facility = State.facility
 let set_filter = State.set_filter
-let set_process_name = State.set_process_name
+
+(** Update facilities configuration from the environment.
+
+    By default, it reads the configuration in the environment variable
+    [PROCESS_NAME_LOG]. [PROCESS_NAME] can be overwritten using the
+    optionnal [process_name] parameter. By default [PROCESS_NAME] is
+    taken from [Pid.name]. The variable name is always uppercase.
+
+    The configuration must be a list of [NAME=LEVEL] values separated
+    by commas. Any invalid level will be skipped.
+*)
 let read_env_config = State.read_env_config
 
 (**
