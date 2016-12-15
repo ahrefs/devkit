@@ -91,6 +91,7 @@ let manage () =
   end;
   Log.reopen !logfile; (* immediately after fork *)
   Log.set_rotation !lrot;
+  Log.read_env_config ~process_name:(Pid.name @@ Pid.self ()) ();
   Option.may Nix.manage_pidfile !pidfile; (* write pidfile after fork! *)
   if Option.is_some !logfile then
   begin
