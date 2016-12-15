@@ -60,10 +60,10 @@ module State = struct
   let set_process_name name =
     process_name := (String.uppercase name)
 
-  let read_env_config () =
+  let read_env_config ?(process_name=(!process_name)) () =
     let facilities =
       try
-        let env = Sys.getenv (!process_name ^ "_LOG") in
+        let env = Sys.getenv (process_name ^ "_LOG") in
         Stre.nsplitc env ','
       with Not_found ->
         []
