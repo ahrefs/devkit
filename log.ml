@@ -39,6 +39,7 @@ open Prelude
 (** Global logger state *)
 module State = struct
 
+  let process_name = ref "DEVKIT"
   let all = Hashtbl.create 10
   let default_level = ref (`Info : Logger.level)
 
@@ -55,6 +56,27 @@ module State = struct
     match name with
     | None -> default_level := level; Hashtbl.iter (fun _ x -> Logger.set_filter x level) all
     | Some name -> Logger.set_filter (facility name) level
+
+  let set_process_name name =
+    process_name := name
+
+  let read_env_config () =
+    let facilities =
+      try
+        let env = Sys.getenv (!process_name ^ "_LOG") in
+        Stre.nsplitc env ','
+      with Not_found ->
+        []
+    in
+    List.iter begin fun facility ->
+      try
+        let name, level = Stre.splitc facility '=' in
+        let level = Logger.level level in
+        set_filter ~name level
+      with
+      | Not_found | Failure _ -> ()
+
+    end facilities
 
   let output_ch ch =
     fun str -> try output_string ch str; flush ch with _ -> () (* logging never fails, most probably ENOSPC *)
@@ -143,6 +165,8 @@ include State.M
 
 let facility = State.facility
 let set_filter = State.set_filter
+let set_process_name = State.set_process_name
+let read_env_config = State.read_env_config
 
 (**
   param [lines]: whether to split multiline message as separate log lines (default [true])
