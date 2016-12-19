@@ -56,6 +56,29 @@ module State = struct
     | None -> default_level := level; Hashtbl.iter (fun _ x -> Logger.set_filter x level) all
     | Some name -> Logger.set_filter (facility name) level
 
+  let read_env_config ?process_name () =
+    let process_name =
+      match process_name with
+      | None -> Pid.name @@ Pid.self ()
+      | Some name -> name
+    in
+    let process_name = String.uppercase process_name in
+    let facilities =
+      try
+        let env = Sys.getenv (process_name ^ "_LOG") in
+        Stre.nsplitc env ','
+      with Not_found ->
+        []
+    in
+    List.iter begin fun facility ->
+      try
+        let name, level = Stre.splitc facility '=' in
+        let level = Logger.level level in
+        set_filter ~name level
+      with
+      | Not_found | Failure _ -> ()
+    end facilities
+
   let output_ch ch =
     fun str -> try output_string ch str; flush ch with _ -> () (* logging never fails, most probably ENOSPC *)
 
@@ -143,6 +166,18 @@ include State.M
 
 let facility = State.facility
 let set_filter = State.set_filter
+
+(** Update facilities configuration from the environment.
+
+    By default, it reads the configuration in the environment variable
+    [PROCESS_NAME_LOG]. [PROCESS_NAME] can be overwritten using the
+    optionnal [process_name] parameter. By default [PROCESS_NAME] is
+    taken from [Pid.name]. The variable name is always uppercase.
+
+    The configuration must be a list of [NAME=LEVEL] values separated
+    by commas. Any invalid level will be skipped.
+*)
+let read_env_config = State.read_env_config
 
 (**
   param [lines]: whether to split multiline message as separate log lines (default [true])
