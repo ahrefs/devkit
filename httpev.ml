@@ -793,7 +793,11 @@ let answer_forked ?debug srv req answer k =
     begin match Lwt_unix.fork () with
     | 0 ->
       Exn.suppress Unix.close srv.listen_socket;
-      answer_blocking ?debug srv req answer k;
+      begin try
+          answer_blocking ?debug srv req answer k;
+        with exn ->
+          log #error ~exn "unhandled exception in continuation callback"
+      end;
       U.sys_exit 0
     | -1 -> Exn.fail "fork failed : %s" (show_request req)
     | pid ->
