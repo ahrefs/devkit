@@ -159,7 +159,7 @@ let failed reason s =
   | NotAcceptable -> "Not Acceptable"
   in
   let s = Stre.shorten 1024 s in
-  raise (Parse (reason, sprintf "%s : %s" name s))
+  raise (Parse (reason, sprintf "%s : %S" name s))
 
 let get_content_length headers =
   match Exn.catch (List.assoc "content-length") headers with
