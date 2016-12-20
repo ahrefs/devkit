@@ -54,7 +54,7 @@ let write_pidfile path =
   end
 
 let read_pidfile path =
-  Control.with_open_in_txt path (fun ch -> Scanf.fscanf ch " %u " Prelude.id)
+  Control.with_open_in_txt path (fun ch -> let ib = Scanf.Scanning.from_channel ch in Scanf.bscanf ib " %u " Prelude.id)
 
 let probe_pidfile path =
   if Sys.file_exists path then

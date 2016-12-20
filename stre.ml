@@ -133,7 +133,7 @@ let istarts_with s ?(pos=0) prefix =
   try
   for i = 0 to String.length prefix - 1 do
     let c1 = s.[pos + i] and c2 = prefix.[i] in
-    if c1 <> c2 && Char.lowercase c1 <> Char.lowercase c2 then raise Not_found
+    if c1 <> c2 && Char.lowercase_ascii c1 <> Char.lowercase_ascii c2 then raise Not_found
   done; true
   with Not_found -> false
 
