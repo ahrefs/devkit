@@ -97,7 +97,6 @@ module State = struct
   let log_ch = stderr
   let () = assert (Unix.descr_of_out_channel stderr = Unix.stderr)
   let base_name = ref ""
-  let need_rotation = ref (fun _ -> false)
 
   let hook = ref (fun _ _ _ -> ())
 
@@ -125,40 +124,6 @@ module State = struct
         ()
     with
       e -> M.warn (facility self) "reopen_log_ch(%s) failed : %s" file (Printexc.to_string e)
-
-  let find_possible_rotation () =
-    let i = ref 0 in
-    while Sys.file_exists (sprintf "%s.%d" !base_name !i) do incr i done;
-    !i
-
-  let rollback () =
-    for i = 2 to 10 do
-      try Unix.rename (sprintf "%s.%d" !base_name i) (sprintf "%s.%d" !base_name (i - 1)) with _ -> ()
-    done;
-    ()
-
-  let do_rotation () =
-    if !base_name <> "" then
-    begin
-      let i = find_possible_rotation () in
-      if i > 10 then rollback ();
-      let i = min i 10 in
-      Sys.rename !base_name (sprintf "%s.%d" !base_name i);
-      reopen_log_ch ~self_call:true !base_name
-    end
-
-  let check_rotation () =
-    if !base_name <> "" then
-    begin
-      let stats = Unix.fstat (Unix.descr_of_out_channel log_ch) in
-      (!need_rotation stats) && (stats.Unix.st_kind = Unix.S_REG)
-    end else false (* no rotation with empty basename*)
-
-  let rotation_i = ref 0
-
-  let rotate () = incr rotation_i; if !rotation_i > 1_000 then begin rotation_i:=0; if check_rotation () then do_rotation () end
-
-  let set_rotation f = need_rotation := f
 
 end
 
@@ -205,7 +170,6 @@ let make_s output_line =
   in
   fun ?exn ?(lines=true) ?backtrace ?saved_backtrace s ->
     try
-      State.rotate ();
       match exn with
       | None -> output lines facil s
       | Some exn ->
@@ -263,18 +227,5 @@ let reopen = function
 | None -> ()
 | Some name -> State.reopen_log_ch name
 
-(** set log rotation **)
-type rotation =
-| No_rotation
-| Days_rotation of int
-| Size_rotation of int
-| OnceAday_rotation
-
 let log_start = ref (Time.now())
 let cur_size = ref 0
-
-let set_rotation = function
-| No_rotation -> ()
-| Days_rotation d -> State.set_rotation (fun _ -> let cur_time = Time.now() in if cur_time -. !log_start > (float d) *. 60. *. 60. then (log_start := Time.now();true) else false)
-| Size_rotation s -> State.set_rotation (fun stats -> stats.Unix.st_size > s * 1024 * 1024)
-| OnceAday_rotation -> State.set_rotation (fun _ -> let get_day s = (Unix.gmtime s).Unix.tm_yday in if get_day (Time.now()) <> get_day (!log_start) then (log_start := Time.now(); true) else false)

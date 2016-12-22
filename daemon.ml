@@ -8,7 +8,6 @@ let logfile = ref None
 let pidfile = ref None
 let runas = ref None
 let foreground = ref false
-let logrotation = ref None
 
 let managed = ref false
 
@@ -50,7 +49,6 @@ let get_args () =
      "-loglevel", Arg.String set_loglevel, " ([<facil>=]debug|info|warn|error[,])+");
     ExtArg.may_str "logfile" logfile "<file> Log file";
     ExtArg.may_str "pidfile" pidfile "<file> PID file";
-    ExtArg.may_str "logrotation" logrotation "t<time_hours>|s<size_MB|onceaday> log rotation options";
     "-runas",
       Arg.String (fun name -> try runas := Some (Unix.getpwnam name) with exn -> Exn.fail ~exn "runas: unknown user %s" name),
       "<user> run as specified user";
@@ -63,17 +61,6 @@ let manage () =
   match !managed with
   | true -> () (* be smart *)
   | false ->
-  (* check logrotation param before daemonize *)
-  let lrot = ref Log.No_rotation in
-  begin match !logfile, !logrotation with
-  | None, Some _ -> Exn.fail "log rotation cannot be used without specified logfile"
-  | _, None -> ()
-  | _, Some s when String.length s = 0 -> Exn.fail "No rotation format specified, use manual for more info"
-  | Some _, Some s when s.[0] = 't' -> lrot := Log.Days_rotation (int_of_string (String.sub s 1 (String.length s - 1)))
-  | Some _, Some s when s.[0] = 's' -> lrot := Log.Size_rotation (int_of_string (String.sub s 1 (String.length s - 1)))
-  | Some _, Some "onceaday" -> lrot := Log.OnceAday_rotation
-  | _, Some s -> Exn.fail "bad log rotation format %s, use d<days> or s<size MB>" s
-  end;
 (*
   this will fail if files don't exists :(
   (* fail before fork if something is wrong *)
@@ -90,7 +77,6 @@ let manage () =
     U.setregid gid gid;
   end;
   Log.reopen !logfile; (* immediately after fork *)
-  Log.set_rotation !lrot;
   Log.read_env_config ();
   Option.may Nix.manage_pidfile !pidfile; (* write pidfile after fork! *)
   if Option.is_some !logfile then
