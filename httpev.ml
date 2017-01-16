@@ -204,22 +204,13 @@ let make_request_exn ~line1 ~headers ~body c =
       with
         _ -> failed Version version
     in
-    let meth = match meth with
-    | "GET" -> `GET
-    | "POST" -> `POST
-    | "HEAD" -> `HEAD
-    | _ -> failed Method meth
-    in
+    let meth = try method_of_string meth with Failure _ -> failed Method meth in
     let (path,args) = try String.split url "?" with _ -> url,"" in
     if version = (1,1) && not (List.mem_assoc "host" headers) then failed Header "Host is required for HTTP/1.1";
     let decode_args = if c.server.config.strict_args then decode_args else Web.parse_url_args $ String.strip in
     let args = decode_args args in
-    let args = match meth with
-    | `POST ->
-      let cont_type = try List.assoc "content-type" headers with _ -> "" in
-      if cont_type = "application/x-www-form-urlencoded" then List.append args @@ decode_args body else args
-    | `GET | `HEAD -> args
-    in
+    let cont_type = try List.assoc "content-type" headers with _ -> "" in
+    let args = if cont_type = "application/x-www-form-urlencoded" then List.append args @@ decode_args body else args in
     let encoding = try acceptable_encoding headers with Failure s -> failed NotAcceptable s in
     {
       url; path; args; headers; body; meth;

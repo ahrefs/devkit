@@ -8,7 +8,7 @@ type request = { addr : Unix.sockaddr;
                  args : (string * string) list;
                  conn : Time.t; (* time when client connected *)
                  recv : Time.t; (* time when client request was fully read *)
-                 meth : [`GET | `POST | `HEAD ];
+                 meth : [`GET | `POST | `PUT | `PATCH | `DELETE | `HEAD ];
                  headers : (string * string) list;
                  body : string;
                  version : int * int; (* client HTTP version *)
@@ -46,7 +46,19 @@ type reply = extended_reply_status reply'
 let show_method = function
   | `GET -> "GET"
   | `POST -> "POST"
+  | `PUT -> "PUT"
+  | `PATCH -> "PATCH"
+  | `DELETE -> "DELETE"
   | `HEAD -> "HEAD"
+
+let method_of_string = function
+  | "GET" -> `GET
+  | "POST" -> `POST
+  | "PUT" -> `PUT
+  | "PATCH" -> `PATCH
+  | "DELETE" -> `DELETE
+  | "HEAD" -> `HEAD
+  | s -> Exn.fail "method_of_string %s" s
 
 let show_client_addr req =
   let orig = Nix.show_addr req.addr in
