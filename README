@@ -8,9 +8,10 @@ Released under the terms of LGPL-2.1 with OCaml linking exception.
 Dependencies
 ============
 
-For updating ragel-generated code :
+To update ragel-generated code :
 
   aptitude install ragel
+  make -B gen
 
-For OCaml dependencies see `opam/opam`
-External dependencies : opam install -e debian devkit
+For OCaml dependencies see `opam`
+External dependencies : `opam list -s -e debian --rec --required-by=devkit`

@@ -22,6 +22,7 @@ remove: [
 ]
 depends: [
   "ocamlfind" {build}
+  "ocamlbuild" {build}
   "camlp4" {build}
   ("extlib" {>= "1.6.1"} | "extlib-compat" {>= "1.6.1"})
   "ounit"
