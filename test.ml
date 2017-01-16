@@ -277,7 +277,7 @@ let () = test "Action.stable_partition" begin fun () ->
   t [1;2;3] 1;
   t [] 0;
   t [] 1;
-  for i = 1 to 10 do
+  for _ = 1 to 10 do
     t (List.init (Random.int 10_000) id) (Random.int 100)
   done;
 end

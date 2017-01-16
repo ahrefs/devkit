@@ -35,14 +35,14 @@ let stop ?wait:_ (qi,_,_) = Mtq.clear qi
 
 let create f n =
   let qi = Mtq.create () and qo = Mtq.create () in
-  for i = 1 to n do
+  for _ = 1 to n do
     ignore (Thread.create (fun () -> worker qi f qo) ())
   done;
   qi,qo,n
 
 let perform (qi,qo,n) ?autoexit:_ e f =
   let active = ref 0 in
-  for i = 1 to n do
+  for _ = 1 to n do
     match Enum.get e with
     | Some x -> Mtq.put qi x; incr active
     | None -> ()
