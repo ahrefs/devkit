@@ -159,6 +159,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
   let with_curl f = bracket (return @@ Curl.init ()) (fun h -> Curl.cleanup h; return_unit) f
   let with_curl_cache f = bracket (return @@ CurlCache.get ()) (fun h -> CurlCache.release h; return_unit) f
 
+  (* deprecated *)
   let http_gets ?(setup=ignore) ?max_size ?(check=(fun _ -> true)) ?(result=(fun _ _ -> return_unit)) url =
     with_curl_cache begin fun h ->
       Curl.set_url h url;
@@ -374,6 +375,7 @@ let http_get_io_lwt ?body ?timeout ?(setup=ignore) ?(check=(fun h -> Curl.get_ht
   | exn -> Exn_lwt.fail ~exn "http_get_io_lwt (%s)" (inner_error_msg ())
 
 (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
+(* deprecated! use http_request or http_query instead *)
 let http_do ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (action:http_action_old) url =
   let open Curl in
   let post ?req h ct body =
