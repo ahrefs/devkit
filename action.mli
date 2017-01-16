@@ -1,3 +1,4 @@
+(** miscellaneous *)
 
 (** [period p f]
 
@@ -259,7 +260,7 @@ val args : string list
 
 (** Misc. *)
 
-(** name01 name02 name09 name10 name11 -> name0{1..2} name{09..11} *)
+(** [name01 name02 name09 name10 name11] -> [name0{1..2} name{09..11}] *)
 val shell_sequence : string list -> string list
 
 val hexdump : string -> string
