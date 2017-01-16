@@ -17,4 +17,3 @@ true: bin_annot, annot, debug, thread, package(threads), warn_A, warn_e, warn(-3
 "devkit_ragel.ml": warn(-38)
 <memory_gperftools.cm*>: package(gperftools)
 <network.ml*> or <logstash.ml*> or <action.ml*>: package(yojson)
-"logstash.mli" or <network.ml*>:  package(result)

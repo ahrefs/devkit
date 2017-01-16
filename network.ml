@@ -114,5 +114,5 @@ let private_network_ip () =
 let ipv4_to_yojson ip = `String (string_of_ipv4 ip)
 let ipv4_of_yojson j =
   match j with
-  | `String i -> begin try Result.Ok (ipv4_of_string_exn i) with exn -> Result.Error (Printf.sprintf "ipv4: cannot parse %S (%s)" i (Exn.to_string exn)) end
-  | _ -> Result.Error "ipv4: expected string"
+  | `String i -> begin try Ok (ipv4_of_string_exn i) with exn -> Error (Printf.sprintf "ipv4: cannot parse %S (%s)" i (Exn.to_string exn)) end
+  | _ -> Error "ipv4: expected string"

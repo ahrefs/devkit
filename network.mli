@@ -16,7 +16,7 @@ val ipv4_of_int : int -> ipv4
 val int_of_ipv4 : ipv4 -> int
 val class_c : ipv4 -> ipv4
 val ipv4_to_yojson : ipv4 -> Yojson.Safe.json
-val ipv4_of_yojson : Yojson.Safe.json -> (ipv4, string) Result.result
+val ipv4_of_yojson : Yojson.Safe.json -> (ipv4, string) result
 
 module IPv4 : sig
 type t
