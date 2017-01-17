@@ -247,3 +247,13 @@ let unlimit_soft r = let (_,hard) = U.getrlimit r in U.setrlimit r ~soft:hard ~h
 let raise_limits () =
   unlimit_soft U.RLIMIT_CORE;
   unlimit_soft U.RLIMIT_NOFILE
+
+let connect fd sockaddr =
+  let open Unix in
+  try connect fd sockaddr with Unix_error (e, f, "") -> raise (Unix_error (e, f, show_addr sockaddr))
+
+let connect_lwt fd sockaddr =
+  let open Lwt_unix in
+  Lwt.catch
+    (fun () -> connect fd sockaddr)
+    (function Unix_error (e, f, "") -> Lwt.fail (Unix_error (e, f, show_addr sockaddr)) | exn -> Lwt.fail exn)
