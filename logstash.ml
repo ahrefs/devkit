@@ -70,7 +70,7 @@ let common_fields () =
   [
     "timestamp_ms", `Int (int_of_float @@ Time.now () *. 1000.);
     "pid", `String (Pid.show_self ());
-    "toolname", `String (Pid.self ()).Pid.name;
+    "from", `String (Pid.self ()).Pid.name;
   ]
 
 let get () =
