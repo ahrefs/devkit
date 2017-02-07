@@ -74,6 +74,14 @@ let string_of_http_action : http_action -> string = function
   | `PATCH -> "PATCH"
   | `DELETE -> "DELETE"
 
+let http_action_of_string : string -> http_action = function
+  | "GET" -> `GET
+  | "POST" -> `POST
+  | "PUT" -> `PUT
+  | "PATCH" -> `PATCH
+  | "DELETE" -> `DELETE
+  | s -> Exn.fail "http_action_of_string %S" s
+
 module type IO_TYPE = sig
   type 'a t
   val return : 'a -> 'a t
