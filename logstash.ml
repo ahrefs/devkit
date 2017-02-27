@@ -183,7 +183,7 @@ let round_to_midnight timestamp =
 let is_same_day timestamp =
   Time.now () -. Time.days 1 < timestamp
 
-let null = object method event _j = () method write () = () method reload () = () method autoflush () = () end
+let null = object method event _j = () method write () = () method reload () = () end
 
 let log ?autoflush ?name () =
   let name = match name with None -> get_basename () | Some _ -> name in
@@ -193,33 +193,29 @@ let log ?autoflush ?name () =
     match open_logstash_exn stat_basename with
     | exception exn -> log #warn ~exn "disabling output"; null
     | out ->
+      let out = ref out in
+      let nr = ref 0 in
+      let activity = ref false in
+      begin match autoflush with
+      | None -> ()
+      | Some delay ->
+        let rec l () =
+          let%lwt () = Lwt_unix.sleep delay in
+          if !nr > 0 && not !activity then (flush !out; nr := 0);
+          activity := false;
+          l ()
+        in
+        Lwt.async l
+      end;
       object(self)
         val mutable timestamp = round_to_midnight @@ Time.now ()
-        val mutable out = out
-        val nr = ref 0
-        val mutable activity = false
-
-        method autoflush =
-          let l = lazy (
-            match autoflush with
-            | None -> ()
-            | Some delay ->
-              let rec l () =
-                activity <- false;
-                let%lwt () = Lwt_unix.sleep delay in
-                if !nr > 0 && not activity then (flush out; nr := 0);
-                l ()
-              in
-              Lwt.async l)
-          in
-          fun () -> Lazy.force l
 
         method reload () =
           try
             log #info "rotate log";
             let new_out = open_logstash_exn stat_basename in
-            let prev = out in
-            out <- new_out;
+            let prev = !out in
+            out := new_out;
             nr := 0;
             timestamp <- round_to_midnight @@ Time.now ();
             flush prev;
@@ -233,14 +229,13 @@ let log ?autoflush ?name () =
 
         method write () =
           self#try_rotate ();
-          get () |> List.iter (write_json out nr)
+          get () |> List.iter (write_json !out nr)
 
         method event (j : (string * J.json) list) =
-          self#autoflush ();
           self#try_rotate ();
           let json = `Assoc (common_fields () @ j) in
-          write_json out nr json;
-          activity <- true
+          write_json !out nr json;
+          activity := true
 
       end
 

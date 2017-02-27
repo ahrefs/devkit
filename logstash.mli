@@ -7,7 +7,7 @@ val setup : ?pause:Time.t -> Libevent.event_base -> unit
 val setup_lwt : ?pause:Time.t -> unit -> unit
 
 (* Setup logger for a stream of events *)
-val log : ?autoflush:float -> ?name:string -> unit -> < event : (string * Yojson.json) list -> unit; write : unit -> unit; reload : unit -> unit; autoflush : unit -> unit >
+val log : ?autoflush:float -> ?name:string -> unit -> < event : (string * Yojson.json) list -> unit; write : unit -> unit; reload : unit -> unit; >
 
 val setup_error_log : unit -> unit
 
