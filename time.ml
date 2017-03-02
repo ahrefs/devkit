@@ -165,8 +165,8 @@ let to_rfc2822 secs =
 
 (** @param cut - only show this number of most significant components *)
 let show_duration ?cut t =
-  let factors = [60; 60; 24; 30 ] in
-  let names = ["secs"; "min"; "hours"; "days"; "months";] in
+  let factors = [60; 60; 24; 365 ] in
+  let names = ["sec"; "min"; "hour"; "day"; "year";] in
   let rec loop t acc = function
   | [] -> List.rev (t :: acc)
   | n::tl -> loop (t/n) (t mod n :: acc) tl
@@ -177,7 +177,7 @@ let show_duration ?cut t =
   loop (int_of_float t) [] factors |> List.combine names |> List.rev |>
   List.dropwhile (fun (_,x) -> x = 0) |>
   (match cut with Some n -> List.take n | None -> id) |>
-  List.map (fun (n,x) -> sprintf "%u %s" x n) |> String.concat " "
+  List.map (fun (n,x) -> sprintf "%u %s%s" x n (if x <> 1 then "s" else "")) |> String.concat " "
 
 let duration_str = show_duration
 

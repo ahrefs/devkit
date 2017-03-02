@@ -207,6 +207,13 @@ let () = test "Network.ipv4_matches" begin fun () ->
   t "255.255.255.254" "255.255.255.255/32" false
 end
 
+let () = test "Time.show_duration" begin fun () ->
+  let t n s = assert_equal ~printer:id s (Time.show_duration n) in
+  t (Time.days 365) "1 year 0 days 0 hours 0 mins 0 secs";
+  t (Time.days 10) "10 days 0 hours 0 mins 0 secs";
+  t 93784. "1 day 2 hours 3 mins 4 secs";
+end
+
 let () = test "Time.compact_duration" begin fun () ->
   let t n s =
     (* FIXME epsilon compare *)
