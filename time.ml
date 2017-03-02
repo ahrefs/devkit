@@ -165,10 +165,10 @@ let to_rfc2822 secs =
 
 (** @param cut - only show this number of most significant components *)
 let show_duration ?cut t =
-  let factors = [60; 60; 24; 30; 12;] in
+  let factors = [60; 60; 24; 30 ] in
   let names = ["secs"; "min"; "hours"; "days"; "months";] in
   let rec loop t acc = function
-  | [] -> List.rev acc
+  | [] -> List.rev (t :: acc)
   | n::tl -> loop (t/n) (t mod n :: acc) tl
   in
   if t < 1. then sprintf "%.4f secs" t
@@ -222,4 +222,4 @@ let to_sec = int
 let to_ms x = int_of_float @@ 1000. *. x
 
 let ago t = now () -. t
-let ago_str = duration_str $ ago
+let ago_str = show_duration $ ago
