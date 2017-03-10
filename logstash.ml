@@ -136,17 +136,17 @@ let open_logstash_exn basename =
 
 module J = Yojson
 
-let write_json out nr json =
+let write_json activity out nr json =
   let bytes = J.to_string ~std:true json ^ "\n" in
   try
     (* try not to step on the other forks toes, page writes are atomic *)
-    if (String.length bytes > 4096 - !nr) then (flush out; nr := 0);
+    if (String.length bytes > 4096 - !nr) then (activity := true; flush out; nr := 0);
     output_string out bytes; nr := !nr + String.length bytes
   with exn -> log #warn ~exn "failed to write event %S" bytes
 
 let line_writer out =
   let nr = ref 0 in
-  write_json out nr
+  write_json (ref false) out nr
 
 let setup_ setup =
   match get_basename () with
@@ -200,9 +200,9 @@ let log ?autoflush ?name () =
       | None -> ()
       | Some delay ->
         let rec l () =
+          activity := false;
           let%lwt () = Lwt_unix.sleep delay in
           if !nr > 0 && not !activity then (flush !out; nr := 0);
-          activity := false;
           l ()
         in
         Lwt.async l
@@ -229,13 +229,12 @@ let log ?autoflush ?name () =
 
         method write () =
           self#try_rotate ();
-          get () |> List.iter (write_json !out nr)
+          get () |> List.iter (write_json activity !out nr)
 
         method event (j : (string * J.json) list) =
           self#try_rotate ();
           let json = `Assoc (common_fields () @ j) in
-          write_json !out nr json;
-          activity := true
+          write_json activity !out nr json;
 
       end
 
