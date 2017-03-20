@@ -28,6 +28,12 @@ method kind = "int"
 method show v = string_of_int !v
 end
 
+let float = object
+method store v = Arg.Set_float v
+method kind = "float"
+method show v = string_of_float !v
+end
+
 let string = object
 method store v = Arg.Set_string v
 method kind = "string"
@@ -46,6 +52,12 @@ method kind = "int"
 method show v = Option.map_default string_of_int "none" !v
 end
 
+let float_option = object
+method store v = Arg.Float (fun x -> v := Some x)
+method kind = "float"
+method show v = Option.map_default string_of_float "none" !v
+end
+
 let str_option = object
 method store v = Arg.String (fun x -> v := Some x)
 method kind = "string"
@@ -53,9 +65,11 @@ method show v = Option.map_default id "none" !v
 end
 
 let int = make_arg int
+let float = make_arg float
 let str = make_arg string
 let duration = make_arg duration
 let may_int = make_arg int_option
+let may_float = make_arg float_option
 let may_str = make_arg str_option
 let positive_int = make_arg (test_int (fun x -> x > 0))
 
