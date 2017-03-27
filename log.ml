@@ -88,7 +88,7 @@ module State = struct
     let oid = Thread.id (Thread.self ()) in
     let pinfo = if pid = tid then sprintf "%5u:%u" pid oid else sprintf "%5u:%u:%u" pid oid tid in
     sprintf "[%s] %s [%s:%s] %s\n"
-      (Time.to_string ~gmt:true ~ms:true (Unix.gettimeofday ()))
+      (Time.to_string ~gmt:false ~ms:true (Unix.gettimeofday ()))
       pinfo
       facil.Logger.name
       (Logger.string_level level)
