@@ -71,22 +71,23 @@ let show_crt_info = ref (fun () -> "MALLOC: ?")
 let malloc_release = ref (ignore : unit -> unit)
 
 let reclaim_s () =
-  let open Gc in
   let module A = Action in
-  let heap_words = (stat ()).heap_words in
+  let st1 = Gc.stat () in
   let { rss; _ } = get_vm_info () in
   let t1 = Time.now () in
   Gc.compact ();
   let t2 = Time.now () in
   !malloc_release ();
   let t3 = Time.now () in
-  let heap_words' = (stat ()).heap_words in
+  let st3 = Gc.stat () in
   let { rss=rss'; _ } = get_vm_info () in
   let changed f a b =
     if a = b then sprintf "= %s" (f a) else sprintf "%s -> %s" (f a) (f b)
   in
-  sprintf "Memory.reclaim: heap %s (%s), rss %s"
-    (changed A.caml_words heap_words heap_words')
+  sprintf "Memory.reclaim: heap %s live %s freelist %s (%s), rss %s"
+    (changed A.caml_words st1.heap_words st3.heap_words)
+    (changed A.caml_words st1.live_words st3.live_words)
+    (changed string_of_int st1.free_blocks st3.free_blocks)
     (Time.duration_str @@ t2 -. t1)
     (if !malloc_release == ignore then A.bytes_string rss
      else sprintf "%s (%s)" (changed A.bytes_string rss rss') (Time.duration_str @@ t3 -. t2))
