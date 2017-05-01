@@ -31,6 +31,10 @@ ocamllex : allocated     11.2GB, heap         0B, collection 0 33 5718, elapsed 
 *)
 let ipv4_of_string_exn = Devkit_ragel.parse_ipv4
 let ipv4_of_string_null s = try ipv4_of_string_exn s with _ -> 0l
+(*
+Network.is_ipv4_slow : allocated      8.0GB, heap         0B, collection 0 0 1019, elapsed 1.57 secs, 31.92/sec : ok
+     Network.is_ipv4 : allocated      625KB, heap         0B, collection 0 0 0, elapsed 0.2477 secs, 201.87/sec : ok
+*)
 let is_ipv4_slow = Devkit_ragel.is_ipv4_slow
 let is_ipv4 s =
   String.length s >= 7
