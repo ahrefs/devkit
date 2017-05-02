@@ -3,6 +3,7 @@
 *)
 
 open Unix
+open Printf
 
 open Control
 open Prelude
@@ -112,8 +113,8 @@ let handle_sig_reload_with fin =
     [Sys.sighup]
 
 let show_addr = function
-  | ADDR_UNIX s -> Printf.sprintf "unix:%s" s
-  | ADDR_INET (addr,port) -> Printf.sprintf "%s:%u" (string_of_inet_addr addr) port
+  | ADDR_UNIX s -> sprintf "unix:%s" s
+  | ADDR_INET (addr,port) -> sprintf "%s:%u" (string_of_inet_addr addr) port
 
 let get_inet_addr_exn = function
   | ADDR_INET (addr,_) -> addr
@@ -257,3 +258,11 @@ let connect_lwt fd sockaddr =
   Lwt.catch
     (fun () -> connect fd sockaddr)
     (function Unix_error (e, f, "") -> Lwt.fail (Unix_error (e, f, show_addr sockaddr)) | exn -> Lwt.fail exn)
+
+let get_xdg_dir ~env dir =
+  try Sys.getenv env with Not_found ->
+  try sprintf "%s/.%s" (Sys.getenv "HOME") dir with Not_found ->
+    Exn.fail "get_xdg_dir: unable to find %s directory" dir
+
+let xdg_cache_dir = lazy (get_xdg_dir ~env:"XDG_DATA_CACHE" "cache")
+let xdg_config_dir = lazy (get_xdg_dir ~env:"XDG_CONFIG_HOME" "config")
