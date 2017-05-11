@@ -211,15 +211,22 @@ let chunk_a n a =
   let last = if last_n = 0 then 0 else 1 in
   List.init (chunks + last) (fun i -> Array.sub a (i*n) (if i = chunks then last_n else n))
 
-(* FIXME *)
+let kbyte = 1024.
+let mbyte = kbyte *. 1024.
+let gbyte = mbyte *. 1024.
+let tbyte = gbyte *. 1024.
+let pbyte = tbyte *. 1024.
+let ebyte = pbyte *. 1024.
 
-let bytes_string_f f = (* oh ugly *)
+let bytes_string_f f =
   let a = abs_float f in
-  if a < 1024. then sprintf "%dB" (int_of_float f) else
-  if a < 1024. *. 1024. then sprintf "%dKB" (int_of_float (f /. 1024.)) else
-  if a < 1024. *. 1024. *. 1024. then sprintf "%.1fMB" (f /. 1024. /. 1024.) else
-  if a < 1024. *. 1024. *. 1024. *. 1024. then sprintf "%.1fGB" (f /. 1024. /. 1024. /. 1024.) else
-  sprintf "%.1fTB" (f /. 1024. /. 1024. /. 1024. /. 1024.)
+  if a < kbyte then sprintf "%dB" (int_of_float f) else
+  if a < mbyte then sprintf "%dKB" (int_of_float (f /. kbyte)) else
+  if a < gbyte then sprintf "%.1fMB" (f /. mbyte) else
+  if a < tbyte then sprintf "%.1fGB" (f /. gbyte) else
+  if a < pbyte then sprintf "%.1fTB" (f /. tbyte) else
+  if a < ebyte then sprintf "%.1fPB" (f /. pbyte) else
+  sprintf "%.1fEB" (f /. ebyte)
 
 let bytes_string = bytes_string_f $ float_of_int
 let bytes_string_i64 = bytes_string_f $ Int64.to_float
@@ -434,6 +441,9 @@ let parse_bytes_unit s =
     | "k" -> 1024
     | "m" -> 1024 * 1024
     | "g" -> 1024 * 1024 * 1024
+    | "t" -> 1024 * 1024 * 1024 * 1024
+    | "p" -> 1024 * 1024 * 1024 * 1024 * 1024
+    | "e" -> 1024 * 1024 * 1024 * 1024 * 1024 * 1024
     | _ -> raise Not_found
   in
   try
@@ -453,7 +463,7 @@ let get_bytes_unit n =
     | x::_ -> (n, x)
   in
   assert (n <> 0);
-  loop n ["";"K";"M";"G";"T";"P"]
+  loop n ["";"K";"M";"G";"T";"P";"E"]
 
 let show_bytes_unit n =
   match get_bytes_unit n with
