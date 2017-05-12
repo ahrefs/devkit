@@ -379,11 +379,7 @@ let run_forks_simple ?(revive=false) ?wait_stop f args =
       List.iter (Hashtbl.remove workers) dead;
       loop pause
   in
-  Control.bracket (Signal.save ()) Signal.restore begin fun _ ->
-    let forward signo = killall signo (pids ()) in
-    Signal.set Sys.[sigusr1;sigusr2;sighup] forward;
-    loop 1.
-  end
+  loop 1.
 
 let run_workers workers ?wait_stop (type t) (f : t -> unit) l =
   assert (workers > 0);
