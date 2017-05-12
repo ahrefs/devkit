@@ -14,6 +14,8 @@ open Hidden
 
 (** {2 Server} *)
 
+type max_time = { headers : Time.t; body : Time.t; send : Time.t; }
+
 (** server configuration *)
 type config =
   {
@@ -37,8 +39,15 @@ type config =
     reuseport : bool;
     nodelay : bool;
     strict_args : bool;
+    max_time : max_time;
       (** default false, if enabled - will in particular fail on "/path?arg1&arg2", why would anyone want that? *)
   }
+
+let default_max_time = {
+  headers = Time.seconds 30;
+  body = Time.minutes 1;
+  send = Time.minutes 2;
+}
 
 let default =
   {
@@ -60,6 +69,7 @@ let default =
     reuseport = false;
     nodelay = false;
     strict_args = false;
+    max_time = default_max_time;
   }
 
 include Httpev_common
@@ -934,7 +944,8 @@ let read_headers cin limit =
   (loop temp)[%lwt.finally ReqBuffersCache.release temp; Lwt.return_unit]
 
 let handle_client_lwt client cin answer =
-  let%lwt (headers,data) = timeout 30. (read_headers cin client.server.config.max_request_size) in
+  let cfg = client.server.config in
+  let%lwt (headers,data) = timeout cfg.max_time.headers (read_headers cin cfg.max_request_size) in
   match headers with
   | [] -> failed RequestLine "missing"
   | line1::headers ->
@@ -950,7 +961,7 @@ let handle_client_lwt client cin answer =
     | Some n when String.length data = n -> Lwt.return data
     | Some n ->
       let s = Bytes.create (n - String.length data) in
-      let%lwt () = timeout 60. (Lwt_io.read_into_exactly cin s 0 (n - String.length data)) in
+      let%lwt () = timeout cfg.max_time.body (Lwt_io.read_into_exactly cin s 0 (n - String.length data)) in
       Lwt.return (data ^ s)
   in
   (* TODO check that no extra bytes arrive *)
@@ -1034,7 +1045,7 @@ let setup_fd_lwt fd config answer =
       (* reusing same buffer! *)
       let cout = Lwt_io.(of_fd ~buffer ~close:Lwt.return ~mode:output fd) in
       begin try%lwt
-        timeout 120. (send_reply client cout reply)
+        timeout config.max_time.send (send_reply client cout reply)
       with exn ->
         !!error;
         log #warn ~exn "send_reply %s" (show_client client);
