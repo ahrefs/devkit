@@ -59,14 +59,19 @@ let list_sorted_uniq p =
     | _ -> x :: acc
   end []
 
-let list_random_exn l = List.nth l (Random.int (List.length l))
+let random_int state =
+  match state with
+  | None -> Random.int
+  | Some t -> Random.State.int t
 
-let list_random = function
+let list_random_exn ?state l = List.nth l (random_int state (List.length l))
+
+let list_random ?state = function
   | [] -> None
-  | l -> Some (list_random_exn l)
+  | l -> Some (list_random_exn ?state l)
 
-let array_random_exn a = a.(Random.int (Array.length a))
-let array_random = function [||] -> None | a -> Some (array_random_exn a)
+let array_random_exn ?state a = a.(random_int state (Array.length a))
+let array_random ?state = function [||] -> None | a -> Some (array_random_exn ?state a)
 
 let array_rfindi p a =
   let j = ref 0 in
@@ -81,9 +86,10 @@ let array_rfind p a = a.(array_rfindi p a)
 
 let array_iter_rev f a = for i = Array.length a - 1 downto 0 do f (Array.unsafe_get a i) done
 
-let shuffle a =
+let shuffle ?state a =
+   let random = random_int state in
    for i = pred (Array.length a) downto 1 do
-     let j = Random.int (succ i) in
+     let j = random (succ i) in
      if i <> j (* faster to omit this test with arrays of about 100000 elements or more *) then (
        let tmp = Array.unsafe_get a i in
        Array.unsafe_set a i (Array.unsafe_get a j);
@@ -418,8 +424,8 @@ let thread_run_periodic ~delay ?(now=false) f =
   in
   ()
 
-let random_bytes n = String.init n (fun _ -> Char.chr (Random.int 256))
-let random_ascii n = String.init n (fun _ -> Char.chr (Char.code '!' + Random.int (Char.code '~' - Char.code '!' + 1)))
+let random_bytes ?state n = String.init n (fun _ -> Char.chr (random_int state 256))
+let random_ascii ?state n = String.init n (fun _ -> Char.chr (Char.code '!' + random_int state (Char.code '~' - Char.code '!' + 1)))
 
 let parse_bytes_unit s =
   let unit_of_string s =

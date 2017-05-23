@@ -68,8 +68,8 @@ val list_uniq : ('a -> 'b) -> 'a list -> 'a list
 val list_sorted_uniq : ('a -> 'a -> bool) -> 'a list -> 'a list
 
 (** Get a random element from a list. *)
-val list_random_exn : 'a list -> 'a
-val list_random : 'a list -> 'a option
+val list_random_exn : ?state:Random.State.t -> 'a list -> 'a
+val list_random : ?state:Random.State.t -> 'a list -> 'a option
 
 (** extract sublist from a list, e.g. [slice 1 3 \[0;1;2;3;4\]] will return [\[1;2;3\]]. *)
 val slice : int -> int -> 'a list -> 'a list
@@ -96,8 +96,8 @@ val strl : ('a -> string) -> 'a list -> string
 
 (** Array utilities *)
 
-val array_random_exn : 'a array -> 'a
-val array_random : 'a array -> 'a option
+val array_random_exn : ?state:Random.State.t -> 'a array -> 'a
+val array_random : ?state:Random.State.t -> 'a array -> 'a option
 
 (** [array_rfindi p a]
 
@@ -117,8 +117,10 @@ val array_rfind : ('a -> bool) -> 'a array -> 'a
     order. *)
 val array_iter_rev : ('a -> 'b) -> 'a array -> unit
 
-(** [shuffle a] shuffles an array, giving a uniform random distribution. *)
-val shuffle : 'a array -> unit
+(** [shuffle ?state a] shuffles an array, giving a uniform random distribution.
+  @param state random state to use (default: global Random state)
+*)
+val shuffle : ?state:Random.State.t -> 'a array -> unit
 
 (** array must be sorted *)
 val binary_search' : 'a array -> ('a -> 'b -> int) -> 'b -> 'a option
@@ -279,7 +281,7 @@ type ewma = (float -> unit) * (unit -> float)
 val ewma : float -> ewma
 
 (** generates a string of n random bytes. *)
-val random_bytes : int -> string
+val random_bytes : ?state:Random.State.t -> int -> string
 
 (** generates a string of n random ascii chars. *)
-val random_ascii : int -> string
+val random_ascii : ?state:Random.State.t -> int -> string
