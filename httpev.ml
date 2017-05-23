@@ -287,7 +287,7 @@ let write_f c (data,ack) ev fd _flags =
     | s::xs when String.length s = 0 -> loop xs 0 (* skip empty strings *)
     | s::xs ->
       try
-        let len = Unix.single_write fd s ack (String.length s - ack) in
+        let len = Unix.single_write_substring fd s ack (String.length s - ack) in
         let ack = ack + len in
         if ack = String.length s then
           loop xs 0
@@ -346,7 +346,7 @@ let write_some fd s =
   let slen = String.length s in
   if slen = 0 then `Done else
   try
-    let len = Unix.write fd s 0 (String.length s) in
+    let len = Unix.write_substring fd s 0 (String.length s) in
     if len = slen then `Done else `Some len
   with
   | Unix.Unix_error (Unix.EAGAIN,_,_) -> `Some 0
@@ -373,7 +373,7 @@ let write_reply c l =
 
 let write_reply_blocking c s =
   try
-    let n = Unix.write c.fd s 0 (String.length s) in
+    let n = Unix.write_substring c.fd s 0 (String.length s) in
     assert (n = String.length s)
   with
     exn -> abort c exn "write_reply_blocking"
@@ -937,7 +937,7 @@ let read_headers cin limit =
       | buf ->
       let acc = match acc with None -> buf | Some acc -> acc ^ buf in
       match String.split acc "\r\n\r\n" with
-      | exception _ -> loop ~acc (if acc == temp then Bytes.create 2048 else temp)
+      | exception _ -> loop ~acc (if acc == Bytes.unsafe_to_string temp then Bytes.create 2048 else temp)
       | (headers,body) -> Lwt.return (String.nsplit headers "\r\n", body)
   in
   let temp = ReqBuffersCache.get () in
@@ -962,7 +962,7 @@ let handle_client_lwt client cin answer =
     | Some n ->
       let s = Bytes.create (n - String.length data) in
       let%lwt () = timeout cfg.max_time.body (Lwt_io.read_into_exactly cin s 0 (n - String.length data)) in
-      Lwt.return (data ^ s)
+      Lwt.return (data ^ Bytes.unsafe_to_string s)
   in
   (* TODO check that no extra bytes arrive *)
   client.req <- Body_lwt (String.length data);

@@ -212,7 +212,7 @@ let sleep seconds =
 *)
 let output_buf_fd ?(bufsize=1*1024*1024) fd =
   if bufsize <= 0 then Exn.invalid_arg "output_fd: bufsize %d" bufsize;
-  let buf = String.create bufsize in
+  let buf = Bytes.create bufsize in
   let len = ref 0 in
   let flush () =
     match !len with
@@ -227,12 +227,12 @@ let output_buf_fd ?(bufsize=1*1024*1024) fd =
     if l + !len > bufsize then
     begin
       let miss = bufsize - !len in
-      String.blit s p buf !len miss;
+      Bytes.blit s p buf !len miss;
       len := bufsize;
       flush ();
       output s (p + miss) (l - miss)
     end else begin
-      String.blit s p buf !len l;
+      Bytes.blit s p buf !len l;
       len := !len + l;
       check_flush ()
     end

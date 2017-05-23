@@ -321,7 +321,7 @@ let http_get_io_exn ?(setup=ignore) ?max_size ?(check=(fun h -> Curl.get_httpcod
           match check h with
           | false -> 0
           | true ->
-            IO.nwrite out s;
+            IO.nwrite_string out s;
             let l = String.length s in
             read_size += l;
             match max_size with
@@ -370,7 +370,7 @@ let http_get_io_lwt ?body ?timeout ?(setup=ignore) ?(check=(fun h -> Curl.get_ht
         try
           match check h with
           | false -> inner_error := `Http (Curl.get_httpcode h); 0
-          | true -> IO.nwrite out s; String.length s
+          | true -> IO.nwrite_string out s; String.length s
         with exn -> inner_error := `Write exn; 0
       end;
       match%lwt Curl_lwt.perform h with

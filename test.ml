@@ -13,7 +13,7 @@ let () = test "HtmlStream" begin fun () ->
   let module HS = HtmlStream in
   let (==>) s s' =
   try
-    let s'' = Control.wrapped_output (IO.output_string ()) (fun io -> Stream.iter (IO.nwrite io $ HS.show_raw') (HS.parse (Stream.of_string s))) in
+    let s'' = Control.wrapped_output (IO.output_string ()) (fun io -> Stream.iter (IO.nwrite_string io $ HS.show_raw') (HS.parse (Stream.of_string s))) in
     if s' = s'' then () else
       failwith (sprintf "%s ==> %s (got %s)" s s' s'')
   with

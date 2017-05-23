@@ -82,7 +82,7 @@ let read_byte iz =
     iz.in_pos <- 0;
     iz.in_avail <- n
   end;
-  let c = iz.in_buffer.[iz.in_pos] in
+  let c = Bytes.get iz.in_buffer iz.in_pos in
   iz.in_pos <- iz.in_pos + 1;
   iz.in_avail <- iz.in_avail - 1;
   Char.code c
@@ -146,7 +146,7 @@ let rec really_input iz buf pos len =
   end
 
 let input_char iz =
-  if input iz iz.char_buffer 0 1 = 0 then raise IO.No_more_input else iz.char_buffer.[0]
+  if input iz iz.char_buffer 0 1 = 0 then raise IO.No_more_input else Bytes.get iz.char_buffer 0
 
 let input_byte iz =
   Char.code (input_char iz)
@@ -161,13 +161,13 @@ let close_in iz =
 
 type 'a out_channel =
   { out_chan: 'a IO.output;
-    out_buffer: string;
+    out_buffer: bytes;
     mutable out_pos: int;
     mutable out_avail: int;
     out_stream: Zlib.stream;
     mutable out_size: int32;
     mutable out_crc: int32;
-    char_buffer: string }
+    char_buffer: bytes }
 
 let open_out ?(level = 6) oc =
   if level < 1 || level > 9 then invalid_arg "Gzip_stream.open_output: bad level";

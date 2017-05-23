@@ -88,7 +88,7 @@ let manage () =
   let unix_stderr s =
     let s = Log.State.format_simple `Info log#facility s in
     try
-      let (_:int) = Unix.write Unix.stderr s 0 (String.length s) in ()
+      let (_:int) = Unix.write_substring Unix.stderr s 0 (String.length s) in ()
     with _ ->
       () (* do not fail, can be ENOSPC *)
   in

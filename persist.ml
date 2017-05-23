@@ -21,9 +21,9 @@ let to_channel ch ?(flags=[]) x =
   Marshal.to_channel ch (x:t) flags
 
 let from_channel ch =
-  let s = String.create (String.length V.tag) in
+  let s = Bytes.create (String.length V.tag) in
   really_input ch s 0 (String.length V.tag);
-  if s <> V.tag then raise Error;
+  if Bytes.unsafe_to_string s <> V.tag then raise Error;
   (Marshal.from_channel ch : t)
 
 let to_string ?(flags=[]) x = V.tag ^ Marshal.to_string (x:t) flags

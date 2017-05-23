@@ -33,7 +33,7 @@ let pipe_in f =
 
 let string s =
   let out = output (IO.output_string ()) in
-  IO.nwrite out s;
+  IO.nwrite out (Bytes.unsafe_of_string s); (* IO wrong type *)
   IO.close_out out
 
 let to_string s =

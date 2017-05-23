@@ -40,7 +40,7 @@ let read_some fd buf ofs len =
 
 let write_some fd buf ofs len =
   try
-    Unix.write fd buf ofs len
+    Unix.write_substring fd buf ofs len
   with
   | Unix.Unix_error ((Unix.EAGAIN|Unix.EWOULDBLOCK),_,_) -> 0
 

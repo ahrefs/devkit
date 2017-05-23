@@ -147,7 +147,7 @@ let output out v =
     | I n -> put_int n
     | B b -> IO.printf out "b:%u;" (if b then 1 else 0)
     | F f -> IO.printf out "d:%g;" (if compare nan f = 0 then 0. else f)
-    | N -> IO.nwrite out "N;"
+    | N -> IO.nwrite_string out "N;"
     | S s -> put_str s
   in
   put v
