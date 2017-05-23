@@ -374,7 +374,7 @@ let bench ?(compact=Gc.compact) count f =
   compact ();
   let t = new timer in
   let st = Gc.quick_stat () in
-  let res = Exn.map (fun () -> for _ = 1 to count do f () done) () in
+  let res = Exn.map (fun () -> for _ = 1 to count do ignore @@ f () done) () in
   let st2 = Gc.quick_stat () in
   let elapsed = t#get in
   let res = match res with

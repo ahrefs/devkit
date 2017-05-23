@@ -115,7 +115,7 @@ val array_rfind : ('a -> bool) -> 'a array -> 'a
 
 (** [array_iter_rev f a] calls [f] on each elements of [a] in reverse
     order. *)
-val array_iter_rev : ('a -> 'b) -> 'a array -> unit
+val array_iter_rev : ('a -> unit) -> 'a array -> unit
 
 (** [shuffle ?state a] shuffles an array, giving a uniform random distribution.
   @param state random state to use (default: global Random state)
