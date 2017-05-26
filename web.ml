@@ -91,6 +91,7 @@ module type IO_TYPE = sig
   val fail : ?exn:exn -> ('a, unit, string, 'b t) format4 -> 'a
   val raise : exn -> 'a t
   val map_s : ('a -> 'b t) -> 'a list -> 'b list t
+  val catch : (unit -> 'a t) -> (exn -> 'a t) -> 'a t
 end
 
 module type CURL = sig
@@ -264,6 +265,7 @@ module IO_blocking = struct
   let raise = raise
   let sleep = Nix.sleep
   let map_s = List.map
+  let catch = fun f e -> try f ()  with exn -> e exn
 end
 
 module IO_lwt = struct
@@ -277,6 +279,7 @@ module IO_lwt = struct
   let raise = Lwt.fail
   let sleep = Lwt_unix.sleep
   let map_s = Lwt_list.map_s
+  let catch = Lwt.catch
 end
 
 
