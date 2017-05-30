@@ -241,7 +241,7 @@ module LRU (Keys : StdHashtbl.HashedType) = struct
     let drop elem =
       match is_singleton elem with
       | true -> None
-      | false -> Some (Dllist.drop elem)
+      | false -> Some (Dllist.rev_drop elem)
 
     let append t value =
       match !t with
@@ -359,7 +359,6 @@ module LRU (Keys : StdHashtbl.HashedType) = struct
       Hashtbl.remove cache.table key;
       match (Queue.unwrap node).queue with
       | `Lru ->
-        (* if the node is in the lru queuen it will be moved to the lfu queue *)
         cache.lru_avaibl <- cache.lru_avaibl + 1;
         Queue.remove cache.lru node
       | `Lfu ->
