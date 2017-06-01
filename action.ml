@@ -211,14 +211,14 @@ let chunk_a n a =
   let last = if last_n = 0 then 0 else 1 in
   List.init (chunks + last) (fun i -> Array.sub a (i*n) (if i = chunks then last_n else n))
 
-let kbyte = 1024.
-let mbyte = kbyte *. 1024.
-let gbyte = mbyte *. 1024.
-let tbyte = gbyte *. 1024.
-let pbyte = tbyte *. 1024.
-let ebyte = pbyte *. 1024.
-
-let bytes_string_f f =
+let bytes_string_f =
+  let kbyte = 1024. in
+  let mbyte = kbyte *. 1024. in
+  let gbyte = mbyte *. 1024. in
+  let tbyte = gbyte *. 1024. in
+  let pbyte = tbyte *. 1024. in
+  let ebyte = pbyte *. 1024. in
+  fun f ->
   let a = abs_float f in
   if a < kbyte then sprintf "%dB" (int_of_float f) else
   if a < mbyte then sprintf "%dKB" (int_of_float (f /. kbyte)) else
