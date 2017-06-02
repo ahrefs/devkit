@@ -343,6 +343,10 @@ module LRU (Keys : StdHashtbl.HashedType) = struct
       entry.value, evicted
     with Not_found -> cache.miss <- cache.miss + 1; raise Not_found
 
+  let find cache key =
+    let entry = Queue.unwrap @@ Hashtbl.find cache.table key in
+    entry.value
+
   let get cache key =
     fst @@ get_evicted cache key
 
