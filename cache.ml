@@ -301,6 +301,8 @@ module LRU (Keys : StdHashtbl.HashedType) = struct
 
   let size cache = Hashtbl.length cache.table
 
+  let iter f cache = Hashtbl.iter (fun key value -> f key (Queue.unwrap value).value) cache.table
+
   let miss cache = cache.miss
   let hit cache = cache.hit
 

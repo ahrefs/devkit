@@ -65,6 +65,7 @@ module LRU(K : Hashtbl.HashedType) : sig
   val hit : 'v t -> int
   val mem : 'v t -> K.t -> bool
   val size : 'v t -> int
+  val iter : (K.t -> 'v -> unit) -> 'v t -> unit
   val lru_free : 'v t -> int
   val lfu_free : 'v t -> int
 end
