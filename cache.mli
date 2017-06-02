@@ -56,7 +56,9 @@ module LRU(K : Hashtbl.HashedType) : sig
   type 'v t
   val create : int -> 'v t
   val put : 'v t -> K.t -> 'v -> unit
+  val put_evicted : 'v t -> K.t -> 'v -> (K.t * 'v) option
   val get : 'v t -> K.t -> 'v
+  val get_evicted : 'v t -> K.t -> ('v * (K.t * 'v) option)
   val replace : 'v t -> K.t -> 'v -> unit
   val remove : 'v t -> K.t -> unit
   val miss : 'v t -> int

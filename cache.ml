@@ -310,7 +310,7 @@ module LRU (Keys : StdHashtbl.HashedType) = struct
       entry.value <- value
     with Not_found -> ()
 
-  let get cache key =
+  let get_evicted cache key =
     try
       let node = Hashtbl.find cache.table key in
       let entry = Queue.unwrap node in
@@ -327,31 +327,48 @@ module LRU (Keys : StdHashtbl.HashedType) = struct
         Queue.remove cache.lfu node
       end;
       (* If the queue is full, drop one entry *)
-      if cache.lfu_avaibl <= 0 then begin
-        let evicted = Queue.pop cache.lfu in
-        Hashtbl.remove cache.table (Queue.unwrap evicted).key;
-      end else
-        cache.lfu_avaibl <- cache.lfu_avaibl - 1;
+      let evicted = 
+        if cache.lfu_avaibl <= 0 then begin
+          let evicted = Queue.unwrap (Queue.pop cache.lfu) in
+          Hashtbl.remove cache.table evicted.key;
+          Some (evicted.key, evicted.value)
+        end else begin
+          cache.lfu_avaibl <- cache.lfu_avaibl - 1;
+          None
+        end
+      in
       Queue.append cache.lfu node;
-      entry.value
+      entry.value, evicted
     with Not_found -> cache.miss <- cache.miss + 1; raise Not_found
+
+  let get cache key =
+    fst @@ get_evicted cache key
 
   let mem cache key = Hashtbl.mem cache.table key
   let lru_free cache = cache.lru_avaibl
   let lfu_free cache = cache.lfu_avaibl
 
-  let put cache key value =
+  let put_evicted cache key value =
     try
       let node = Hashtbl.find cache.table key |> Queue.unwrap in
-      node.value <- value
+      node.value <- value;
+      None
     with Not_found ->
-      if cache.lru_avaibl = 0 then
-        let evicted = Queue.pop cache.lru in
-        Hashtbl.remove cache.table (Queue.unwrap evicted).key
-      else
-        cache.lru_avaibl <- cache.lru_avaibl - 1;
+      let evicted =
+        if cache.lru_avaibl = 0 then begin
+          let evicted = Queue.unwrap (Queue.pop cache.lru) in
+          Hashtbl.remove cache.table evicted.key;
+          Some (evicted.key, evicted.value)
+        end else begin
+          cache.lru_avaibl <- cache.lru_avaibl - 1;
+          None
+        end
+      in
       let node = Queue.push cache.lru { key;  value; queue = `Lru } in
-      Hashtbl.add cache.table key node
+      Hashtbl.add cache.table key node;
+      evicted
+
+  let put cache key value = put_evicted cache key value |> ignore
 
   let remove cache key =
     try
