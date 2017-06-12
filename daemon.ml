@@ -33,7 +33,13 @@ let signal_exit =
 let break () = if !should_exit_ then raise ShouldExit
 
 (** wait until [should_exit] is set and raise [ShouldExit] *)
-let wait_exit () = Lwt.bind should_exit_lwt (fun () -> Lwt.fail ShouldExit)
+let wait_exit =
+  (* NOTE
+    Bind to should_exit_lwt only once, because every bind will create an immutable waiter on
+    should_exit_lwt's sleeper, that is only removed after should_exit_lwt thread terminates.
+  *)
+  let thread = lazy (Lwt.bind should_exit_lwt (fun () -> Lwt.fail ShouldExit)) in
+  fun () -> Lazy.force thread
 
 (** obsolete, use [wait_exit] *)
 let break_lwt = wait_exit
