@@ -41,9 +41,6 @@ let wait_exit =
   let thread = lazy (Lwt.bind should_exit_lwt (fun () -> Lwt.fail ShouldExit)) in
   fun () -> Lazy.force thread
 
-(** obsolete, use [wait_exit] *)
-let break_lwt = wait_exit
-
 let get_args () =
   [
     (let set_loglevel s =
