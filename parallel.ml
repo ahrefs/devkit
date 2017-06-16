@@ -117,7 +117,7 @@ let worker (execute : task -> result) =
         | [] | _ :: _ :: _ -> assert false
         | [ _fd, revents; ] ->
         assert (not (ExtUnixAll.Poll.(is_set revents pollpri)));
-        assert (ExtUnixAll.Poll.(is_set revents pollin));
+        assert (ExtUnixAll.Poll.(is_inter revents (pollin + pollhup)));
         match (Marshal.from_channel input : task) with
         | exception End_of_file -> ()
         | exception exn -> log #error ~exn "Parallel.worker failed to unmarshal task"
