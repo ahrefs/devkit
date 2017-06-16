@@ -113,9 +113,11 @@ let worker (execute : task -> result) =
       let output = Unix.out_channel_of_descr child_write in
       let input = Unix.in_channel_of_descr child_read in
       let rec loop () =
-        let (r,_,e) = Nix.restart (fun () -> Unix.select [child_read] [] [child_read] (-1.)) () in
-        assert (e = []);
-        assert (r <> []);
+        match Nix.restart (fun () -> ExtUnixAll.(poll [| child_read, Poll.(pollin + pollpri); |] (-1.))) () with
+        | [] | _ :: _ :: _ -> assert false
+        | [ _fd, revents; ] ->
+        assert (not (ExtUnixAll.Poll.(is_set revents pollpri)));
+        assert (ExtUnixAll.Poll.(is_set revents pollin));
         match (Marshal.from_channel input : task) with
         | exception End_of_file -> ()
         | exception exn -> log #error ~exn "Parallel.worker failed to unmarshal task"
@@ -176,11 +178,12 @@ let perform t ?(autoexit=false) tasks finish =
         | Some x -> incr workers; Marshal.to_channel cout (x : task) []; flush cout
       end;
 (*       Printf.printf "workers %u\n%!" !workers; *)
+      let events = ExtUnixAll.Poll.(pollin + pollpri) in
       while !workers > 0 && t.alive do
         let fds = List.filter_map (function {ch=Some (cin,_); _} -> Some (Unix.descr_of_in_channel cin) | _ -> None) t.running in
-        let (r,_,err) = Nix.restart (fun () -> Unix.select fds [] fds (-1.)) () in
-        assert (err = []);
-        let channels = r |> List.map (fun fd ->
+        let r = Nix.restart (fun () -> ExtUnixAll.poll (Array.of_list (List.map (fun fd -> fd, events) fds)) (-1.)) () in
+        assert (not (List.exists (fun (_fd, revents) -> ExtUnixAll.Poll.(is_set revents pollpri)) r));
+        let channels = r |> List.map (fun (fd, _revents) ->
           t.running |> List.find (function {ch=Some (cin,_); _} -> Unix.descr_of_in_channel cin = fd | _ -> false))
         in
         let answers = channels |> List.filter_map begin fun w ->
