@@ -7,7 +7,11 @@ open ExtLib
 
 let log = Log.from "html"
 
-module Raw = New(struct type t = string end)
+module Raw = struct
+  include New(String)
+  let length x = String.length @@ project x
+  let is_empty x = "" = project x
+end
 
 type elem = Tag of (string * (string * Raw.t) list) | Text of Raw.t | Close of string
 
