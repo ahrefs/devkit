@@ -21,6 +21,11 @@ val run_forks' : ('a -> unit) -> 'a list -> unit
 *)
 val run_workers : int -> ?wait_stop:int -> ('a -> unit) -> 'a list -> unit
 
+(** Process enum with specified number of workers, collect results via provided callback.
+  Pass exit signals to the workers, see {!Forks.stop} for the description of [wait_stop] parameter.
+*)
+val run_workers_enum : int -> ?wait_stop:int -> ('a -> 'b) -> ('b -> unit) -> 'a Enum.t -> unit
+
 module Thread : sig
 
 type 'a t
