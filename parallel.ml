@@ -384,9 +384,9 @@ let run_forks_simple ?(revive=false) ?wait_stop f args =
   in
   loop 1.
 
-let run_workers workers ?wait_stop (type t) (f : t -> unit) l =
+let run_workers_enum workers ?wait_stop (type t) (type u) (f : t -> u) (g : u -> unit) enum =
   assert (workers > 0);
-  let module Worker = struct type task = t type result = unit end in
+  let module Worker = struct type task = t type result = u end in
   let module W = Forks(Worker) in
   let worker x =
     (* sane signal handler FIXME restore? *)
@@ -395,8 +395,11 @@ let run_workers workers ?wait_stop (type t) (f : t -> unit) l =
   in
   let proc = W.create worker workers in
   Nix.handle_sig_exit_with ~exit:true (fun () -> W.stop ?wait:wait_stop proc); (* FIXME: output in signal handler *)
-  W.perform ~autoexit:true proc (List.enum l) id;
+  W.perform ~autoexit:true proc enum g;
   W.stop proc
+
+let run_workers workers ?wait_stop (type t) (f : t -> unit) l =
+  run_workers_enum workers ?wait_stop f id (List.enum l)
 
 let run_forks ?wait_stop ?revive ?wait ?workers (type t) (f : t -> unit) l =
   let wait_stop = if wait_stop = None then wait else wait_stop in
