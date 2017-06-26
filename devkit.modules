@@ -38,5 +38,6 @@ Signal
 Static_config
 Stre
 Time
+UnsafeBitSet
 Var
 Web
