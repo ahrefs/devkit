@@ -371,7 +371,6 @@ end
 
 module LRU = struct
   module L = Cache.LRU(struct type t = int let equal = (=) let hash x = x end)
-  open OUnit
 
   let () = test "LRU.put simple" begin fun () ->
       let size = 5 in
@@ -480,19 +479,35 @@ module LRU = struct
     end
 end
 
-module Timer = struct
-  open OUnit
-  let () = test "Timer.start" begin fun () ->
-      let timer = new Action.timer_start 0.5 in
-      assert_bool "timer initially not empty" (timer#json = []);
-      timer#record "mark" 0.5;
-      assert_bool "timer mark not 0" (timer#json = [("mark", `Int 0)]);
-      timer#record "mark2" 1.0;
-      assert_bool "timer mark2 not 500ms" (timer#json = [("mark", `Int 0); ("mark2", `Int 500)]);
-      timer#reset;
-      assert_bool "timer not empty" (timer#json = []);
-    end
-end
+let () = test "Timer.start" begin fun () ->
+    let timer = new Action.timer_start 0.5 in
+    assert_bool "timer initially not empty" (timer#json = []);
+    timer#record "mark" 0.5;
+    assert_bool "timer mark not 0" (timer#json = [("mark", `Int 0)]);
+    timer#record "mark2" 1.0;
+    assert_bool "timer mark2 not 500ms" (timer#json = [("mark", `Int 0); ("mark2", `Int 500)]);
+    timer#reset;
+    assert_bool "timer not empty" (timer#json = []);
+  end
+
+module Bit_list_test = Bit_struct_list.Make(struct let item_bits = 3 let pp = string_of_int end)
+
+let () = test "bit_struct_list" @@ fun () ->
+  let printer l = Action.strl string_of_int l in
+  let open Bit_list_test in
+  let t l = OUnit.assert_equal ~printer l (to_list @@ inject @@ project @@ of_list l) in
+  t [ 0; 1; 2; 3; 4; 5; 6; 7; 6; 5; 4; 3; 2; 1; 0 ];
+  t [ 0; 1; 2; 3; 4; 5; 6; 7; 6; 5; 4; 3; 2; 1 ];
+  t [ 7; 3; 1; 5; 0; 4; 4; 2; 7; 7; 7; 1; 0; 0; 0; 5; 3; 5 ];
+  t [ ];
+  t [ 0 ];
+  t [ 7 ];
+  t [ 7; 1 ];
+  t [ 1; 5; 7 ];
+  t [ 1; 1; 1; 1 ];
+  t [ 2; 3; 2; 0; 5 ];
+  t [ 0; 1; 2; 3; 4; 5; 6; 7 ];
+  ()
 
 let tests () =
   let (_:test_results) = run_test_tt_main ("devkit" >::: List.rev !tests) in
