@@ -178,14 +178,14 @@ let count_unique equal e =
   in
   from next
 
-let sub e f =
+let sub ?(cmp=(=)) e f =
   match peek e with
   | None -> None
   | Some x ->
     let current = f x in
     let next () =
       match peek e with
-      | Some x when f x = current -> junk e; x
+      | Some x when cmp (f x) current -> junk e; x
       | None | Some _ -> raise No_more_elements
     in
     Some (current, from next)

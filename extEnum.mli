@@ -51,7 +51,7 @@ val uniq : ('a -> 'a -> bool) -> 'a t -> 'a t
 val count_unique : ('a -> 'a -> bool) -> 'a t -> ('a * int) t
 
 (** [sub e f] extracts a subenum (consecutive sequence of the elements from [e]) that map to the same value of [f] *)
-val sub : 'a t -> ('a -> 'b) -> ('b * 'a t) option
+val sub : ?cmp:('b -> 'b -> bool) -> 'a t -> ('a -> 'b) -> ('b * 'a t) option
 
 (** [iter_while f e] calls [f] for each element of [e] until it returns [false] or [e] is exhausted *)
 val iter_while : ('a -> bool) -> 'a t -> unit
