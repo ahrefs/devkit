@@ -200,6 +200,9 @@ let log ?autoflush ?name () =
       | None -> ()
       | Some delay ->
         let rec l () =
+          match Daemon.should_exit () with
+          | true -> Lwt.return_unit
+          | false ->
           activity := false;
           let%lwt () = Lwt_unix.sleep delay in
           if !nr > 0 && not !activity then (flush !out; nr := 0);
