@@ -697,8 +697,8 @@ module Args(T : sig val req : request end) : sig
   val int : ?default:int -> string -> int
   (** Get integer parameter. @raise Bad if parameter is missing and no [default] provided *)
 
-  val bool : string -> bool
-  (** Get boolean parameter. @return true when param value is "true", false otherwise or when parameter is missing. *)
+  val bool : ?default:bool -> string -> bool
+  (** Get boolean parameter. @return [true] when parameter value is ["true"], [false] otherwise. @raise Bad if missing and no [default] provided. *)
 
   val float : ?default:float -> string -> float
   val int64 : ?default:int64 -> string -> int64
@@ -719,7 +719,7 @@ struct
   let int64 = make Int64.of_string
   let int = make int_of_string
   let float = make float_of_string
-  let bool name = try bool_of_string @@ arg name with _ -> false
+  let bool = make bool_of_string
   let array name =
     let name = name ^ "[]" in
     T.req.args |> List.filter (fun (name',_) -> name = name') |> List.map snd
