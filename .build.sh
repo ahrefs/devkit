@@ -2,7 +2,7 @@
 set -e -u
 
 export OPAMKEEPBUILDDIR=true
-export OPAMBUILDTEST=true
+export OPAMBUILDTEST=false
 export OPAMYES=true
 
 opam update
