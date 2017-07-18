@@ -201,6 +201,13 @@ let array_concat sep a =
     done;
     Buffer.contents b
 
+let rstrip ?(chars=" \t\r\n") s =
+  let l = ref (String.length s - 1) in
+  while !l >= 0 && String.contains chars (String.unsafe_get s !l) do
+    decr l;
+  done;
+  String.sub s 0 (!l + 1)
+
 let catmap ?(sep="") f l = String.concat sep (List.map f l)
 let list f l = sprintf "[%s]" @@ catmap ~sep:";" f l
 let array f a = sprintf "[|%s|]" @@ array_concat ";" @@ Array.map f a
