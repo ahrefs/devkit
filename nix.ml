@@ -196,15 +196,7 @@ let find_mount path =
   !mount
 
 (* in seconds *)
-let sleep seconds =
-  let rec loop t =
-    if t < 0. then
-      ()
-    else
-      let start = Time.now () in
-      try Thread.delay t with Unix.Unix_error (EINTR,_,_) -> loop @@ start +. t -. Time.now ()
-  in
-  loop seconds
+let sleep = Unix.sleepf
 
 (**
   Buffered output to [Unix.file_descr].
