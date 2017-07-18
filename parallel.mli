@@ -26,6 +26,15 @@ val run_workers : int -> ?wait_stop:int -> ('a -> unit) -> 'a list -> unit
 *)
 val run_workers_enum : int -> ?wait_stop:int -> ('a -> 'b) -> ('b -> unit) -> 'a Enum.t -> unit
 
+(** Run function wrapped in {!Action.log} in dedicated thread *)
+val log_thread : ?name:string -> ('a -> unit) -> 'a -> Thread.t
+
+(** run [f] in thread periodically once in [delay] seconds.
+  @param f returns [false] to stop the thread, [true] otherwise
+  @param now default [false]
+*)
+val thread_run_periodic : delay:float -> ?now:bool -> (unit -> bool) -> unit
+
 module Thread : sig
 
 type 'a t

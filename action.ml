@@ -277,7 +277,6 @@ let log_do ?name f = log ?name f ()
 
 let log_thread ?name f x =
   Thread.create (fun () -> log ?name f x) ()
-let log_thread_do ?name f = log_thread ?name f ()
 
 let io_copy input output =
   try

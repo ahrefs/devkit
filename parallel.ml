@@ -221,6 +221,18 @@ let perform t ?(autoexit=false) tasks finish =
 
 end
 
+let log_thread ?name f x = Thread.create (fun () -> Action.log ?name f x) ()
+
+let thread_run_periodic ~delay ?(now=false) f =
+  let (_:Thread.t) = Thread.create begin fun () ->
+    if not now then Nix.sleep delay;
+    while try f () with exn -> Log.self #warn ~exn "Action.thread_run_periodic"; true do
+      Nix.sleep delay
+    done
+  end ()
+  in
+  ()
+
 let invoke (f : 'a -> 'b) x : unit -> 'b =
   let input, output = Unix.pipe() in
   match Nix.fork () with
@@ -286,7 +298,7 @@ module ThreadPool = struct
     in
     t.free := t.total;
     for i = 1 to t.total do
-      let (_:Thread.t) = Action.log_thread worker i in ()
+      let (_:Thread.t) = log_thread worker i in ()
     done
 
   let status t = Printf.sprintf "queue %d threads %d of %d"

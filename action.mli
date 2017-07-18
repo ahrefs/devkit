@@ -16,11 +16,7 @@ val timely : float -> ('a -> unit) -> ('a -> unit)
 (** Combination of the above, see the code for more info. *)
 val timely_counter : float -> (int -> unit) -> (unit -> unit)
 
-(** run [f] in thread periodically once in [delay] seconds.
-  @param f returns [false] to stop the thread, [true] otherwise
-  @param now default [false]
-*)
-val thread_run_periodic : delay:float -> ?now:bool -> (unit -> bool) -> unit
+val thread_run_periodic : delay:float -> ?now:bool -> (unit -> bool) -> unit [@@ocaml.deprecated "use Parallel.thread_run_periodic"]
 
 
 (** Enum utilities *)
@@ -235,8 +231,7 @@ val speed : int -> float -> float
 val log : ?name:string -> ('a -> unit) -> 'a -> unit
 val log_do : ?name:string -> (unit -> unit) -> unit
 
-val log_thread : ?name:string -> ('a -> unit) -> 'a -> Thread.t
-val log_thread_do : ?name:string -> (unit -> unit) -> Thread.t
+val log_thread : ?name:string -> ('a -> unit) -> 'a -> Thread.t [@@ocaml.deprecated "use Parallel.log_thread"]
 val perform : ?name:string -> ('a -> unit) -> 'a -> bool
 
 
