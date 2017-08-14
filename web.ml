@@ -203,7 +203,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     begin match code with
     | CURLE_OK ->
       bprintf b "HTTP %d got %s from %s"
-        (get_httpcode h) (get_primaryip h) (*get_primaryport h*) (Action.bytes_string_f @@ get_sizedownload h);
+        (get_httpcode h) (Action.bytes_string_f @@ get_sizedownload h) (get_primaryip h) (*get_primaryport h*);
       begin match get_redirectcount h with
       | 0 -> ()
       | n -> bprintf b " at %s after %d redirects" (get_effectiveurl h) n
