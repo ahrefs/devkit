@@ -144,6 +144,8 @@ let simple_result ?(verbose=false) = function
   | `Error code -> `Error (sprintf "(%d) %s" (Curl.errno code) (Curl.strerror code))
   | `Ok (n, content) -> `Error (sprintf "http %d%s" n (if verbose then ": " ^ content else ""))
 
+let nr_http = ref 0
+
 module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with type 'a IO.t = 'a IO.t = struct
 
   module IO = IO
@@ -194,6 +196,24 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       | code -> `Error code
     end
 
+  let verbose_curl_result nr_http action t h code =
+    let open Curl in
+    let b = Buffer.create 10 in
+    bprintf b "%s #%d %s" (string_of_http_action action) nr_http t#get_str;
+    begin match code with
+    | CURLE_OK ->
+      bprintf b "%s HTTP %d got %s from %s"
+        t#get_str (get_httpcode h) (get_primaryip h) (*get_primaryport h*) (Action.bytes_string_f @@ get_sizedownload h);
+      begin match get_redirectcount h with
+      | 0 -> ()
+      | n -> bprintf b "at %s after %d redirects" (get_effectiveurl h) n
+      end
+    | _ ->
+      bprintf b "%s error (%d) %s (errno %d)" t#get_str (errno code) (strerror code) (Curl.get_oserrno h)
+    end;
+    log #info_s (Buffer.contents b);
+    return ()
+
   (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
   (* Don't use curl_setheaders when using ?headers option *)
   let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?max_size ?(http_1_0=false) ?headers ?body (action:http_action) url =
@@ -227,6 +247,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       let () = setup h in
       ()
     in
+    incr nr_http;
     if verbose then begin
       let action = string_of_http_action action in
       let body = match body with
@@ -235,9 +256,11 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       | Some (`Raw (ct,body)) -> sprintf "%s %s" ct (Stre.shorten 64 body)
       | Some (`Chunked (ct,_f)) -> sprintf "%s chunked" ct
       in
-      log #info "%s %s %s" action url body
+      log #info "%s #%d %s %s" action !nr_http url body
     end;
-    http_gets ~setup ?max_size url
+    let t = new Action.timer in
+    let result = if verbose then Some (verbose_curl_result !nr_http action t) else None in
+    http_gets ~setup ?result ?max_size url
 
   let http_request ?ua ?timeout ?verbose ?setup ?max_size ?http_1_0 ?headers ?body (action:http_action) url =
     http_request' ?ua ?timeout ?verbose ?setup ?max_size ?http_1_0 ?headers ?body action url >>= fun res ->
