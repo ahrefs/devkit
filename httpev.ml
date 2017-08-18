@@ -39,8 +39,8 @@ type config =
     reuseport : bool;
     nodelay : bool;
     strict_args : bool;
-    max_time : max_time;
       (** default false, if enabled - will in particular fail on "/path?arg1&arg2", why would anyone want that? *)
+    max_time : max_time;
   }
 
 let default_max_time = {
@@ -790,6 +790,12 @@ let answer_blocking ?(debug=false) srv req answer k =
     log_access_apache !(srv.config.access_log) code (Int64.to_int !count) ~background:(continue <> None) req;
   call_me_maybe continue ()
 
+let stats = new Var.typ "httpev.forks" "k"
+
+let nr_forked = stats#count "forked"
+let nr_queued = stats#count "queued"
+let nr_rejected = stats#count "rejected"
+
 let answer_forked ?debug srv req answer k =
   let do_fork () =
     match check_req req with
@@ -820,12 +826,18 @@ let answer_forked ?debug srv req answer k =
         k (`Internal_server_error,[],"")
   in
   if Hashtbl.length srv.h_childs < srv.config.max_data_childs then
+  begin
+    incr nr_forked;
     do_fork ()
-  else
-  if Stack.length srv.q_wait < srv.config.max_data_waiting then
+  end
+  else if Stack.length srv.q_wait < srv.config.max_data_waiting then
+  begin
+    incr nr_queued;
     Stack.push do_fork srv.q_wait
+  end
   else
   begin
+    incr nr_rejected;
     log #info "rejecting, overloaded : %s" (show_request req);
     k (`Service_unavailable, ["Content-Type", "text/plain"], "overloaded")
   end
