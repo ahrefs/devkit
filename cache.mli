@@ -8,7 +8,7 @@ module TimeLimited(E : sig type t end) : sig
   val replace : t -> key -> E.t -> unit
   val get : t -> key -> E.t option
   val count : t -> int
-end
+end [@@ocaml.deprecated "use TimeLimited2"]
 
 module type Lock = sig
   type t
@@ -17,7 +17,7 @@ module type Lock = sig
 end
 
 module NoLock : Lock
-module LockMutex : Lock
+module LockMutex : Lock [@@ocaml.deprecated "use ExtThread.LockMutex"]
 
 module TimeLimited2(E : Set.OrderedType)(Lock : Lock) : sig
   type t
@@ -50,7 +50,7 @@ module SizeLimited : sig
   val get : 'a t -> key -> 'a option
   val random : 'a t -> 'a option
 
-end
+end [@@ocaml.deprecated "use LRU"]
 
 module LRU(K : Hashtbl.HashedType) : sig
   type 'v t

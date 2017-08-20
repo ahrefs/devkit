@@ -1,5 +1,5 @@
 
-open Control
+open ExtThread
 
 type 'a t = { mutex : Mutex.t; cond : Condition.t; mutable v : 'a option; }
 

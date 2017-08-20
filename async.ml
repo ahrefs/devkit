@@ -256,7 +256,7 @@ module Fin : sig
 
 type t
 
-val setup : Ev.event_base -> t
+val setup : Ev.event_base -> t [@@ocaml.deprecated "use ExtThread.Async_fin"]
 
 (** Arrange for callback to be executed in libevent loop, callback should not throw (exceptions are reported and ignored) *)
 val callback : t -> (unit -> unit) -> unit

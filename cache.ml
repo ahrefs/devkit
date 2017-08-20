@@ -1,5 +1,5 @@
 open Prelude
-open Control
+open ExtThread
 
 module StdHashtbl = Hashtbl
 
@@ -63,7 +63,7 @@ end
 module LockMutex = struct
   type t = Mutex.t
   let create = Mutex.create
-  let locked = Control.locked
+  let locked = ExtThread.locked
 end
 
 module TimeLimited2(E: Set.OrderedType)

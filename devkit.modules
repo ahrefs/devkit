@@ -10,6 +10,7 @@ Exn
 Exn_lwt
 ExtArg
 ExtEnum
+ExtThread
 Factor
 FastBase64
 Files

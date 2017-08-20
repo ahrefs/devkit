@@ -42,5 +42,5 @@ val with_output_txt : string -> (unit IO.output -> 'a) -> 'a
 
 (** Misc. *)
 
-val locked : Mutex.t -> (unit -> 'a) -> 'a
+val locked : Mutex.t -> (unit -> 'a) -> 'a [@@ocaml.deprecated "use ExtThread.locked"]
 val with_opendir : string -> (Unix.dir_handle -> 'b) -> 'b

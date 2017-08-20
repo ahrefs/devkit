@@ -1,5 +1,6 @@
 
-open Control
+(* ExtThread.locked, duplicated to break internal circular dependency in ExtThread *)
+let locked mutex f = Mutex.lock mutex; Std.finally (fun () -> Mutex.unlock mutex) f ()
 
 type 'a t = { mutex : Mutex.t; cond : Condition.t; q : 'a Queue.t; }
 
