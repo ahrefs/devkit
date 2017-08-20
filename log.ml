@@ -85,8 +85,7 @@ module State = struct
   let format_simple level facil msg =
     let pid = Unix.getpid () in
     let tid = U.gettid () in
-    let oid = Thread.id (Thread.self ()) in
-    let pinfo = if pid = tid then sprintf "%5u:%u" pid oid else sprintf "%5u:%u:%u" pid oid tid in
+    let pinfo = if pid = tid then sprintf "%5u:" pid else sprintf "%5u:%u" pid tid in
     sprintf "[%s] %s [%s:%s] %s\n"
       (Time.to_string ~gmt:false ~ms:true (Unix.gettimeofday ()))
       pinfo

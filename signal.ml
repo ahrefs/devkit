@@ -38,7 +38,7 @@ let stop t =
 let handle t sigs f =
   List.iter (fun signo -> Hashtbl.replace t.h signo f) sigs;
   let sigs = List.of_enum (Hashtbl.keys t.h) in
-  let (_:int list) = Thread.sigmask Unix.SIG_BLOCK sigs in
+  let (_:int list) = Unix.sigprocmask Unix.SIG_BLOCK sigs in
   let _ = U.signalfd ~fd:t.fd ~sigs ~flags:[] () in
   ()
 

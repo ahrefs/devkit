@@ -154,19 +154,6 @@ let () = test "Stre.by_words" begin fun () ->
   f (make " " 10 @@ make "" 10240 "\239\191\189") [];
 end
 
-let () = test "ThreadPool" begin fun () ->
-  let module TP = Parallel.ThreadPool in
-  let pool = TP.create 3 in
-  TP.wait_blocked pool;
-  let i = ref 0 in
-  for j = 1 to 10 do
-    let worker _k () = incr i; Nix.sleep 0.2 in
-    TP.put pool (worker j);
-  done;
-  TP.wait_blocked pool;
-  assert_equal !i 10;
-end
-
 let () = test "Network.string_of_ipv4" begin fun () ->
   let t n s =
     assert_equal ~printer:Int32.to_string n (Network.int32_of_ipv4 @@ Network.ipv4_of_string_null s);
