@@ -27,13 +27,13 @@ val run_workers : int -> ?wait_stop:int -> ('a -> unit) -> 'a list -> unit
 val run_workers_enum : int -> ?wait_stop:int -> ('a -> 'b) -> ('b -> unit) -> 'a Enum.t -> unit
 
 (** Run function wrapped in {!Action.log} in dedicated thread *)
-val log_thread : ?name:string -> ('a -> unit) -> 'a -> Thread.t
+val log_thread : ?name:string -> ('a -> unit) -> 'a -> Thread.t [@@ocaml.deprecated "use ExtThread.log_create"]
 
 (** run [f] in thread periodically once in [delay] seconds.
   @param f returns [false] to stop the thread, [true] otherwise
   @param now default [false]
 *)
-val thread_run_periodic : delay:float -> ?now:bool -> (unit -> bool) -> unit
+val thread_run_periodic : delay:float -> ?now:bool -> (unit -> bool) -> unit [@@ocaml.deprecated "use ExtThread.run_periodic"]
 
 module Thread : sig
 
@@ -48,7 +48,7 @@ val map : ('a -> 'b) -> 'a array -> 'b array
 (** parallel map with the specified number of workers, default=8 *)
 val mapn : ?n:int -> ('a -> 'b) -> 'a list -> 'b Exn.result list
 
-end (* Thread *)
+end [@@ocaml.deprecated "use ExtThread"] (* Thread *)
 
 module type WorkerT = sig
   type task
@@ -86,7 +86,7 @@ val perform : ('a,'b) t -> 'a Enum.t -> ('b -> unit) -> unit
 (** Thread workers *)
 module Threads(T:WorkerT) : Workers
   with type task = T.task
-   and type result = T.result
+   and type result = T.result [@@ocaml.deprecated "use ExtThread.Workers"]
 
 (** Forked workers *)
 module Forks(T:WorkerT) : Workers
@@ -95,7 +95,7 @@ module Forks(T:WorkerT) : Workers
 
 module ThreadPool : sig
 type t
-val create : int -> t
+val create : int -> t [@@ocaml.deprecated "use ExtThread.Pool"]
 val status : t -> string
 val put : t -> (unit -> unit) -> unit
 val wait_blocked : ?n:int -> t -> unit
