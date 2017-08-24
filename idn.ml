@@ -209,8 +209,30 @@ let need_encoding s =
   try
     for i = 0 to pred l do
       if not (basic (Char.code (String.unsafe_get s i))) then
-	raise Exit
+        raise Exit
     done; false
+  with Exit -> true
+
+let need_decoding s =
+  let l = String.length s in
+  try
+    if l >= 4 then
+      if (String.unsafe_get s 0 = 'x')
+      && (String.unsafe_get s 1 = 'n')
+      && (String.unsafe_get s 2 = '-')
+      && (String.unsafe_get s 3 = '-')
+      then raise Exit
+      else
+        for i = 0 to pred l do
+          if l - i > 4 then
+            if (String.unsafe_get s i = '.')
+            && (String.unsafe_get s (i+1) = 'x')
+            && (String.unsafe_get s (i+2) = 'n')
+            && (String.unsafe_get s (i+3) = '-')
+            && (String.unsafe_get s (i+4) = '-')
+            then raise Exit
+        done;
+    false
   with Exit -> true
 
 (* Punycode API *)
@@ -232,10 +254,15 @@ let transtext s =
 (* IDN api *)
 
 let encode_domain domain =
-  join (List.map transcode (split domain))
+  if need_encoding domain then
+    join (List.map transcode (split domain))
+  else
+    domain
 
 let decode_domain domain =
-  join (List.map transtext (split domain))
+  if need_decoding domain then
+    join (List.map transtext (split domain))
+  else domain
 
 (* self test *)
 
