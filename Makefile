@@ -2,7 +2,7 @@
 VERSION=$(shell git describe --always --long)
 
 ifndef VERSION
-VERSION=v0.4
+VERSION=v0.5
 endif
 
 .PHONY: build lib top doc clean install uninstall test gen
