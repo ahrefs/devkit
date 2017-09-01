@@ -66,9 +66,10 @@ module Dyn = struct
 end
 
 
+let timestamp_field () = ("timestamp_ms", `Int Time.(to_ms @@ now ()))
 let common_fields () =
   [
-    "timestamp_ms", `Int (int_of_float @@ Time.now () *. 1000.);
+    timestamp_field ();
     "pid", `String (Pid.show_self ());
     "from", `String (Pid.self ()).Pid.name;
   ]
@@ -183,9 +184,16 @@ let round_to_midnight timestamp =
 let is_same_day timestamp =
   Time.now () -. Time.days 1 < timestamp
 
+type logger = <
+  event : (string * Yojson.json) list -> unit;
+  write : unit -> unit;
+  reload : unit -> unit;
+>
+
 let null = object method event _j = () method write () = () method reload () = () end
 
-let log ?autoflush ?name () =
+let log ?autoflush ?(add_timestamp_only=false) ?name () =
+  let add_fields = if add_timestamp_only then fun l -> timestamp_field () :: l else fun l -> common_fields () @ l in
   let name = match name with None -> get_basename () | Some _ -> name in
   match name with
   | None -> null
@@ -234,10 +242,9 @@ let log ?autoflush ?name () =
           self#try_rotate ();
           get () |> List.iter (write_json activity !out nr)
 
-        method event (j : (string * J.json) list) =
+        method event j =
           self#try_rotate ();
-          let json = `Assoc (common_fields () @ j) in
-          write_json activity !out nr json;
+          write_json activity !out nr (`Assoc (add_fields j))
 
       end
 

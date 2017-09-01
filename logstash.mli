@@ -6,8 +6,14 @@ val get : unit -> [> `Assoc of (string * [>`Floatlit of string | `Int of int | `
 val setup : ?pause:Time.t -> Libevent.event_base -> unit
 val setup_lwt : ?pause:Time.t -> unit -> unit
 
+type logger = <
+  event : (string * Yojson.json) list -> unit; (** write event manually *)
+  write : unit -> unit; (** write Var counters explicitly *)
+  reload : unit -> unit; (** reopen output file *)
+>
+
 (* Setup logger for a stream of events *)
-val log : ?autoflush:float -> ?name:string -> unit -> < event : (string * Yojson.json) list -> unit; write : unit -> unit; reload : unit -> unit; >
+val log : ?autoflush:float -> ?add_timestamp_only:bool -> ?name:string -> unit -> logger
 
 val setup_error_log : unit -> unit
 
