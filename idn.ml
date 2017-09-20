@@ -223,14 +223,13 @@ let need_decoding s =
       && (String.unsafe_get s 3 = '-')
       then raise Exit
       else
-        for i = 0 to pred l do
-          if l - i > 4 then
-            if (String.unsafe_get s i = '.')
-            && (String.unsafe_get s (i+1) = 'x')
-            && (String.unsafe_get s (i+2) = 'n')
-            && (String.unsafe_get s (i+3) = '-')
-            && (String.unsafe_get s (i+4) = '-')
-            then raise Exit
+        for i = 0 to pred l - 4 do
+          if (String.unsafe_get s i = '.')
+          && (String.unsafe_get s (i+1) = 'x')
+          && (String.unsafe_get s (i+2) = 'n')
+          && (String.unsafe_get s (i+3) = '-')
+          && (String.unsafe_get s (i+4) = '-')
+          then raise Exit
         done;
     false
   with Exit -> true
@@ -270,6 +269,11 @@ let () =
   assert ("他们为什么不说中文" = decode "ihqwcrb4cv8a8dqg056pqjye");
   assert ("---禁刊拍賣網址---" = decode "-------5j3ji85am9zsk4ckwjm29b");
   assert ("reality44hire-b9a" = encode (decode "reality44hire-b9a"));
+  assert (need_encoding "---禁刊拍賣網址---");
+  assert (not (need_encoding "asdasdasdfs"));
+  assert (need_decoding "xn--asd.asda");
+  assert (need_decoding "qwe.xn--werw");
+  assert (not (need_decoding "qwexn--werw.sdfsf"));
   begin
     try
       let (_:string) = decode_domain "xn----7sbksbihemjgbjxflp8bn1jxc.xn--p1aiaudio_orlov_yum" in
