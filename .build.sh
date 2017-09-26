@@ -5,8 +5,14 @@ export OPAMKEEPBUILDDIR=true
 export OPAMBUILDTEST=false
 export OPAMYES=true
 
+opam()
+{
+  echo opam "$@" 1>&2
+  $(which opam) "$@"
+}
+
 opam update
-opam sw 4.04.1
+opam sw set 4.05.0 || ( opam sw create 4.05.0; opam remote add -k git ahrefs git@git.ahrefs.com:ahrefs/opam)
 eval $(opam config env)
 opam uninstall devkit
 opam upgrade --fixup
