@@ -12,7 +12,7 @@ true: bin_annot, -annot, debug, thread, package(threads), strict_formats, strict
 <*.{top,byte,native}>: package(extlib), package(pcre), package(zip), package(libevent), package(curl), package(curl.lwt), package(netstring),\
   package(extunix), package(xmlm), package(lwt.unix), package(bytes), package(yojson)
 "logstash.ml": package(lwt.ppx)
-<test.*> or "cache.ml": package(oUnit), package(yojson)
+<test.*> or "cache.ml": package(oUnit), package(yojson), package(netstring)
 <memory_gperftools.cm*>: package(gperftools)
 <extThread.ml*>: package(libevent)
 <network.ml*> or <logstash.ml*> or <action.ml*>: package(yojson)

@@ -477,6 +477,16 @@ let () = test "Timer.start" begin fun () ->
     assert_bool "timer not empty" (timer#json = []);
   end
 
+module CONV_Netconversion =
+struct
+  let upoints s = Netconversion.uarray_of_ustring `Enc_utf8 s
+  let ustring a = Netconversion.ustring_of_uarray `Enc_utf8 a
+end
+
+let () = test "idn" @@ fun () ->
+  let module I = Idn.Make(CONV_Netconversion) in
+  I.self_test ()
+
 module Bit_list_test = Bit_struct_list.Make(struct let item_bits = 3 let pp = string_of_int end)
 
 let () = test "bit_struct_list" @@ fun () ->

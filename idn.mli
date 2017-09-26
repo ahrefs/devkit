@@ -20,14 +20,16 @@ sig
 
   val encode_domain : string -> string
   val decode_domain : string -> string
+
+  val self_test : unit -> unit
 end
 
 (*
 
 module CONV_Netconversion =
 struct
-  let upoints = Netconversion.uarray_of_ustring `Enc_utf8
-  let ustring = Netconversion.ustring_of_uarray `Enc_utf8
+  let upoints s = Netconversion.uarray_of_ustring `Enc_utf8 s
+  let ustring a = Netconversion.ustring_of_uarray `Enc_utf8 a
 end
 
 module CONV_Camomile =

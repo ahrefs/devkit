@@ -263,9 +263,7 @@ let decode_domain domain =
     join (List.map transtext (split domain))
   else domain
 
-(* self test *)
-
-let () =
+let self_test () =
   assert ("他们为什么不说中文" = decode "ihqwcrb4cv8a8dqg056pqjye");
   assert ("---禁刊拍賣網址---" = decode "-------5j3ji85am9zsk4ckwjm29b");
   assert ("reality44hire-b9a" = encode (decode "reality44hire-b9a"));
@@ -283,5 +281,7 @@ let () =
     | _ -> assert false
   end;
   ()
+
+let () = self_test ()
 
 end
