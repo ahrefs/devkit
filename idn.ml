@@ -268,10 +268,14 @@ let self_test () =
   assert ("---禁刊拍賣網址---" = decode "-------5j3ji85am9zsk4ckwjm29b");
   assert ("reality44hire-b9a" = encode (decode "reality44hire-b9a"));
   assert (need_encoding "---禁刊拍賣網址---");
-  assert (not (need_encoding "asdasdasdfs"));
+  assert (not @@ need_encoding "asdasdasdfs");
   assert (need_decoding "xn--asd.asda");
+  assert (need_decoding "xn--");
+  assert (need_decoding "a.xn--");
+  assert (not @@ need_decoding "a.xn-");
+  assert (not @@ need_decoding "a.b");
   assert (need_decoding "qwe.xn--werw");
-  assert (not (need_decoding "qwexn--werw.sdfsf"));
+  assert (not @@ need_decoding "qwexn--werw.sdfsf");
   begin
     try
       let (_:string) = decode_domain "xn----7sbksbihemjgbjxflp8bn1jxc.xn--p1aiaudio_orlov_yum" in
