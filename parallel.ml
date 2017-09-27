@@ -5,10 +5,6 @@ open Prelude
 
 let log = Log.from "parallel"
 
-module Threads = ExtThread.Workers
-module ThreadPool = ExtThread.Pool
-module Thread = ExtThread
-
 module type WorkerT = sig
   type task
   type result
@@ -185,9 +181,6 @@ let perform t ?(autoexit=false) tasks finish =
       | n -> log #warn "Finished, %d workers vanished" n
 
 end
-
-let log_thread = ExtThread.log_create
-let thread_run_periodic = ExtThread.run_periodic
 
 let invoke (f : 'a -> 'b) x : unit -> 'b =
   let input, output = Unix.pipe() in
