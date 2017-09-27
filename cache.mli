@@ -1,23 +1,13 @@
 (** Various types of in-memory caches *)
 
-module TimeLimited(E : sig type t end) : sig
-  type t
-  type key
-  val create : Time.t -> t
-  val add : t -> E.t -> key
-  val replace : t -> key -> E.t -> unit
-  val get : t -> key -> E.t option
-  val count : t -> int
-end [@@ocaml.deprecated "use TimeLimited2"]
-
 module type Lock = sig
   type t
   val create : unit -> t
   val locked : t -> (unit -> 'a) -> 'a
 end
 
+(** see also {!ExtThread.LockMutex} *)
 module NoLock : Lock
-module LockMutex : Lock [@@ocaml.deprecated "use ExtThread.LockMutex"]
 
 module TimeLimited2(E : Set.OrderedType)(Lock : Lock) : sig
   type t
@@ -28,29 +18,6 @@ module TimeLimited2(E : Set.OrderedType)(Lock : Lock) : sig
   val count : t -> int
   val iter : t -> (E.t -> unit) -> unit
 end
-
-(** Limited cache which remembers only the fixed number of last inserted values, mt-safe *)
-module SizeLimited : sig
-
-  (** The type of the cache *)
-  type 'a t
-
-  (** The type of the key assigned to each value in the cache *)
-  type key = private int
-
-  val key : int -> key
-
-  (**
-    [create size dummy] creates new empty cache.
-    [size] is the number of last entries to remember.
-  *)
-  val create : int -> 'a t
-
-  val add : 'a t -> 'a -> key
-  val get : 'a t -> key -> 'a option
-  val random : 'a t -> 'a option
-
-end [@@ocaml.deprecated "use LRU"]
 
 module LRU(K : Hashtbl.HashedType) : sig
   type 'v t

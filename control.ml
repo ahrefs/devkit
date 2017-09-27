@@ -24,7 +24,4 @@ let with_output io = bracket io IO.close_out
 let with_output_bin name k = with_open_out_bin name (fun ch -> bracket (IO.output_channel ch) IO.flush k)
 let with_output_txt name k = with_open_out_txt name (fun ch -> bracket (IO.output_channel ch) IO.flush k)
 
-let locked mutex f = Mutex.lock mutex; Std.finally (fun () -> Mutex.unlock mutex) f ()
-
 let with_opendir dir = bracket (Unix.opendir dir) Unix.closedir
-

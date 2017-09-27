@@ -275,9 +275,6 @@ let perform ?name f x =
 let log ?name f x = let (_:bool) = perform ?name f x in ()
 let log_do ?name f = log ?name f ()
 
-let log_thread ?name f x =
-  Thread.create (fun () -> log ?name f x) ()
-
 let io_copy input output =
   try
     let size = 16 * 1024 in
@@ -419,16 +416,6 @@ let list_min ?(cmp=compare) l =
   List.fold_left (fun x y -> if cmp x y < 0 then x else y) (List.hd l) l
 
 let args = List.tl (Array.to_list Sys.argv)
-
-let thread_run_periodic ~delay ?(now=false) f =
-  let (_:Thread.t) = Thread.create begin fun () ->
-    if not now then Nix.sleep delay;
-    while try f () with exn -> Log.self #warn ~exn "Action.thread_run_periodic"; true do
-      Nix.sleep delay
-    done
-  end ()
-  in
-  ()
 
 let random_bytes ?state n = String.init n (fun _ -> Char.chr (random_int state 256))
 let random_ascii ?state n = String.init n (fun _ -> Char.chr (Char.code '!' + random_int state (Char.code '~' - Char.code '!' + 1)))

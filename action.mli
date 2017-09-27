@@ -16,9 +16,6 @@ val timely : float -> ('a -> unit) -> ('a -> unit)
 (** Combination of the above, see the code for more info. *)
 val timely_counter : float -> (int -> unit) -> (unit -> unit)
 
-val thread_run_periodic : delay:float -> ?now:bool -> (unit -> bool) -> unit [@@ocaml.deprecated "use ExtThread.run_periodic"]
-
-
 (** Enum utilities *)
 
 (** [uniq f e]
@@ -231,7 +228,6 @@ val speed : int -> float -> float
 val log : ?name:string -> ('a -> unit) -> 'a -> unit
 val log_do : ?name:string -> (unit -> unit) -> unit
 
-val log_thread : ?name:string -> ('a -> unit) -> 'a -> Thread.t [@@ocaml.deprecated "use ExtThread.log_create"]
 val perform : ?name:string -> ('a -> unit) -> 'a -> bool
 
 

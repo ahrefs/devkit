@@ -1,52 +1,9 @@
 open Prelude
-open ExtThread
 
 module StdHashtbl = Hashtbl
 
 open ExtLib
 open Printf
-
-(** Thread safe *)
-module TimeLimited(E: sig type t end) = struct
-
-  type key = Int64.t
-
-  let fixed f = 10000. *. f |> Int64.of_float
-  let current () = Unix.gettimeofday () |> fixed
-
-  module Value = struct
-    type t = key * E.t
-    let compare (t1,_) (t2,_) = compare t1 t2
-  end
-
-  module M = Set.Make(Value)
-
-  type t = { limit : Int64.t; mutex : Mutex.t; mutable m : M.t; }
-
-  let private_refresh m =
-    let cur = current () in
-    if (try fst (M.min_elt m) <= cur with _ -> false)
-    then M.filter (fun (l,_) -> l > cur) m
-    else m
-
-  let create limit = { limit = fixed limit; mutex = Mutex.create (); m = M.empty }
-  let add t x =
-    let key = Int64.add t.limit (current ()) in
-    locked t.mutex (fun () -> t.m <- M.add (key, x) (private_refresh t.m));
-    key
-
-  let on_key key = fun (k,_) -> k = key
-
-  let replace t key x =
-    locked t.mutex (fun () -> t.m <- M.add (key, x) (M.filter (not $ on_key key) t.m))
-
-  let get t key =
-    let found = locked t.mutex (fun () -> M.filter (on_key key) t.m) in
-    try M.choose found |> snd |> some with Not_found -> None
-
-  let count t = locked t.mutex (fun () -> M.cardinal t.m)
-
-end
 
 module type Lock = sig
   type t
@@ -58,12 +15,6 @@ module NoLock = struct
   type t = unit
   let create () = ()
   let locked () f = f ()
-end
-
-module LockMutex = struct
-  type t = Mutex.t
-  let create = Mutex.create
-  let locked = ExtThread.locked
 end
 
 module TimeLimited2(E: Set.OrderedType)
@@ -106,34 +57,6 @@ module TimeLimited2(E: Set.OrderedType)
   let count t = Lock.locked t.lock (fun () -> M.cardinal t.m)
 
   let iter t f = Lock.locked t.lock (fun () -> M.iter (fun (x,_) -> f x) t.m)
-
-end
-
-module SizeLimited = struct
-
-  type key = int
-
-  let key = id
-
-  type 'a t = { mutable arr : 'a array option; size : int; mutable key : key; mutex : Mutex.t; }
-
-  let create size = { arr = None; size = size; key = 0; mutex = Mutex.create (); }
-
-  let add t x = locked t.mutex (fun () ->
-    let arr = match t.arr with | Some a -> a | None -> let a = Array.make t.size x in t.arr <- Some a; a in
-    arr.(t.key mod t.size) <- x;
-    t.key <- t.key + 1;
-    t.key - 1)
-
-  let get t k = locked t.mutex (fun () ->
-    match t.arr with
-    | None -> None
-    | Some a -> if k < t.key && t.key <= k + t.size then Some (a.(k mod t.size)) else None)
-
-  let random t = locked t.mutex (fun () ->
-    match t.arr,t.key with
-    | None,_ | _,0 -> None
-    | Some a, key -> Some a.(Random.int key mod t.size))
 
 end
 

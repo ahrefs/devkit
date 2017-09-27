@@ -55,7 +55,7 @@ let log_create ?name f x = Thread.create (fun () -> Action.log ?name f x) ()
 let run_periodic ~delay ?(now=false) f =
   let (_:Thread.t) = Thread.create begin fun () ->
     if not now then Nix.sleep delay;
-    while try f () with exn -> Log.self #warn ~exn "Action.thread_run_periodic"; true do
+    while try f () with exn -> Log.self #warn ~exn "ExtThread.run_periodic"; true do
       Nix.sleep delay
     done
   end ()

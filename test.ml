@@ -83,28 +83,6 @@ let () = test "Stre.iexists" begin fun () ->
   fail (f "xyXZZx!x_" "xx");
 end
 
-let () = test "Cache.SizeLimited" begin fun () ->
-  let module T = Cache.SizeLimited in
-  let c = T.create 100 in
-  let key = T.key in
-  let test_get k = assert_equal ~printer:Std.dump (T.get c k) in
-  let some k v = test_get (key k) (Some v) in
-  let none k = test_get (key k) None in
-  let iter f i1 i2 = for x = i1 to i2 do f x done in
-  iter (fun i ->
-    iter none i (1000+i);
-    assert_equal (key i) (T.add c i);
-    some i i) 0 99;
-  iter (fun i ->
-    iter none i (1000+i);
-    iter (fun k -> some k k) (i-100) (i-1);
-    assert_equal (key i) (T.add c i);
-    some i i) 100 999;
-  iter none 0 899;
-  iter (fun k -> some k k) 900 999;
-  iter none 1000 2000;
-end
-
 let () = test "Stre.splitc" begin fun () ->
   let t = assert_equal ~printer:(fun (a,b) -> sprintf "(%S,%S)" a b) in
   t ("a","b") (Stre.splitc "a.b" '.');
