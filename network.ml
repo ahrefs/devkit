@@ -95,7 +95,6 @@ let special_cidr = List.map cidr_of_string_exn [
 ]
 
 let is_ipv4_special ip = List.exists (ipv4_matches ip) special_cidr
-let ipv4_special = is_ipv4_special
 
 let public_network_ips () =
   U.getifaddrs () |> List.filter begin fun (_,ip) ->

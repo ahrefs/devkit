@@ -12,12 +12,6 @@ val ( $ ) : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b
 (** 2-function composition : [f $$ g] is equivalent to [(fun x y -> f (g x) (g y))] *)
 val ( $$ ) : ('a -> 'a -> 'b) -> ('c -> 'a) -> 'c -> 'c -> 'b
 
-(** @deprecated Use [|>] instead. *)
-val ( >> ) : 'a -> ('a -> 'b) -> 'b [@@ocaml.deprecated "use (|>) instead"]
-
-(** @deprecated Use [\@\@] instead. *)
-val ( & ) : ('a -> 'b) -> 'a -> 'b [@@ocaml.deprecated "use (@@) instead"]
-
 (** identity *)
 val id : 'a -> 'a
 

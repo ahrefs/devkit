@@ -45,8 +45,6 @@ let of_dynarray ?(start=0) ?n d =
   in
   make start
 
-let dyn_range = of_dynarray
-
 let take limit e =
   let limit = ref limit in
   from begin fun () ->

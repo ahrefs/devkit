@@ -11,8 +11,6 @@ val list_loop : 'a list -> 'a t
 (** @return enum over [DynArray] slice (default: whole array) *)
 val of_dynarray : ?start:int -> ?n:int -> 'a DynArray.t -> 'a Enum.t
 
-val dyn_range : ?start:int -> ?n:int -> 'a DynArray.t -> 'a Enum.t [@@ocaml.deprecated "use of_dynarray"]
-
 (** [take n e] @return enum consuming first [n] elements of [e] *)
 val take : int -> 'a t -> 'a t
 

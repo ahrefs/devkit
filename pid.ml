@@ -10,7 +10,6 @@ let to_string { id; name; host; stamp; } = sprintf "%u:%u:%s@%s" stamp id name h
 let compare (pid1:t) pid2 = compare pid1 pid2
 let equal pid1 pid2 = 0 = compare pid1 pid2
 let name { name; _ } = name
-let short_name { name; _ } = name
 
 let get_name s = try fst @@ String.split s "." with _ -> s
 let validate_name descr s =

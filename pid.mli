@@ -16,9 +16,6 @@ val show : t -> string
 (** @return application name *)
 val name : t -> string
 
-(** @return application name *)
-val short_name : t -> string [@@ocaml.deprecated "use Pid.name"]
-
 (** @return string representation of pid, can be read back by [parse_pid_exn] *)
 val to_string : t -> string
 
