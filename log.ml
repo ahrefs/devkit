@@ -42,6 +42,8 @@ module State = struct
   let all = Hashtbl.create 10
   let default_level = ref (`Info : Logger.level)
 
+  let utc_timezone = ref false
+
   let facility name =
     try
       Hashtbl.find all name
@@ -87,7 +89,7 @@ module State = struct
     let tid = U.gettid () in
     let pinfo = if pid = tid then sprintf "%5u:" pid else sprintf "%5u:%u" pid tid in
     sprintf "[%s] %s [%s:%s] %s\n"
-      (Time.to_string ~gmt:false ~ms:true (Unix.gettimeofday ()))
+      (Time.to_string ~gmt:!utc_timezone ~ms:true (Unix.gettimeofday ()))
       pinfo
       facil.Logger.name
       (Logger.string_level level)
@@ -130,6 +132,7 @@ include State.M
 
 let facility = State.facility
 let set_filter = State.set_filter
+let set_utc = State.utc_timezone := true
 
 (** Update facilities configuration from the environment.
 
