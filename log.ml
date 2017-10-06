@@ -132,7 +132,7 @@ include State.M
 
 let facility = State.facility
 let set_filter = State.set_filter
-let set_utc = State.utc_timezone := true
+let set_utc () = State.utc_timezone := true
 
 (** Update facilities configuration from the environment.
 
