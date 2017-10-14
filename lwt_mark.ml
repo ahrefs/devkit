@@ -16,20 +16,19 @@ module LastN = struct
 
   type 'a t =
     { queue : 'a Queue.t;
-      max : int;
-      mutable cur : int;
+      mutable avail : int;
     }
 
   let create n =
     if n < 0 then invalid_arg "LastN.create: n < 0" else
-    { queue = Queue.create (); max = n; cur = 0 }
+    { queue = Queue.create (); avail = n }
 
   let add x t =
     Queue.push x t.queue;
-    if t.cur = t.max then
+    if t.avail = 0 then
       ignore (Queue.pop t.queue)
     else
-      t.cur <- t.cur + 1
+      t.avail <- t.avail - 1
 
   let to_list t =
     List.rev @@ Queue.fold (fun acc x -> x :: acc) [] t.queue
