@@ -182,10 +182,12 @@ let status name ?dump cont =
 let status_s name ?dump cont =
   status (Lazy.from_val name) ?dump cont
 
-let ignore_result name run_thread =
-  Lwt.ignore_result @@
+let async name run_thread =
+  Lwt.async @@ fun () ->
     with_new_mark ~name:(Lazy.from_val name) ~kind:Background @@
     run_thread
+
+let ignore_result = async
 
 let log_do msg =
   let mark = Option.default top_mark (Lwt.get key) in

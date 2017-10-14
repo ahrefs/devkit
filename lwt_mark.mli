@@ -50,8 +50,11 @@ val name : string -> (unit -> 'a Lwt.t) -> 'a Lwt.t
 val status   : string Lazy.t -> ?dump:('a -> string) -> (unit -> 'a Lwt.t) -> 'a Lwt.t
 val status_s : string        -> ?dump:('a -> string) -> (unit -> 'a Lwt.t) -> 'a Lwt.t
 
-(** [ignore_result name run_thread] works like [name] + [Lwt.ignore_result (run_thread ())], but thread is marked as "background" (just
-    for display purposes).
+(** [async ?log name run_thread] works like [name] + [Lwt.async run_thread], but thread is marked as "background" (just for display
+    purposes). *)
+val async : string -> (unit -> 'a Lwt.t) -> unit
+
+(** [ignore_result == async]. Deprecated.
     Note: this function takes argument [run_thread] that creates thread, not the thread itself, this differs from [Lwt.ignore_result].
     Reason: functions of this module may be used during evaluation of [(run_thread ()) : 'a Lwt.t], so we need to prepare Lwt thread
     storage before the evaluation of [(run_thread ())].
