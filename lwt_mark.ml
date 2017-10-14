@@ -144,7 +144,7 @@ let log_exit mark msg =
 
 (** separate function to ease reasoning about which values are kept in closures (here: only arguments and top-level values, no local
     bindings from [with_new_mark]) *)
-let run_with_mark ?dump ~mark cont () =
+let run_with_mark ?dump ?log:(log : Log.logger option) ~mark cont () =
   register_mark mark;
   let on_success v =
     unregister_mark mark;
@@ -157,10 +157,11 @@ let run_with_mark ?dump ~mark cont () =
     log_exit mark @@ lazy begin
       "exn: " ^ Printexc.to_string exn
     end;
+    begin match log with None -> () | Some log -> log #warn "thread %S failed" !!(mark.name) ~exn end;
   in
   run_thread on_success on_failure cont
 
-let with_new_mark ?dump ~name ~kind cont =
+let with_new_mark ?dump ?log ~name ~kind cont =
   if not !enabled then cont () else
   let new_mark =
     let (parent_name, parent_id) =
@@ -169,7 +170,7 @@ let with_new_mark ?dump ~name ~kind cont =
     in
       create ~name ~kind ~parent_name ~parent_id
   in
-  with_mark (Some new_mark) @@ run_with_mark ?dump ~mark:new_mark cont
+  with_mark (Some new_mark) @@ run_with_mark ?dump ?log ~mark:new_mark cont
 
 (**)
 
@@ -182,9 +183,9 @@ let status name ?dump cont =
 let status_s name ?dump cont =
   status (Lazy.from_val name) ?dump cont
 
-let async name run_thread =
+let async ?log name run_thread =
   Lwt.async @@ fun () ->
-    with_new_mark ~name:(Lazy.from_val name) ~kind:Background @@
+    with_new_mark ?log ~name:(Lazy.from_val name) ~kind:Background @@
     run_thread
 
 let ignore_result = async
