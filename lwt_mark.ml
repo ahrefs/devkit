@@ -53,8 +53,8 @@ type mark =
     name : lazy_string;
     parent_name : lazy_string;
     parent_id : id;
-      (** id is stored to find parent thread in !marks, but there are no direct links to parent's mark *)
-      (** parent_{name,id} don't reflect Lwt scheduling (so background thread's parent is not set to main/unnamed/toplevel); they are
+      (** [id] is stored to find parent thread in !marks, but there are no direct links to parent's mark.
+          [parent_{name,id}] don't reflect Lwt scheduling (so background thread's parent is not set to main/unnamed/toplevel); they are
           used to trace places where threads were born (control flow). *)
     logs : lazy_string LastN.t;
   }
