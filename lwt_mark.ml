@@ -209,7 +209,7 @@ let summary () =
         match mark.kind with
         | Normal | Background -> acc
         | Status -> begin
-            let { parent_id; _ } = parent_of_status mark.parent_id in
+            let {id = parent_id; _} = parent_of_status mark.parent_id in
             let (acc, statuses) =
               try (acc, IntMap.find parent_id acc)
               with Not_found -> let s = ref [] in (IntMap.add parent_id s acc, s)
