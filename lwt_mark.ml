@@ -198,9 +198,15 @@ let log_l msg =
   if not !enabled then () else
   log_do msg
 
+let log_do_strict msg =
+  log_do (Lazy.from_val msg)
+
 let log msg =
   if not !enabled then () else
-  log_do (Lazy.from_val msg)
+  log_do_strict msg
+
+let log_f fmt =
+  if not !enabled then Printf.ikfprintf ignore () fmt else Printf.ksprintf log_do_strict fmt
 
 (**)
 

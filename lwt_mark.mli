@@ -65,6 +65,7 @@ val ignore_result : ?log:Log.logger -> string -> (unit -> 'a Lwt.t) -> unit
     When marking is enabled, but current thread is not marked/named, line is added to special "<top>" thread logs. *)
 val log   : string        -> unit
 val log_l : string Lazy.t -> unit
+val log_f : ('a, unit, string, unit) format4 -> 'a
 
 (** Human-readable marks summary: current running threads, their last logs and statuses. *)
 val summary : unit -> string
