@@ -65,13 +65,7 @@ let string_of_kind = function
 (** [0] is a special value, not used by threads. *)
 let next_mark_id = ref 1
 
-module Int = struct
-  type t = int
-  let compare (x : int) y = Pervasives.compare (x : int) y
-end
-module IntMap = Map.Make(Int)
-
-let marks = ref IntMap.empty
+let marks : (int, mark) Hashtbl.t = Hashtbl.create 7
 
 let create ~name ~parent_id ~parent_name ~kind =
   { id = (let id = !next_mark_id in next_mark_id := id + 1; id);
@@ -83,13 +77,13 @@ let create ~name ~parent_id ~parent_name ~kind =
   }
 
 let register_mark m =
-  match IntMap.find m.id !marks with
-  | exception Not_found -> marks := IntMap.add m.id m !marks
+  match Hashtbl.find marks m.id with
+  | exception Not_found -> Hashtbl.add marks m.id m
   | _ -> assert false
 
 let unregister_mark m =
-  match IntMap.find m.id !marks with
-  | _ -> marks := IntMap.remove m.id !marks
+  match Hashtbl.find marks m.id with
+  | _ -> Hashtbl.remove marks m.id
   | exception Not_found -> assert false
 
 let special name =
@@ -128,7 +122,7 @@ let run_thread on_success on_failure func =
   | exception exn -> on_failure exn; Lwt.fail exn
 
 let mark_or_orphan id =
-  try IntMap.find id !marks with Not_found -> orphan_mark
+  try Hashtbl.find marks id with Not_found -> orphan_mark
 
 let log_exit mark msg =
   let parent = mark_or_orphan mark.parent_id in
@@ -222,23 +216,21 @@ let summary () =
   Buffer.add_string b "Lwt_mark status (running threads):\n";
   if !enabled
   then begin
-    let statuses = IntMap.fold begin fun _id mark acc ->
+    let statuses = Hashtbl.create 7 in
+    Hashtbl.iter begin fun _id mark ->
         match mark.kind with
-        | Normal | Background -> acc
+        | Normal | Background -> ()
         | Status -> begin
             let {id = parent_id; _} = parent_of_status mark.parent_id in
-            let (acc, statuses) =
-              try (acc, IntMap.find parent_id acc)
-              with Not_found -> let s = ref [] in (IntMap.add parent_id s acc, s)
+            let sts =
+              try Hashtbl.find statuses parent_id
+              with Not_found -> let s = ref [] in (Hashtbl.add statuses parent_id s; s)
             in
-            tuck statuses mark;
-            acc
+            tuck sts mark
           end
       end
-      !marks
-      IntMap.empty
-    in
-    IntMap.iter begin fun _id {id; name; parent_id; parent_name; logs; kind} ->
+      marks;
+    Hashtbl.iter begin fun _id {id; name; parent_id; parent_name; logs; kind} ->
         bprintf b "%s (#%i, %s%s)\n"
           !!name id (string_of_kind kind)
           (if parent_id = 0 then "" else sprintf ", parent: %s#%i" !!parent_name parent_id);
@@ -248,7 +240,7 @@ let summary () =
           | Status -> ()
           | Normal | Background ->
               let sts =
-                match IntMap.find id statuses with
+                match Hashtbl.find statuses id with
                 | sts_acc -> List.rev !sts_acc
                 | exception Not_found -> []
               in
@@ -256,7 +248,7 @@ let summary () =
         end;
         Buffer.add_char b '\n'
       end
-      !marks
+      marks
   end else
     bprintf b "<not initialized>\n";
   Buffer.contents b
