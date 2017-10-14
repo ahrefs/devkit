@@ -131,7 +131,16 @@ let mark_or_orphan id =
   try IntMap.find id !marks with Not_found -> orphan_mark
 
 let log_exit mark msg =
-  log_to (mark_or_orphan mark.parent_id) msg
+  let parent = mark_or_orphan mark.parent_id in
+  log_to parent begin
+    let {name; id; kind; parent_name; parent_id; logs = _} = mark in
+    lazy begin
+      Printf.sprintf "thread %S (#%i, %s%s) exit %s\n"
+        !!name id (string_of_kind kind)
+        (if parent == orphan_mark then Printf.sprintf ", parent was %s#%i" !!parent_name parent_id else "")
+        !!msg
+    end
+  end
 
 (** separate function to ease reasoning about which values are kept in closures (here: only arguments and top-level values, no local
     bindings from [with_new_mark]) *)
@@ -140,14 +149,13 @@ let run_with_mark ?dump ~mark cont () =
   let on_success v =
     unregister_mark mark;
     log_exit mark @@ lazy begin
-      Printf.sprintf "thread %S (#%i, %s) exit ok%s\n"
-        !!(mark.name) mark.id (string_of_kind mark.kind) (match dump with None -> "" | Some dump -> ", res: " ^ dump v)
+      "ok" ^ (match dump with None -> "" | Some dump -> ", res: " ^ dump v)
     end;
   in
   let on_failure exn =
     unregister_mark mark;
     log_exit mark @@ lazy begin
-      Printf.sprintf "thread %S (#%i, %s) exit exn: %s\n" !!(mark.name) mark.id (string_of_kind mark.kind) (Printexc.to_string exn)
+      "exn: " ^ Printexc.to_string exn
     end;
   in
   run_thread on_success on_failure cont
