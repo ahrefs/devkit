@@ -10,6 +10,7 @@ type logger = <
   event : (string * Yojson.json) list -> unit; (** write event manually *)
   write : unit -> unit; (** write Var counters explicitly *)
   reload : unit -> unit; (** reopen output file *)
+  flush : unit -> unit; (** force flush *)
 >
 
 (* Setup logger for a stream of events *)

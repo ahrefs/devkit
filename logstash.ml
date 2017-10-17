@@ -188,9 +188,10 @@ type logger = <
   event : (string * Yojson.json) list -> unit;
   write : unit -> unit;
   reload : unit -> unit;
+  flush : unit -> unit;
 >
 
-let null = object method event _j = () method write () = () method reload () = () end
+let null = object method event _j = () method write () = () method reload () = () method flush () = () end
 
 let log ?autoflush ?(add_timestamp_only=false) ?name () =
   let add_fields = if add_timestamp_only then fun l -> timestamp_field () :: l else fun l -> common_fields () @ l in
@@ -245,6 +246,9 @@ let log ?autoflush ?(add_timestamp_only=false) ?name () =
         method event j =
           self#try_rotate ();
           write_json activity !out nr (`Assoc (add_fields j))
+
+        method flush () =
+          if !nr > 0 && not !activity then (flush !out; nr := 0)
 
       end
 
