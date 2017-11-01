@@ -253,16 +253,15 @@ let log ?autoflush ?(add_timestamp_only=false) ?name () =
       end
 
 let logstash_err = Lazy.from_fun @@ log ~name:"log/errors"
-let flush_error_log () = !!logstash_err #flush ()
 
 let setup_error_log () =
   Signal.set_reload !!logstash_err#reload;
-  at_exit flush_error_log;
   let chain_hook = !Log.State.hook in
   Log.State.hook := begin fun level facil s ->
     if level = `Error then
     begin
       !!logstash_err #event ["facility", `String facil.Logger.name; "message", `String s];
+      !!logstash_err #flush ();
     end;
     chain_hook level facil s
   end

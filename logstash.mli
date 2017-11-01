@@ -17,7 +17,6 @@ type logger = <
 val log : ?autoflush:float -> ?add_timestamp_only:bool -> ?name:string -> unit -> logger
 
 val setup_error_log : unit -> unit
-val flush_error_log : unit -> unit
 
 (** Counters with arbitrary attributes *)
 module Dyn : sig
