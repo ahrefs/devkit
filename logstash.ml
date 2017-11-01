@@ -258,9 +258,9 @@ let setup_error_log () =
   Signal.set_reload !!logstash_err#reload;
   let chain_hook = !Log.State.hook in
   Log.State.hook := begin fun level facil s ->
-    if level = `Error then begin
-      let pid = Pid.self () in
-      !!logstash_err #event ["error", `String facil.Logger.name; "pid", `Int pid.id; "pid_name", `String pid.name; "host", `String pid.host; "message", `String s];
+    if level = `Error then
+    begin
+      !!logstash_err #event ["facility", `String facil.Logger.name; "message", `String s];
     end;
     chain_hook level facil s
   end
