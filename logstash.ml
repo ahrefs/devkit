@@ -29,7 +29,7 @@ module Dyn = struct
 
   let make ?(attrs=[]) name =
     match is_in_families name with
-    | true -> Exn.fail "static class with this name alreasdy exists: %s" name
+    | true -> Exn.fail "static class with this name already exists: %s" name
     | false -> make_family (("class", `String name)::attrs)
 
   let extend dyn attrs =
