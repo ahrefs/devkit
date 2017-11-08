@@ -16,9 +16,14 @@ let escape k =
 
 let zero = Var.(function Count _ -> Count 0 | Time _ -> Time 0. | Bytes _ -> Bytes 0)
 
+module J = Yojson.Safe
+
+type json = [ `Float of float | `Int of int | `String of string ]
+
 module Dyn = struct
   open Var
-  type t = (string * [`Floatlit of string | `Int of int | `String of string ]) list
+
+  type t = (string * json) list
 
   let show_a = Action.strl (fun (c,_) -> sprintf "%S:''" c)
 
@@ -85,10 +90,7 @@ let get () =
         let x = ref (zero v), a in
         Hashtbl.add state attr x; x
     in
-    let this = (common_fields () @ attr
-      :  (string * [ `Floatlit of string | `Int of int | `String of string]) list
-      :> (string * [>`Floatlit of string | `Int of int | `String of string]) list)
-    in
+    let this = (common_fields () @ attr : (string * json) list :> (string * [> json ]) list) in
     match v, !previous with
     | Count x, Count x' ->
       let delta = x - x' in
@@ -98,22 +100,19 @@ let get () =
       if delta <> 0 then begin previous := v; tuck l @@ `Assoc (("bytes", `Int delta) :: this) end
     | Time x, Time x' ->
       let delta = x -. x' in
-      if delta > epsilon_float then begin previous := v; tuck l @@ `Assoc (("seconds", `Floatlit (sprintf "%g" delta)) :: this) end
+      if delta > epsilon_float then begin previous := v; tuck l @@ `Assoc (("seconds", `Float delta) :: this) end
     | Count _, Bytes _ | Count _, Time _
     | Bytes _, Count _ | Bytes _, Time _
     | Time _, Count _ | Time _, Bytes _ -> () (* cannot happen *)
   end;
   dynamic |> Hashtbl.iter begin fun attr v ->
     let attr = List.map (fun (k, s) -> escape k, s) attr in
-    let this = (common_fields () @ attr
-      :  (string * [ `Floatlit of string | `Int of int | `String of string]) list
-      :> (string * [>`Floatlit of string | `Int of int | `String of string]) list)
-    in
+    let this = (common_fields () @ attr : (string * json) list :> (string * [> json ]) list) in
     let add c = tuck l @@ `Assoc (c :: this) in
     match v with
     | Count x -> add ("count", `Int x)
     | Bytes x -> add ("bytes", `Int x)
-    | Time x -> add ("seconds", `Floatlit (sprintf "%g" x))
+    | Time x -> add ("seconds", `Float x)
   end;
   Hashtbl.clear dynamic;
   !l
@@ -134,8 +133,6 @@ let open_logstash_exn basename =
     Files.open_out_append_text filename
   with exn ->
     Exn.fail ~exn "failed to open stats file %s" filename
-
-module J = Yojson
 
 let write_json activity out nr json =
   let bytes = J.to_string ~std:true json ^ "\n" in
@@ -185,7 +182,7 @@ let is_same_day timestamp =
   Time.now () -. Time.days 1 < timestamp
 
 type logger = <
-  event : (string * Yojson.json) list -> unit;
+  event : (string * Yojson.Safe.json) list -> unit;
   write : unit -> unit;
   reload : unit -> unit;
   flush : unit -> unit;
