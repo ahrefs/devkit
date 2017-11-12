@@ -173,6 +173,8 @@ let setup_lwt ?(pause=default_period) () =
     Lwt.async loop
   )
 
+let force_flush () = setup_ (fun f -> f())
+
 let round_to_midnight timestamp =
   let ms = Time.to_ms timestamp in
   let diff = ms mod (Time.days 1 |> Time.to_ms) in
