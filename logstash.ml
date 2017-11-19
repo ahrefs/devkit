@@ -165,6 +165,7 @@ let default_period = Time.seconds 60
 let setup ?(pause=default_period) events = setup_ (fun f -> Async.setup_periodic_timer_wait events pause f)
 let setup_lwt ?(pause=default_period) () =
   setup_ (fun f ->
+    at_exit f;
     let rec loop () =
       match Daemon.should_exit () with
       | true -> Lwt.return_unit
@@ -172,8 +173,6 @@ let setup_lwt ?(pause=default_period) () =
     in
     Lwt.async loop
   )
-
-let force_flush () = setup_ (fun f -> f())
 
 let round_to_midnight timestamp =
   let ms = Time.to_ms timestamp in
