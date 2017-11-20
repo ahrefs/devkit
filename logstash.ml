@@ -162,7 +162,7 @@ let setup_ setup =
     end
 
 let default_period = Time.seconds 60
-let setup ?(pause=default_period) events = setup_ (fun f -> Async.setup_periodic_timer_wait events pause f)
+let setup ?(pause=default_period) events = setup_ (fun f -> at_exit f; Async.setup_periodic_timer_wait events pause f)
 let setup_lwt ?(pause=default_period) () =
   setup_ (fun f ->
     at_exit f;
