@@ -52,5 +52,6 @@ let update () =
     set_name (!self).name
 
 let self () = update (); !self
+let self_name () = name @@ self ()
 let show_self () = update (); !self_s
 let self_as name = set_name name; self ()
