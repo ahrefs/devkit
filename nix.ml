@@ -258,3 +258,8 @@ let get_xdg_dir ~env dir =
 
 let xdg_cache_dir = lazy (get_xdg_dir ~env:"XDG_DATA_CACHE" "cache")
 let xdg_config_dir = lazy (get_xdg_dir ~env:"XDG_CONFIG_HOME" "config")
+
+let quote_if_needed s = try Scanf.sscanf s "%_[a-zA-Z0-9:_/.-]%!" s with _ -> Filename.quote s
+
+let args = List.tl (Array.to_list Sys.argv) (* Action.args *)
+let cmdline = String.concat " " @@ List.map quote_if_needed @@ Array.to_list Sys.argv
