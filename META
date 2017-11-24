@@ -12,3 +12,11 @@ package "gperftools" (
   archive(mt,native) = "devkit_gperftools.cmxa"
   exists_if = "devkit_gperftools.cma"
 )
+
+package "jemalloc" (
+  description = "jemalloc support"
+  requires = "devkit,jemalloc_ctl"
+  archive(mt,byte) = "devkit_jemalloc.cma"
+  archive(mt,native) = "devkit_jemalloc.cmxa"
+  exists_if = "devkit_jemalloc.cma"
+)

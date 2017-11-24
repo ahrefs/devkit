@@ -41,5 +41,6 @@ depends: [
 ]
 depopts: [
   "gperftools"
+  "ocaml-jemalloc"
 ]
 available: [ocaml-version >= "4.04.0"]
