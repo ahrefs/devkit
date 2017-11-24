@@ -1,4 +1,4 @@
-(** Memory reporting for gperftools, call [promote] in every binary linked with gperftools *)
+(** Memory reporting for gperftools, call [setup] in every binary linked with gperftools *)
 
 let show_crt_info () =
   let bytes = Action.bytes_string in

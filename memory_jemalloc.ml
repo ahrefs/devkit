@@ -1,4 +1,4 @@
-(** Memory reporting for gperftools, call [promote] in every binary linked with gperftools *)
+(** Memory reporting for jemalloc, call [setup] in every binary linked with jemalloc *)
 
 open Jemalloc_ctl
 
