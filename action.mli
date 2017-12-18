@@ -8,10 +8,11 @@ val period : int -> (int -> unit) -> (unit -> unit)
 
 (** [timely p f]
 
+    @param [first] the earliest time [f x] must be executed ([now + p] by default).
     @return a function [pf] such that [pf x] = [f x] if the
     last execution of [pf x] was done more than [p] seconds ago, or
     [()] otherwise. *)
-val timely : float -> ('a -> unit) -> ('a -> unit)
+val timely : float -> ?first:float -> ('a -> unit) -> ('a -> unit)
 
 (** Combination of the above, see the code for more info. *)
 val timely_counter : float -> (int -> unit) -> (unit -> unit)

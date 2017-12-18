@@ -9,9 +9,9 @@ let period n f =
   let count = ref 0 in
   (fun () -> incr count; if !count mod n = 0 then f !count)
 
-let timely period f =
+let timely period ?first f =
   assert (period > 0.);
-  let next = ref (Time.get () +. period) in
+  let next = ref (match first with Some first -> first | None -> Time.get () +. period) in
   (fun x -> if Time.get () > !next then begin Std.finally (fun () -> next := Time.get () +. period) f x end)
 
 let timely_counter period f =
