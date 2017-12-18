@@ -8,7 +8,7 @@ val period : int -> (int -> unit) -> (unit -> unit)
 
 (** [timely p f]
 
-    @param [first] the earliest time [f x] must be executed ([now + p] by default).
+    @param first the earliest time [f x] must be executed ([now + p] by default).
     @return a function [pf] such that [pf x] = [f x] if the
     last execution of [pf x] was done more than [p] seconds ago, or
     [()] otherwise. *)
