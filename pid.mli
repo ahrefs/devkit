@@ -13,6 +13,9 @@ val dummy : t
 (** @return pretty-printed pid (human readable) *)
 val show : t -> string
 
+(** @return machine hostname *)
+val host : t -> string
+
 (** @return application name *)
 val name : t -> string
 
