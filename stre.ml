@@ -56,11 +56,11 @@ let from s p = from_to s p (String.length s)
 (** safe (lazy) way to cut substring
   same as extlib [String.slice] *)
 let slice =
-  let clip n len = if n < 0 then Int.max 0 (len + n) else Int.min n len in
-  fun ?first ?last s ->
+  let clip max x = if x > max then max else if x < 0 then 0 else x in
+  fun ?(first=0) ?(last=Sys.max_string_length) s ->
     let len = String.length s in
-    let i = match first with None -> 0 | Some n -> clip n len in
-    let j = match last with None -> len | Some n -> clip n len in
+    let i = if first = 0 then 0 else clip len (if first < 0 then len + first else first) in
+    let j = if last = Sys.max_string_length then len else clip len (if last < 0 then len + last else last) in
     if i < j then unsafe_from_to s i j else ""
 
 (** split by delimiter
