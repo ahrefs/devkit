@@ -19,7 +19,7 @@ val ipv4_to_yojson : ipv4 -> Yojson.Safe.json
 val ipv4_of_yojson : Yojson.Safe.json -> (ipv4, string) result
 
 module IPv4 : sig
-type t
+type t = ipv4
 val equal : t -> t -> bool
 val compare : t -> t -> int
 val null : t
