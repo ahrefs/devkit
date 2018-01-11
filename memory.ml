@@ -1,4 +1,19 @@
-(** Memory reporting - GC and OS, optionally malloc *)
+(** Memory reporting - GC and OS, optionally malloc
+
+General background:
+- VSZ is not very intersting, this is the amount of memory which is mapped to the process address space.
+  It's not really memory use, only the amount of memory the process can access without triggering a segfault.
+- RSS is resident set size: this is the real world data. It's tracked by kernel and is the amount of memory
+  currently allocated to this process. Most of the time this is what you want to look at.
+- Malloc stats: those are metrics tracked by C malloc (jemalloc, tcmalloc, glibc, etc).
+  - size is basically like VSZ but from malloc point of view.
+    That is it does not include mmap files for instance.
+  - used is basically RSS from malloc point of view.
+  - heap is the sum of all currently malloced values for which [free] had not been called.
+    So this is what application requested, not including metadata, cache, etc
+- Gc stats are one level above and are tracked by ocaml gc.
+  e.g. heap is the total size allocate for ocaml program. See [Gc] module documentation for more details.
+*)
 
 open Prelude
 open ExtLib
