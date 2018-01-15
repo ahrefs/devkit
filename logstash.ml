@@ -191,7 +191,7 @@ type logger = <
 
 let null = object method event _j = () method write () = () method reload () = () method flush () = () end
 
-let log ?autoflush ?(add_timestamp_only=false) ?name () =
+let log ?autoflush ?(verbose=false) ?(add_timestamp_only=false) ?name () =
   let add_fields = if add_timestamp_only then fun l -> timestamp_field () :: l else fun l -> common_fields () @ l in
   let name = match name with None -> get_basename () | Some _ -> name in
   match name with
@@ -222,7 +222,7 @@ let log ?autoflush ?(add_timestamp_only=false) ?name () =
 
         method reload () =
           try
-            log #info "rotate log";
+            if verbose then log #info "rotate log";
             let new_out = open_logstash_exn stat_basename in
             let prev = !out in
             out := new_out;

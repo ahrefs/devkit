@@ -16,7 +16,7 @@ type logger = <
 >
 
 (* Setup logger for a stream of events *)
-val log : ?autoflush:float -> ?add_timestamp_only:bool -> ?name:string -> unit -> logger
+val log : ?autoflush:float -> ?verbose:bool -> ?add_timestamp_only:bool -> ?name:string -> unit -> logger
 
 val setup_error_log : unit -> unit
 
