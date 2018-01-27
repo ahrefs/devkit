@@ -34,3 +34,7 @@ val self : unit -> t
 val self_name : unit -> string
 val self_as : string -> t
 val show_self : unit -> string
+
+(**/**)
+
+val set_fake : t -> unit
