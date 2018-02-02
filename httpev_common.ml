@@ -70,7 +70,7 @@ let client_addr req = match req.addr with Unix.ADDR_INET (addr,port) -> addr, po
 let client_ip req = fst @@ client_addr req
 
 let show_request req =
-  sprintf "#%d %s time %.4f (recv %.4f) %s %s%s"
+  sprintf "#%d %s time %.4f (recv %.4f) %s %s%s %S"
     req.id
     (show_client_addr req)
     (Time.get () -. req.conn)
@@ -78,6 +78,7 @@ let show_request req =
     (show_method req.meth)
     (Exn.default "" (List.assoc "host") req.headers)
     req.url
+    (Exn.default "" (List.assoc "user-agent") req.headers)
 
 let status_code : reply_status -> int = function
   | `Ok -> 200
