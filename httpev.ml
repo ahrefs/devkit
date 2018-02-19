@@ -1073,7 +1073,7 @@ let setup_fd_lwt fd config answer =
 
 let setup_lwt config answer =
   let fd = Lwt_unix.of_unix_file_descr ~blocking:false @@ start_listen config in
-  setup_fd_lwt fd config answer
+  (setup_fd_lwt fd config answer)[%lwt.finally Lwt_unix.close fd]
 
 let server_lwt config answer =
   Lwt_main.run @@ setup_lwt config answer
