@@ -996,6 +996,7 @@ let handle_lwt fd k =
     let pause = 2. in
     log #error "too many open files, disabling accept for %s" (Time.duration_str pause);
     Lwt_unix.sleep pause
+  | `Exn Lwt.Canceled -> log #info "canceling accept loop"; Lwt.fail Lwt.Canceled
   | `Exn exn -> log #warn ~exn "accept"; Lwt.return ()
   | `Ok (fd,addr as peer) ->
     let task =
