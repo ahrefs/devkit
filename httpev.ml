@@ -896,7 +896,7 @@ let send_reply c cout reply =
     | `Body s -> Lwt_io.write cout s
     | `Chunks gen ->
       let push = function
-      | "" -> Lwt.return ()
+      | "" -> Lwt.return_unit
       | s ->
         let%lwt () = Lwt_io.write cout (sprintf "%x\r\n" (String.length s)) in
         let%lwt () = Lwt_io.write cout s in
@@ -908,7 +908,7 @@ let send_reply c cout reply =
       with exn ->
         (* do not write trailer on error - let the peer notice the breakage *)
         log #warn ~exn "generate failed";
-        Lwt.return ()
+        Lwt.return_unit
   in
   Lwt_io.flush cout
 
@@ -985,7 +985,7 @@ let handle_client_lwt client cin answer =
   let req = make_request_exn client ~line1 ~headers ~body:data in
   client.req <- Ready req;
   Hashtbl.replace client.server.reqs req.id req;
-  (handle_request_lwt client req answer)[%lwt.finally Hashtbl.remove client.server.reqs req.id; Lwt.return ()]
+  (handle_request_lwt client req answer)[%lwt.finally Hashtbl.remove client.server.reqs req.id; Lwt.return_unit; ]
 
 let accept_hook = ref (fun () -> ())
 
@@ -997,19 +997,19 @@ let handle_lwt fd k =
     log #error "too many open files, disabling accept for %s" (Time.duration_str pause);
     Lwt_unix.sleep pause
   | `Exn Lwt.Canceled -> log #info "canceling accept loop"; Lwt.fail Lwt.Canceled
-  | `Exn exn -> log #warn ~exn "accept"; Lwt.return ()
+  | `Exn exn -> log #warn ~exn "accept"; Lwt.return_unit
   | `Ok (fd,addr as peer) ->
     let task =
       begin
         try%lwt k peer
-        with exn -> log #warn ~exn "accepted (%s)" (Nix.show_addr addr); Lwt.return ()
+        with exn -> log #warn ~exn "accepted (%s)" (Nix.show_addr addr); Lwt.return_unit
       end [%lwt.finally
         Lwt_unix.(Exn.suppress (shutdown fd) SHUTDOWN_ALL);
         Lwt_unix.close fd
       ]
     in
     Lwt.ignore_result task; (* "fork" processing *)
-    Lwt.return ()
+    Lwt.return_unit
 
 let handle_lwt config fd k =
   let rec loop () =
@@ -1066,9 +1066,9 @@ let setup_fd_lwt fd config answer =
       with exn ->
         !!error;
         log #warn ~exn "send_reply %s" (show_client client);
-        Lwt.return ()
+        Lwt.return_unit
       end
-    end [%lwt.finally decr_active server; Hashtbl.remove server.clients req_id; BuffersCache.release buffer; Lwt.return ()]
+    end [%lwt.finally decr_active server; Hashtbl.remove server.clients req_id; BuffersCache.release buffer; Lwt.return_unit; ]
   end
 
 let setup_lwt config answer =
