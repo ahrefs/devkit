@@ -1017,7 +1017,7 @@ let handle_lwt config fd k =
     let%lwt () = if config.yield then Lwt_unix.yield () else Lwt.return_unit in
     loop ()
   in
-  let%lwt () = Lwt.choose [Daemon.should_exit_lwt; loop ()] in
+  let%lwt () = Lwt.pick [Daemon.should_exit_lwt; loop ()] in
   log #info "%s %s:%d exit" config.name (Unix.string_of_inet_addr config.ip) config.port;
   Lwt.return_unit
 
