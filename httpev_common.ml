@@ -128,8 +128,15 @@ let show_http_reply : reply_status -> string = function
   | `Custom s -> s
 
 (* basically allow all *)
-let auto_options = (`Ok, [
-  "Allow", "OPTIONS, GET, POST, PUT, PATCH, DELETE, HEAD";
-  "Access-Control-Allow-Origin", "*";
-  "Access-Control-Max-Age", "600" (* try to cache *)
-], "")
+let auto_options req =
+  let requested_headers =
+    try
+      List.assoc "access-control-request-headers" req.headers
+    with _ -> ""
+  in
+  (`Ok, [
+    "Allow", "OPTIONS, GET, POST, PUT, PATCH, DELETE, HEAD";
+    "Access-Control-Allow-Origin", "*";
+    "Access-Control-Allow-Headers", requested_headers; (* mimic *)
+    "Access-Control-Max-Age", "600" (* try to cache *)
+  ], "")

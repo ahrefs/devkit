@@ -920,7 +920,7 @@ let handle_request_lwt c req answer =
   let return x = Lwt.return @@ `Body x in
   match req.version with
   | (1,1) when c.server.auto_options && req.meth = `OPTIONS ->
-    return auto_options (* included from Httpev_common *)
+    return @@ auto_options req (* included from Httpev_common *)
   | (1,_) ->
     let auth = match c.server.digest_auth with
     | Some auth -> Digest_auth.check auth req
