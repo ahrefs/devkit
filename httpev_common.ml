@@ -8,7 +8,7 @@ type request = { addr : Unix.sockaddr;
                  args : (string * string) list;
                  conn : Time.t; (* time when client connected *)
                  recv : Time.t; (* time when client request was fully read *)
-                 meth : [`GET | `POST | `PUT | `PATCH | `DELETE | `HEAD ];
+                 meth : [`GET | `POST | `PUT | `PATCH | `DELETE | `HEAD | `OPTIONS];
                  headers : (string * string) list;
                  body : string;
                  version : int * int; (* client HTTP version *)
@@ -51,6 +51,7 @@ let show_method = function
   | `PATCH -> "PATCH"
   | `DELETE -> "DELETE"
   | `HEAD -> "HEAD"
+  | `OPTIONS -> "OPTIONS"
 
 let method_of_string = function
   | "GET" -> `GET
@@ -59,6 +60,7 @@ let method_of_string = function
   | "PATCH" -> `PATCH
   | "DELETE" -> `DELETE
   | "HEAD" -> `HEAD
+  | "OPTIONS" -> `OPTIONS
   | s -> Exn.fail "method_of_string %s" s
 
 let show_client_addr req =
