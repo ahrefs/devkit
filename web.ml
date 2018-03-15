@@ -247,7 +247,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       let () = setup h in
       ()
     in
-    incr nr_http;
+    let nr_http = incr nr_http; !nr_http in (* XXX atomic wrt ocaml threads *)
     if verbose then begin
       let action = string_of_http_action action in
       let body = match body with
@@ -256,10 +256,10 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       | Some (`Raw (ct,body)) -> sprintf "%s %s" ct (Stre.shorten 64 body)
       | Some (`Chunked (ct,_f)) -> sprintf "%s chunked" ct
       in
-      log #info "%s #%d %s %s" action !nr_http url body
+      log #info "%s #%d %s %s" action nr_http url body
     end;
     let t = new Action.timer in
-    let result = if verbose then Some (verbose_curl_result !nr_http action t) else None in
+    let result = if verbose then Some (verbose_curl_result nr_http action t) else None in
     http_gets ~setup ?result ?max_size url
 
   let http_request ?ua ?timeout ?verbose ?setup ?max_size ?http_1_0 ?headers ?body (action:http_action) url =
