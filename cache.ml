@@ -345,6 +345,8 @@ module Assoc = struct
     assert (true = Hashtbl.mem h k);
     Hashtbl.remove h k
   let size = Hashtbl.length
+
+  let fold = Hashtbl.fold
 end
 
 module Lists = struct

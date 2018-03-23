@@ -99,6 +99,8 @@ module Assoc : sig
   (** Delete association, assert if key is not present *)
   val remove : ('a,'b) t -> 'a -> unit
   val size : ('a,'b) t -> int
+
+  val fold: ('a -> 'b -> 'c -> 'c) -> ('a, 'b) t -> 'c -> 'c
 end
 
 module Lists : sig
