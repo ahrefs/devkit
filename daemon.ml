@@ -15,6 +15,10 @@ let managed = ref false
     [manage] will automatically set this flag on SIGTERM unless default signal handling is overriden
 *)
 let should_exit_ = ref false
+
+(** [should_exit_lwt] usage is discouraged.
+    Use [wait_exit] instead, which makes it harder to ignore "should exit" state and loop infinitely
+*)
 let (should_exit_lwt,signal_exit_lwt) = Lwt.wait ()
 let should_exit () = !should_exit_
 let should_run () = not !should_exit_
