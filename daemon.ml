@@ -64,6 +64,26 @@ let get_args () =
 
 let args = get_args ()
 
+let install_signal_handlers () =
+  let unix_stderr s =
+    let s = Log.State.format_simple `Info log#facility s in
+    try
+      let (_:int) = Unix.write_substring Unix.stderr s 0 (String.length s) in ()
+    with _ ->
+      () (* do not fail, can be ENOSPC *)
+  in
+  Signal.set [Sys.sigpipe] ignore;
+  Signal.set [Sys.sigusr1] (fun _ -> Log.reopen !logfile);
+  Signal.set [Sys.sigusr2] begin fun _ ->
+    match Signal.is_safe_output () with
+    | true -> Memory.log_stats (); Memory.reclaim ()
+    | false ->
+      (* output directly to fd to prevent deadlock, but breaks buffering *)
+      Memory.get_stats () |> List.iter unix_stderr;
+      Memory.reclaim_s () |> unix_stderr
+  end;
+  Signal.set_exit signal_exit
+
 let manage () =
   match !managed with
   | true -> () (* be smart *)
@@ -91,24 +111,7 @@ let manage () =
     log #info "run: %s" Nix.cmdline;
     log #info "GC settings: %s" (Action.gc_settings ());
   end;
-  let unix_stderr s =
-    let s = Log.State.format_simple `Info log#facility s in
-    try
-      let (_:int) = Unix.write_substring Unix.stderr s 0 (String.length s) in ()
-    with _ ->
-      () (* do not fail, can be ENOSPC *)
-  in
-  Signal.set [Sys.sigpipe] ignore;
-  Signal.set [Sys.sigusr1] (fun _ -> Log.reopen !logfile);
-  Signal.set [Sys.sigusr2] begin fun _ ->
-    match Signal.is_safe_output () with
-    | true -> Memory.log_stats (); Memory.reclaim ()
-    | false ->
-      (* output directly to fd to prevent deadlock, but breaks buffering *)
-      Memory.get_stats () |> List.iter unix_stderr;
-      Memory.reclaim_s () |> unix_stderr
-  end;
-  Signal.set_exit signal_exit;
+  install_signal_handlers ();
   Nix.raise_limits ();
   managed := true;
   ()
