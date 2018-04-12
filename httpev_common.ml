@@ -32,6 +32,7 @@ type reply_status =
   | `Conflict
   | `Length_required
   | `Request_too_large
+  | `I'm_a_teapot
   | `Internal_server_error
   | `Not_implemented
   | `Service_unavailable
@@ -95,6 +96,7 @@ let status_code : reply_status -> int = function
   | `Conflict -> 409
   | `Length_required -> 411
   | `Request_too_large -> 413
+  | `I'm_a_teapot -> 418
 
   | `Internal_server_error -> 500
   | `Not_implemented -> 501
@@ -118,6 +120,7 @@ let show_http_reply : reply_status -> string = function
   | `Conflict -> "HTTP/1.0 409 Conflict"
   | `Length_required -> "HTTP/1.0 411 Length Required"
   | `Request_too_large -> "HTTP/1.0 413 Request Entity Too Large"
+  | `I'm_a_teapot -> "HTTP/1.0 418 I'm a teapot"
 
   | `Internal_server_error -> "HTTP/1.0 500 Internal Server Error"
   | `Not_implemented -> "HTTP/1.0 501 Not Implemented"
