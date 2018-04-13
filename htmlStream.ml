@@ -8,7 +8,7 @@ open ExtLib
 let log = Log.from "html"
 
 module Raw = struct
-  include New(String)
+  include New(String)()
   let length x = String.length @@ project x
   let is_empty x = "" = project x
 end

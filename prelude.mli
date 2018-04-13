@@ -46,7 +46,7 @@ val printfn : ('a, unit, string, unit) format4 -> 'a
 val eprintfn : ('a, unit, string, unit) format4 -> 'a
 
 (** abstract type generator *)
-module New(T : sig type t end) :
+module New(T : sig type t end)() :
 sig
   type t
   val inj : T.t -> t
@@ -59,7 +59,7 @@ sig
   val project_list : t list -> T.t list
 end
 
-module Fresh(T : sig type t val compare : t -> t -> int end) :
+module Fresh(T : sig type t val compare : t -> t -> int end)() :
 sig
   type t
   val inject : T.t -> t
