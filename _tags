@@ -1,7 +1,7 @@
 true: bin_annot, -annot, debug, thread, package(threads), strict_formats, strict_sequence, safe_string, warn_A, warn_e, warn(-40..42-44-48-58)
 <*.ml{,i}>: package(extlib), package(pcre), package(bytes), package(extunix)
 "web.ml": package(netstring), package(curl.lwt)
-"exn.ml": package(curl), package(xmlm)
+"exn.ml": package(curl)
 "htmlStream.ml" or "php_serialize.ml": syntax_camlp4o, package(camlp4)
 "web.ml" or "lwt_flag.ml" or "lwt_util.ml": package(lwt.ppx)
 "nix.ml" or "files.ml" or "daemon.ml" or "prelude.ml" or "parallel.ml" or "signal.ml" or "lwt_engines.ml" or "lwt_util.ml" or "memory.ml": package(lwt.unix)
