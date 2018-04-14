@@ -33,6 +33,7 @@ depends: [
   "pcre"
   "extunix" {>= "0.1.4"}
   "lwt" {>="2.5.2"}
+  "lwt_ppx"
   "base-bytes"
   "base-unix"
   "base-threads"
