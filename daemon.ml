@@ -43,6 +43,12 @@ let wait_exit =
   let thread = lazy (Lwt.bind should_exit_lwt (fun () -> Lwt.fail ShouldExit)) in
   fun () -> Lazy.force thread
 
+(** [break_lwt = Lwt.wrap break] *)
+let break_lwt () = Lwt.wrap break
+
+(** [unless_exit x] resolves promise [x] or raises [ShouldExit] *)
+let unless_exit x = Lwt.pick [wait_exit (); x]
+
 let get_args () =
   [
     (let set_loglevel s =
