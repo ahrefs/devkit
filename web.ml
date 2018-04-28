@@ -199,14 +199,22 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
   let verbose_curl_result nr_http action t h code =
     let open Curl in
     let b = Buffer.create 10 in
-    bprintf b "%s #%d %s " (string_of_http_action action) nr_http t#get_str;
+    bprintf b "%s #%d %s ⇓%s ⇑%s %s "
+      (string_of_http_action action) nr_http (Time.compact_duration t#get)
+      (Action.bytes_string_f @@ get_sizedownload h)
+      (Action.bytes_string_f @@ get_sizeupload h)
+      (get_primaryip h)
+    ;
     begin match code with
     | CURLE_OK ->
-      bprintf b "HTTP %d got %s from %s"
-        (get_httpcode h) (Action.bytes_string_f @@ get_sizedownload h) (get_primaryip h) (*get_primaryport h*);
+      bprintf b "HTTP %d %s" (get_httpcode h) (get_effectiveurl h);
+      begin match get_redirecturl h with
+      | "" -> ()
+      | s -> bprintf b " -> %s" s
+      end;
       begin match get_redirectcount h with
       | 0 -> ()
-      | n -> bprintf b " at %s after %d redirects" (get_effectiveurl h) n
+      | n -> bprintf b " after %d redirects" n
       end
     | _ ->
       bprintf b "error (%d) %s (errno %d)" (errno code) (strerror code) (Curl.get_oserrno h)
