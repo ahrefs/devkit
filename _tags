@@ -19,3 +19,5 @@ true: bin_annot, -annot, debug, thread, package(threads), strict_formats, strict
 <network.ml*> or <logstash.ml*> or <action.ml*>: package(yojson)
 "gzip_stream.ml": warn(-35)
 <lwt_mark.ml{,i}>: package(lwt)
+# generated code
+"extEnum_merge.ml": warn(-27-39)

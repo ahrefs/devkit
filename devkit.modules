@@ -10,6 +10,7 @@ Exn
 Exn_lwt
 ExtArg
 ExtEnum
+ExtEnum_merge
 ExtThread
 Factor
 FastBase64

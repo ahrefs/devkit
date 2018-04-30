@@ -20,6 +20,8 @@ val align : ('a -> 'a -> int) -> 'a t -> 'a t -> 'a t
 val join : ?left:bool -> ?right:bool -> ?multi:bool -> ('a -> 'b -> int) -> 'a t -> 'b t -> ('a option * 'b option) t
 val join_assoc : ?left:bool -> ?right:bool -> ?multi:bool -> ('a -> 'a -> int) -> ('a * 'b) t -> ('a * 'c) t -> ('a * 'b option * 'c option) t
 
+include module type of ExtEnum_merge
+
 (** merge two enums of different types *)
 val merge : ('a -> 'b -> int) -> 'a t -> 'b t -> ('a option * 'b option) t
 

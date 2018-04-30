@@ -99,33 +99,10 @@ let join_assoc ?(left=false) ?(right=false) ?(multi=true) f e1 e2 =
   in
   from next
 
-let merge f e1 e2 =
-  let next () =
-    match peek e1, peek e2 with
-    | None, None -> raise No_more_elements
-    | Some x, None -> junk e1; Some x, None
-    | None, Some y -> junk e2; None, Some y
-    | Some x, Some y ->
-      match f x y with
-      | 0 -> junk e1; junk e2; Some x, Some y
-      | n when n < 0 -> junk e1; Some x, None
-      | _ -> junk e2; None, Some y
-  in
-  from next
+include ExtEnum_merge
 
-let merge_assoc f e1 e2 =
-  let next () =
-    match peek e1, peek e2 with
-    | None, None -> raise No_more_elements
-    | Some (k,x), None -> junk e1; k, Some x, None
-    | None, Some (k,y) -> junk e2; k, None, Some y
-    | Some (kx,x), Some (ky,y) ->
-      match f kx ky with
-      | 0 -> junk e1; junk e2; kx, Some x, Some y
-      | n when n < 0 -> junk e1; kx, Some x, None
-      | _ -> junk e2; ky, None, Some y
-  in
-  from next
+let merge = join_full
+let merge_assoc = join_assoc_full
 
 let group equal fold zero e =
   let current = ref None in
