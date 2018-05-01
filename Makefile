@@ -22,6 +22,7 @@ gen_metaocaml: extEnum_merge.ml
 extEnum_merge.ml: stage_merge.ml
 		OCAMLFIND_TOOLCHAIN=metaocaml $(OCAMLBUILD) stage_merge.byte
 		./_build/stage_merge.byte > $@
+		ocamlfind ocamlc -package extlib -i $@ > $@i
 
 %.ml: %.ml.rl
 		ragel -O -F1 $< -o $@
