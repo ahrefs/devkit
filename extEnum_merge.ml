@@ -171,24 +171,19 @@ fun cmp_87  ->
         | (None ,None ) -> Pervasives.raise Enum.No_more_elements
         | (Some x_94,None ) ->
             (Enum.junk e1_88;
-             if Pervasives.not _prev_found_93
-             then ((Some x_94), None)
-             else next_91 ())
-        | (None ,Some y_95) -> (Enum.junk e2_89; (None, (Some y_95)))
+             if Pervasives.not _prev_found_93 then `Left x_94 else next_91 ())
+        | (None ,Some y_95) -> (Enum.junk e2_89; `Right y_95)
         | (Some x_96,Some y_97) ->
             let k1_98 = x_96  in
             let k2_99 = y_97  in
             (match cmp_87 k1_98 k2_99 with
-             | 0 ->
-                 (_found_90 := true;
-                  Enum.junk e2_89;
-                  ((Some x_96), (Some y_97)))
+             | 0 -> (_found_90 := true; Enum.junk e2_89; `Both (x_96, y_97))
              | n_100 when n_100 < 0 ->
                  (Enum.junk e1_88;
                   if Pervasives.not _prev_found_93
-                  then ((Some x_96), None)
+                  then `Left x_96
                   else next_91 ())
-             | _ -> (Enum.junk e2_89; (None, (Some y_97))))
+             | _ -> (Enum.junk e2_89; `Right y_97))
          in
       Enum.from next_91
 
@@ -208,9 +203,9 @@ fun cmp_101  ->
             | (Some x_110,None ) ->
                 (Enum.junk e1_104;
                  if Pervasives.not _prev_found_109
-                 then ((Some x_110), None)
+                 then `Left x_110
                  else next_107 ())
-            | (None ,Some y_111) -> (Enum.junk e2_105; (None, (Some y_111)))
+            | (None ,Some y_111) -> (Enum.junk e2_105; `Right y_111)
             | (Some x_112,Some y_113) ->
                 let k1_114 = k1_102 x_112  in
                 let k2_115 = k2_103 y_113  in
@@ -218,13 +213,13 @@ fun cmp_101  ->
                  | 0 ->
                      (_found_106 := true;
                       Enum.junk e2_105;
-                      ((Some x_112), (Some y_113)))
+                      `Both (x_112, y_113))
                  | n_116 when n_116 < 0 ->
                      (Enum.junk e1_104;
                       if Pervasives.not _prev_found_109
-                      then ((Some x_112), None)
+                      then `Left x_112
                       else next_107 ())
-                 | _ -> (Enum.junk e2_105; (None, (Some y_113))))
+                 | _ -> (Enum.junk e2_105; `Right y_113))
              in
           Enum.from next_107
 
@@ -389,19 +384,16 @@ fun cmp_201  ->
         let _prev_found_206 = false  in
         match ((Enum.peek e1_202), (Enum.peek e2_203)) with
         | (None ,None ) -> Pervasives.raise Enum.No_more_elements
-        | (Some x_207,None ) -> (Enum.junk e1_202; ((Some x_207), None))
-        | (None ,Some y_208) -> (Enum.junk e2_203; (None, (Some y_208)))
+        | (Some x_207,None ) -> (Enum.junk e1_202; `Left x_207)
+        | (None ,Some y_208) -> (Enum.junk e2_203; `Right y_208)
         | (Some x_209,Some y_210) ->
             let k1_211 = x_209  in
             let k2_212 = y_210  in
             (match cmp_201 k1_211 k2_212 with
              | 0 ->
-                 (Enum.junk e1_202;
-                  Enum.junk e2_203;
-                  ((Some x_209), (Some y_210)))
-             | n_213 when n_213 < 0 ->
-                 (Enum.junk e1_202; ((Some x_209), None))
-             | _ -> (Enum.junk e2_203; (None, (Some y_210))))
+                 (Enum.junk e1_202; Enum.junk e2_203; `Both (x_209, y_210))
+             | n_213 when n_213 < 0 -> (Enum.junk e1_202; `Left x_209)
+             | _ -> (Enum.junk e2_203; `Right y_210))
          in
       Enum.from next_205
 
@@ -416,8 +408,8 @@ fun cmp_214  ->
             let _prev_found_221 = false  in
             match ((Enum.peek e1_217), (Enum.peek e2_218)) with
             | (None ,None ) -> Pervasives.raise Enum.No_more_elements
-            | (Some x_222,None ) -> (Enum.junk e1_217; ((Some x_222), None))
-            | (None ,Some y_223) -> (Enum.junk e2_218; (None, (Some y_223)))
+            | (Some x_222,None ) -> (Enum.junk e1_217; `Left x_222)
+            | (None ,Some y_223) -> (Enum.junk e2_218; `Right y_223)
             | (Some x_224,Some y_225) ->
                 let k1_226 = k1_215 x_224  in
                 let k2_227 = k2_216 y_225  in
@@ -425,10 +417,9 @@ fun cmp_214  ->
                  | 0 ->
                      (Enum.junk e1_217;
                       Enum.junk e2_218;
-                      ((Some x_224), (Some y_225)))
-                 | n_228 when n_228 < 0 ->
-                     (Enum.junk e1_217; ((Some x_224), None))
-                 | _ -> (Enum.junk e2_218; (None, (Some y_225))))
+                      `Both (x_224, y_225))
+                 | n_228 when n_228 < 0 -> (Enum.junk e1_217; `Left x_224)
+                 | _ -> (Enum.junk e2_218; `Right y_225))
              in
           Enum.from next_220
 
@@ -535,12 +526,11 @@ fun cmp_269  ->
         | (Some x_276,None ) ->
             (Enum.junk e1_270;
              if Pervasives.not _prev_found_275
-             then
-               ((Pervasives.fst x_276), (Some (Pervasives.snd x_276)), None)
+             then ((Pervasives.fst x_276), (`Left (Pervasives.snd x_276)))
              else next_273 ())
         | (None ,Some y_277) ->
             (Enum.junk e2_271;
-             ((Pervasives.fst y_277), None, (Some (Pervasives.snd y_277))))
+             ((Pervasives.fst y_277), (`Right (Pervasives.snd y_277))))
         | (Some x_278,Some y_279) ->
             let k1_280 = Pervasives.fst x_278  in
             let k2_281 = Pervasives.fst y_279  in
@@ -548,16 +538,15 @@ fun cmp_269  ->
              | 0 ->
                  (_found_272 := true;
                   Enum.junk e2_271;
-                  (k1_280, (Some (Pervasives.snd x_278)),
-                    (Some (Pervasives.snd y_279))))
+                  (k1_280,
+                    (`Both ((Pervasives.snd x_278), (Pervasives.snd y_279)))))
              | n_282 when n_282 < 0 ->
                  (Enum.junk e1_270;
                   if Pervasives.not _prev_found_275
-                  then (k1_280, (Some (Pervasives.snd x_278)), None)
+                  then (k1_280, (`Left (Pervasives.snd x_278)))
                   else next_273 ())
              | _ ->
-                 (Enum.junk e2_271;
-                  (k2_281, None, (Some (Pervasives.snd y_279)))))
+                 (Enum.junk e2_271; (k2_281, (`Right (Pervasives.snd y_279)))))
          in
       Enum.from next_273
 
@@ -654,10 +643,10 @@ fun cmp_322  ->
         | (None ,None ) -> Pervasives.raise Enum.No_more_elements
         | (Some x_328,None ) ->
             (Enum.junk e1_323;
-             ((Pervasives.fst x_328), (Some (Pervasives.snd x_328)), None))
+             ((Pervasives.fst x_328), (`Left (Pervasives.snd x_328))))
         | (None ,Some y_329) ->
             (Enum.junk e2_324;
-             ((Pervasives.fst y_329), None, (Some (Pervasives.snd y_329))))
+             ((Pervasives.fst y_329), (`Right (Pervasives.snd y_329))))
         | (Some x_330,Some y_331) ->
             let k1_332 = Pervasives.fst x_330  in
             let k2_333 = Pervasives.fst y_331  in
@@ -665,14 +654,12 @@ fun cmp_322  ->
              | 0 ->
                  (Enum.junk e1_323;
                   Enum.junk e2_324;
-                  (k1_332, (Some (Pervasives.snd x_330)),
-                    (Some (Pervasives.snd y_331))))
+                  (k1_332,
+                    (`Both ((Pervasives.snd x_330), (Pervasives.snd y_331)))))
              | n_334 when n_334 < 0 ->
-                 (Enum.junk e1_323;
-                  (k1_332, (Some (Pervasives.snd x_330)), None))
+                 (Enum.junk e1_323; (k1_332, (`Left (Pervasives.snd x_330))))
              | _ ->
-                 (Enum.junk e2_324;
-                  (k2_333, None, (Some (Pervasives.snd y_331)))))
+                 (Enum.junk e2_324; (k2_333, (`Right (Pervasives.snd y_331)))))
          in
       Enum.from next_326
 

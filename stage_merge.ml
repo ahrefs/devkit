@@ -49,6 +49,8 @@ let print_code code =
 
 let ret_pair a b = (fun _k v -> match v with Left x -> .< .~(a x), None >. | Right x -> .< None, .~(b x) >. | Both (x,y) -> .<.~(a x), .~(b y) >.)
 let ret_assoc a b = (fun k v -> match v with Left x -> .<.~k, .~(a x), None>. | Right x -> .<.~k, None, .~(b x)>. | Both (x,y) -> .<.~k, .~(a x), .~(b y)>.)
+let ret_full a b = (fun _k v -> match v with Left x -> .< `Left .~(a x) >. | Right x -> .< `Right .~(b x) >. | Both (x,y) -> .< `Both (.~(a x), .~(b y)) >.)
+let ret_add_key f = (fun k v -> .< .~k, .~(f k v) >.)
 
 let () =
   let bool k = k false; k true in
@@ -73,9 +75,15 @@ let () =
       else
         print_code @@ .< fun cmp -> .~(gen .<cmp>. ret key key) >.
     in
-    let gen v1 v2 = if assoc then gen (ret_assoc (v1 $ snd_) (v2 $ snd_)) fst_ else gen (ret_pair v1 v2) id in
+    let gen v1 v2 =
+      match left && right, assoc with
+      | false, false -> gen (ret_pair v1 v2) id
+      | false, true -> gen (ret_assoc (v1 $ snd_) (v2 $ snd_)) fst_
+      | true, false -> gen (ret_full v1 v2) id
+      | true, true -> gen (ret_add_key @@ ret_full (v1 $ snd_) (v2 $ snd_)) fst_
+    in
     begin match left, right with
-    | true, true -> gen some some
+    | true, true -> gen id id
     | true, false -> gen id some
     | false, true -> gen some id
     | false, false -> gen id id
