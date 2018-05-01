@@ -306,8 +306,9 @@ let () = test "Enum.join" @@ fun () ->
   ()
 
 let () = test "Enum.join*" @@ fun () ->
-  let printer = Action.strl (uncurry @@ (sprintf "%s, %s" $$ Option.map_default string_of_int "NONE")) in
+  let printer = Action.strl (function `Left x -> sprintf "L %d" x | `Right x -> sprintf "R %d" x | `Both (x,y) -> sprintf "(%d,%d)" x y) in
   let t join e1 e2 expect =
+    let expect = List.map (function None, None -> assert false | None, Some x -> `Right x | Some x, None -> `Left x | Some x, Some y -> `Both (x,y)) expect in
     join compare (List.enum e1) (List.enum e2) |> List.of_enum |>
     OUnit.assert_equal ~printer expect
   in

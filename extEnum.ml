@@ -101,9 +101,6 @@ let join_assoc ?(left=false) ?(right=false) ?(multi=true) f e1 e2 =
 
 include ExtEnum_merge
 
-let merge = join_full
-let merge_assoc = join_assoc_full
-
 let group equal fold zero e =
   let current = ref None in
   let rec next () =

@@ -663,3 +663,61 @@ fun cmp_322  ->
          in
       Enum.from next_326
 
+let merge =
+fun cmp_335  ->
+  fun e1_336  ->
+    fun e2_337  ->
+      let _found_338 = Pervasives.ref false  in
+      let rec next_339 () =
+        let _prev_found_340 = false  in
+        match ((Enum.peek e1_336), (Enum.peek e2_337)) with
+        | (None ,None ) -> Pervasives.raise Enum.No_more_elements
+        | (Some x_341,None ) -> (Enum.junk e1_336; ((Some x_341), None))
+        | (None ,Some y_342) -> (Enum.junk e2_337; (None, (Some y_342)))
+        | (Some x_343,Some y_344) ->
+            let k1_345 = x_343  in
+            let k2_346 = y_344  in
+            (match cmp_335 k1_345 k2_346 with
+             | 0 ->
+                 (Enum.junk e1_336;
+                  Enum.junk e2_337;
+                  ((Some x_343), (Some y_344)))
+             | n_347 when n_347 < 0 ->
+                 (Enum.junk e1_336; ((Some x_343), None))
+             | _ -> (Enum.junk e2_337; (None, (Some y_344))))
+         in
+      Enum.from next_339
+
+let merge_assoc =
+fun cmp_348  ->
+  fun e1_349  ->
+    fun e2_350  ->
+      let _found_351 = Pervasives.ref false  in
+      let rec next_352 () =
+        let _prev_found_353 = false  in
+        match ((Enum.peek e1_349), (Enum.peek e2_350)) with
+        | (None ,None ) -> Pervasives.raise Enum.No_more_elements
+        | (Some x_354,None ) ->
+            (Enum.junk e1_349;
+             ((Pervasives.fst x_354), (Some (Pervasives.snd x_354)), None))
+        | (None ,Some y_355) ->
+            (Enum.junk e2_350;
+             ((Pervasives.fst y_355), None, (Some (Pervasives.snd y_355))))
+        | (Some x_356,Some y_357) ->
+            let k1_358 = Pervasives.fst x_356  in
+            let k2_359 = Pervasives.fst y_357  in
+            (match cmp_348 k1_358 k2_359 with
+             | 0 ->
+                 (Enum.junk e1_349;
+                  Enum.junk e2_350;
+                  (k1_358, (Some (Pervasives.snd x_356)),
+                    (Some (Pervasives.snd y_357))))
+             | n_360 when n_360 < 0 ->
+                 (Enum.junk e1_349;
+                  (k1_358, (Some (Pervasives.snd x_356)), None))
+             | _ ->
+                 (Enum.junk e2_350;
+                  (k2_359, None, (Some (Pervasives.snd y_357)))))
+         in
+      Enum.from next_352
+

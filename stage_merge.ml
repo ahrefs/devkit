@@ -90,19 +90,18 @@ let () =
     end;
     if by then Printf.printf "let %s_key cmp k = %s cmp k k\n\n" name name
 
-(*
-let stage_full_merge return = stage_merge ~left:true ~right:true ~multi:false return
+let stage_full_merge return key = .< fun cmp -> .~(stage_merge .<cmp>. ~left:true ~right:true ~multi:false return key key) >.
 
 let () =
   print_endline "let merge =";
-  print_code @@ stage_full_merge (ret_pair some some) id id
-
-let () =
-  print_endline "let merge_by =";
-  print_code @@ .< fun compare key1 key2 -> .~(stage_full_merge (ret_pair some some) (fun x -> .<key1 .~x>.) (fun x -> .<key2 .~x>.)) compare >.
+  print_code @@ stage_full_merge (ret_pair some some) id
 
 let () =
   print_endline "let merge_assoc =";
-  print_code @@ stage_full_merge (ret_assoc (some $ snd_) (some $ snd_)) fst_ fst_
-*)
+  print_code @@ stage_full_merge (ret_assoc (some $ snd_) (some $ snd_)) fst_
 
+(*
+let () =
+  print_endline "let merge_by =";
+  print_code @@ .< fun compare key1 key2 -> .~(stage_full_merge (ret_pair some some) (fun x -> .<key1 .~x>.) (fun x -> .<key2 .~x>.)) compare >.
+*)
