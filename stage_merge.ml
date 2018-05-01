@@ -2,7 +2,7 @@ open Enum
 
 type ('a,'b) value = Left of 'a | Right of 'b | Both of ('a * 'b)
 
-let stage_merge compare ~left ~right ~multi return key1 key2 =
+let stage_merge compare ~left ~right ~multi return key1 key2 v1 v2 =
   let multi_ret next found ret =
     match left, multi with
     | true, true -> .< if not .~found then .~ret else .~next () >.
@@ -15,15 +15,15 @@ let stage_merge compare ~left ~right ~multi return key1 key2 =
       let _prev_found = .~(if multi && left then .< let prev = !_found in _found := false; prev>.  else .< false >.) in
       match peek e1, peek e2 with
       | None, None -> raise No_more_elements
-      | Some x, None -> junk e1; .~(let ret = return (key1 .<x>.) (Left .<x>.) in multi_ret .<next>. .<_prev_found>. ret)
-      | None, Some y -> junk e2; .~(if right then return (key2 .<y>.) (Right .<y>.) else .< raise No_more_elements >.)
+      | Some x, None -> junk e1; .~(let ret = return (key1 .<x>.) (Left (v1 .<x>.)) in multi_ret .<next>. .<_prev_found>. ret)
+      | None, Some y -> junk e2; .~(if right then return (key2 .<y>.) (Right (v2 .<y>.)) else .< raise No_more_elements >.)
       | Some x, Some y ->
         let k1 = .~(key1 .<x>.) in
         let k2 = .~(key2 .<y>.) in
         match .~compare k1 k2 with
-        | 0 -> .~(if not multi then .< junk e1 >. else if left then .< _found := true >. else .< () >.); junk e2; .~(return .<k1>. (Both (.<x>.,.<y>.)))
-        | n when n < 0 -> junk e1; .~(let ret = return .<k1>. (Left .<x>.) in multi_ret .<next>. .<_prev_found>. ret)
-        | _ (* n > 0 *) -> junk e2; .~(if right then return .<k2>. (Right .<y>.) else .< next () >.)
+        | 0 -> .~(if not multi then .< junk e1 >. else if left then .< _found := true >. else .< () >.); junk e2; .~(return .<k1>. (Both (v1 .<x>., v2 .<y>.)))
+        | n when n < 0 -> junk e1; .~(let ret = return .<k1>. (Left (v1 .<x>.)) in multi_ret .<next>. .<_prev_found>. ret)
+        | _ (* n > 0 *) -> junk e2; .~(if right then return .<k2>. (Right (v2 .<y>.)) else .< next () >.)
     in
     from next
   >.
@@ -47,10 +47,15 @@ let print_code code =
 
 (* generate *)
 
-let ret_pair a b = (fun _k v -> match v with Left x -> .< .~(a x), None >. | Right x -> .< None, .~(b x) >. | Both (x,y) -> .<.~(a x), .~(b y) >.)
-let ret_assoc a b = (fun k v -> match v with Left x -> .<.~k, .~(a x), None>. | Right x -> .<.~k, None, .~(b x)>. | Both (x,y) -> .<.~k, .~(a x), .~(b y)>.)
-let ret_full a b = (fun _k v -> match v with Left x -> .< `Left .~(a x) >. | Right x -> .< `Right .~(b x) >. | Both (x,y) -> .< `Both (.~(a x), .~(b y)) >.)
-let ret_add_key f = (fun k v -> .< .~k, .~(f k v) >.)
+let wrap ret v1 v2 =
+  fun k v ->
+    let v = match v with Left x -> Left (v1 x) | Right x -> Right (v2 x) | Both (x,y) -> Both (v1 x, v2 y) in
+    ret k v
+
+let ret_pair _k v = match v with Left x -> .< .~x, None >. | Right x -> .< None, .~x >. | Both (x,y) -> .<.~x, .~y >.
+let ret_assoc k v = match v with Left x -> .<.~k, .~x, None>. | Right x -> .<.~k, None, .~x>. | Both (x,y) -> .<.~k, .~x, .~y>.
+let ret_full _k v = match v with Left x -> .< `Left .~x >. | Right x -> .< `Right .~x >. | Both (x,y) -> .< `Both (.~x, .~y) >.
+let ret_add_key f k v = .< .~k, .~(f k v) >.
 
 let () =
   let bool k = k false; k true in
@@ -68,19 +73,19 @@ let () =
     let str b name = if b then name else "" in
     let name = String.concat "_" @@ List.filter ((<>) "") @@ ["join"; str assoc "assoc"; dir; str uniq "uniq"; str by "by"] in
     Printf.printf "let %s =\n" name;
-    let gen cmp ret k1 k2 = stage_merge cmp ~left ~right ~multi:(not uniq) ret k1 k2 in
-    let gen ret key =
+    let stage cmp ret k1 k2 v = stage_merge cmp ~left ~right ~multi:(not uniq) ret k1 k2 v v in
+    let gen key v ret =
       if by then
-        print_code .< fun cmp k1 k2 -> .~(gen .<cmp>. ret (fun x -> .<k1 .~x>.) (fun x -> .<k2 .~x>.)) >.
+        print_code .< fun cmp k1 k2 -> .~(stage .<cmp>. ret (fun x -> .<k1 .~x>.) (fun x -> .<k2 .~x>.) v) >.
       else
-        print_code @@ .< fun cmp -> .~(gen .<cmp>. ret key key) >.
+        print_code .< fun cmp -> .~(stage .<cmp>. ret key key v) >.
     in
     let gen v1 v2 =
-      match left && right, assoc with
-      | false, false -> gen (ret_pair v1 v2) id
-      | false, true -> gen (ret_assoc (v1 $ snd_) (v2 $ snd_)) fst_
-      | true, false -> gen (ret_full v1 v2) id
-      | true, true -> gen (ret_add_key @@ ret_full (v1 $ snd_) (v2 $ snd_)) fst_
+      match assoc, left && right with
+      | false, false -> gen id id (wrap ret_pair v1 v2)
+      | false, true -> gen id id ret_full
+      | true, false -> gen fst_ snd_ (wrap ret_assoc v1 v2)
+      | true, true -> gen fst_ snd_ (ret_add_key @@ ret_full)
     in
     begin match left, right with
     | true, true -> gen id id
@@ -90,15 +95,15 @@ let () =
     end;
     if by then Printf.printf "let %s_key cmp k = %s cmp k k\n\n" name name
 
-let stage_full_merge return key = .< fun cmp -> .~(stage_merge .<cmp>. ~left:true ~right:true ~multi:false return key key) >.
+let stage_full_merge return key v = .< fun cmp -> .~(stage_merge .<cmp>. ~left:true ~right:true ~multi:false return key key v v) >.
 
 let () =
   print_endline "let merge =";
-  print_code @@ stage_full_merge (ret_pair some some) id
+  print_code @@ stage_full_merge (wrap ret_pair some some) id id
 
 let () =
   print_endline "let merge_assoc =";
-  print_code @@ stage_full_merge (ret_assoc (some $ snd_) (some $ snd_)) fst_
+  print_code @@ stage_full_merge (wrap ret_assoc some some) fst_ snd_
 
 (*
 let () =
