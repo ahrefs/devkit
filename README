@@ -5,13 +5,21 @@ General purpose OCaml library (development kit)
 Copyright (c) 2009 Ahrefs
 Released under the terms of LGPL-2.1 with OCaml linking exception.
 
-Dependencies
-============
+`opam install devkit`
+
+Development
+===========
+
+Install OCaml dependencies : `opam install . --deps-only`
+
+External dependencies : `opam list -s -e debian --rec --required-by=devkit`
 
 To update ragel-generated code :
 
   aptitude install ragel
-  make -B gen
+  make -B gen_ragel
 
-For OCaml dependencies see `opam`
-External dependencies : `opam list -s -e debian --rec --required-by=devkit`
+To update metaocaml-generated code :
+
+  opam sw 4.04.0+BER
+  make -B gen_metaocaml
