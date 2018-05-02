@@ -21,5 +21,4 @@ To update ragel-generated code :
 
 To update metaocaml-generated code :
 
-  opam sw 4.04.0+BER
-  make -B gen_metaocaml
+  opam exec --switch=4.04+BER -- make -B gen_metaocaml
