@@ -59,7 +59,7 @@ let ret_add_key f k v = .< .~k, .~(f k v) >.
 
 let () =
   let bool k = k false; k true in
-  bool @@ fun assoc -> bool @@ fun uniq -> bool @@ fun right -> bool @@ fun left -> bool @@ fun by ->
+  bool @@ fun assoc -> bool @@ fun multi -> bool @@ fun right -> bool @@ fun left -> bool @@ fun by ->
     match by, assoc with
     | true, true -> () (* assoc doesn't need `by`, has explicit key already *)
     | false, false -> () (* we don't want non-`by` variants, except for assoc which has explicit key *)
@@ -72,9 +72,9 @@ let () =
       | false, false -> "inner"
     in
     let str b name = if b then name else "" in
-    let name = String.concat "_" @@ List.filter ((<>) "") @@ ["join"; str assoc "assoc"; dir; str uniq "uniq"; str by "by"] in
+    let name = String.concat "_" @@ List.filter ((<>) "") @@ ["join"; str assoc "assoc"; dir; str multi "multi"; str by "by"] in
     Printf.printf "let %s =\n" name;
-    let stage cmp ret k1 k2 v = stage_merge cmp ~left ~right ~multi:(not uniq) ret k1 k2 v v in
+    let stage cmp ret k1 k2 v = stage_merge cmp ~left ~right ~multi ret k1 k2 v v in
     let gen key v ret =
       if by then
         print_code .< fun cmp k1 k2 -> .~(stage .<cmp>. ret (fun x -> .<k1 .~x>.) (fun x -> .<k2 .~x>.) v) >.

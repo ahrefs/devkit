@@ -17,6 +17,7 @@ val take : int -> 'a t -> 'a t
 (** merge two enums of same type *)
 val align : ('a -> 'a -> int) -> 'a t -> 'a t -> 'a t
 
+(** @param multi means input value can be present several times in output (when multiple cross-matching values in the right enum) *)
 val join : ?left:bool -> ?right:bool -> ?multi:bool -> ('a -> 'b -> int) -> 'a t -> 'b t -> ('a option * 'b option) t
 val join_assoc : ?left:bool -> ?right:bool -> ?multi:bool -> ('a -> 'a -> int) -> ('a * 'b) t -> ('a * 'c) t -> ('a * 'b option * 'c option) t
 

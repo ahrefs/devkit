@@ -312,15 +312,15 @@ let () = test "Enum.join*" @@ fun () ->
     join Int.compare id (List.enum e1) (List.enum e2) |> List.of_enum |>
     OUnit.assert_equal ~printer expect
   in
-  t Enum.join_full_by_key      [1;2;3;4;] [0;2;4;8;] [ None, Some 0; Some 1, None; Some 2, Some 2; Some 3, None; Some 4, Some 4; None, Some 8; ];
-  t Enum.join_full_by_key      [0;1;2;3;] [4;5;6;7;] [ Some 0, None; Some 1, None; Some 2, None; Some 3, None; None, Some 4; None, Some 5; None, Some 6; None, Some 7];
-  t Enum.join_full_by_key      [4;5;6;7;] [0;1;2;3;] [ None, Some 0; None, Some 1; None, Some 2; None, Some 3; Some 4, None; Some 5, None; Some 6, None; Some 7, None];
-  t Enum.join_full_by_key      [0;1;2;3;] [0;3;] [ Some 0, Some 0; Some 1, None; Some 2, None; Some 3, Some 3; ];
-  t Enum.join_full_by_key      [1;] [0;1;1;1;2;] [ None, Some 0; Some 1, Some 1; Some 1, Some 1; Some 1, Some 1; None, Some 2; ];
-  t Enum.join_full_by_key      [1;] [0;1;1;] [ None, Some 0; Some 1, Some 1; Some 1, Some 1; ];
-  t Enum.join_full_by_key      [1;2;] [0;1;1;] [ None, Some 0; Some 1, Some 1; Some 1, Some 1; Some 2, None; ];
-  t Enum.join_full_by_key      [1;2;] [2;2;3;] [ Some 1, None; Some 2, Some 2; Some 2, Some 2; None, Some 3; ];
-  t Enum.join_full_uniq_by_key [1;2;] [2;2;3;] [ Some 1, None; Some 2, Some 2; None, Some 2; None, Some 3; ];
+  t Enum.join_full_multi_by_key [1;2;3;4;] [0;2;4;8;] [ None, Some 0; Some 1, None; Some 2, Some 2; Some 3, None; Some 4, Some 4; None, Some 8; ];
+  t Enum.join_full_multi_by_key [0;1;2;3;] [4;5;6;7;] [ Some 0, None; Some 1, None; Some 2, None; Some 3, None; None, Some 4; None, Some 5; None, Some 6; None, Some 7];
+  t Enum.join_full_multi_by_key [4;5;6;7;] [0;1;2;3;] [ None, Some 0; None, Some 1; None, Some 2; None, Some 3; Some 4, None; Some 5, None; Some 6, None; Some 7, None];
+  t Enum.join_full_multi_by_key [0;1;2;3;] [0;3;] [ Some 0, Some 0; Some 1, None; Some 2, None; Some 3, Some 3; ];
+  t Enum.join_full_multi_by_key [1;] [0;1;1;1;2;] [ None, Some 0; Some 1, Some 1; Some 1, Some 1; Some 1, Some 1; None, Some 2; ];
+  t Enum.join_full_multi_by_key [1;] [0;1;1;] [ None, Some 0; Some 1, Some 1; Some 1, Some 1; ];
+  t Enum.join_full_multi_by_key [1;2;] [0;1;1;] [ None, Some 0; Some 1, Some 1; Some 1, Some 1; Some 2, None; ];
+  t Enum.join_full_multi_by_key [1;2;] [2;2;3;] [ Some 1, None; Some 2, Some 2; Some 2, Some 2; None, Some 3; ];
+  t Enum.join_full_by_key       [1;2;] [2;2;3;] [ Some 1, None; Some 2, Some 2; None, Some 2; None, Some 3; ];
   ()
 
 let () = test "Enum.uniq" begin fun () ->
