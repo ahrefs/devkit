@@ -61,7 +61,8 @@ let () =
   let bool k = k false; k true in
   bool @@ fun assoc -> bool @@ fun uniq -> bool @@ fun right -> bool @@ fun left -> bool @@ fun by ->
     match by, assoc with
-    | true, true -> ()
+    | true, true -> () (* assoc doesn't need `by`, has explicit key already *)
+    | false, false -> () (* we don't want non-`by` variants, except for assoc which has explicit key *)
     | _ ->
     let dir =
       match left, right with

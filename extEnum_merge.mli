@@ -1,13 +1,9 @@
-val join_inner :
-  ('a -> 'b -> int) -> 'a Enum.t -> 'b Enum.t -> ('a * 'b) Enum.t
 val join_inner_by :
   ('a -> 'b -> int) ->
   ('c -> 'a) -> ('d -> 'b) -> 'c Enum.t -> 'd Enum.t -> ('c * 'd) Enum.t
 val join_inner_by_key :
   ('a -> 'a -> int) ->
   ('b -> 'a) -> 'b Enum.t -> 'b Enum.t -> ('b * 'b) Enum.t
-val join_left :
-  ('a -> 'b -> int) -> 'a Enum.t -> 'b Enum.t -> ('a * 'b option) Enum.t
 val join_left_by :
   ('a -> 'b -> int) ->
   ('c -> 'a) ->
@@ -15,8 +11,6 @@ val join_left_by :
 val join_left_by_key :
   ('a -> 'a -> int) ->
   ('b -> 'a) -> 'b Enum.t -> 'b Enum.t -> ('b * 'b option) Enum.t
-val join_right :
-  ('a -> 'b -> int) -> 'a Enum.t -> 'b Enum.t -> ('a option * 'b) Enum.t
 val join_right_by :
   ('a -> 'b -> int) ->
   ('c -> 'a) ->
@@ -24,10 +18,6 @@ val join_right_by :
 val join_right_by_key :
   ('a -> 'a -> int) ->
   ('b -> 'a) -> 'b Enum.t -> 'b Enum.t -> ('b option * 'b) Enum.t
-val join_full :
-  ('a -> 'b -> int) ->
-  'a Enum.t ->
-  'b Enum.t -> [> `Both of 'a * 'b | `Left of 'a | `Right of 'b ] Enum.t
 val join_full_by :
   ('a -> 'b -> int) ->
   ('c -> 'a) ->
@@ -39,16 +29,12 @@ val join_full_by_key :
   ('b -> 'a) ->
   'b Enum.t ->
   'b Enum.t -> [> `Both of 'b * 'b | `Left of 'b | `Right of 'b ] Enum.t
-val join_inner_uniq :
-  ('a -> 'b -> int) -> 'a Enum.t -> 'b Enum.t -> ('a * 'b) Enum.t
 val join_inner_uniq_by :
   ('a -> 'b -> int) ->
   ('c -> 'a) -> ('d -> 'b) -> 'c Enum.t -> 'd Enum.t -> ('c * 'd) Enum.t
 val join_inner_uniq_by_key :
   ('a -> 'a -> int) ->
   ('b -> 'a) -> 'b Enum.t -> 'b Enum.t -> ('b * 'b) Enum.t
-val join_left_uniq :
-  ('a -> 'b -> int) -> 'a Enum.t -> 'b Enum.t -> ('a * 'b option) Enum.t
 val join_left_uniq_by :
   ('a -> 'b -> int) ->
   ('c -> 'a) ->
@@ -56,8 +42,6 @@ val join_left_uniq_by :
 val join_left_uniq_by_key :
   ('a -> 'a -> int) ->
   ('b -> 'a) -> 'b Enum.t -> 'b Enum.t -> ('b * 'b option) Enum.t
-val join_right_uniq :
-  ('a -> 'b -> int) -> 'a Enum.t -> 'b Enum.t -> ('a option * 'b) Enum.t
 val join_right_uniq_by :
   ('a -> 'b -> int) ->
   ('c -> 'a) ->
@@ -65,10 +49,6 @@ val join_right_uniq_by :
 val join_right_uniq_by_key :
   ('a -> 'a -> int) ->
   ('b -> 'a) -> 'b Enum.t -> 'b Enum.t -> ('b option * 'b) Enum.t
-val join_full_uniq :
-  ('a -> 'b -> int) ->
-  'a Enum.t ->
-  'b Enum.t -> [> `Both of 'a * 'b | `Left of 'a | `Right of 'b ] Enum.t
 val join_full_uniq_by :
   ('a -> 'b -> int) ->
   ('c -> 'a) ->
