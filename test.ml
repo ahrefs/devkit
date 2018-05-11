@@ -320,8 +320,6 @@ let () = test "Enum.join*" @@ fun () ->
   t Enum.join_full_multi_by_key [1;] [0;1;1;] [ None, Some 0; Some 1, Some 1; Some 1, Some 1; ];
   t Enum.join_full_multi_by_key [1;2;] [0;1;1;] [ None, Some 0; Some 1, Some 1; Some 1, Some 1; Some 2, None; ];
   t Enum.join_full_multi_by_key [1;2;] [2;2;3;] [ Some 1, None; Some 2, Some 2; Some 2, Some 2; None, Some 3; ];
-  (* commented out test case fails, albeit it is symmetrical *)
-(*   t Enum.join_full_multi_by_key [2;2;3;] [1;2;] [ None, Some 1; Some 2, Some 2; Some 2, Some 2; Some 3, None; ]; *)
   t Enum.join_full_multi_by_key [2;2;3;] [1;2;] [ None, Some 1; Some 2, Some 2; Some 2, None; Some 3, None; ];
   t Enum.join_full_by_key       [1;2;] [2;2;3;] [ Some 1, None; Some 2, Some 2; None, Some 2; None, Some 3; ];
   ()
