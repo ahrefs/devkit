@@ -1,4 +1,4 @@
-true: bin_annot, -annot, debug, thread, package(threads), strict_formats, strict_sequence, safe_string, warn_A, warn_e, warn(-40..42-44-48-58)
+true: bin_annot, -annot, debug, thread, strict_formats, strict_sequence, safe_string, warn_A, warn_e, warn(-40..42-44-48-58)
 <*.ml{,i}>: package(extlib), package(pcre), package(bytes), package(extunix)
 "web.ml": package(netstring), package(curl.lwt)
 "exn.ml": package(curl)
@@ -19,5 +19,6 @@ true: bin_annot, -annot, debug, thread, package(threads), strict_formats, strict
 <network.ml*> or <logstash.ml*> or <action.ml*>: package(yojson)
 "gzip_stream.ml": warn(-35)
 <lwt_mark.ml{,i}>: package(lwt)
+<mtq.ml*> or <mVar.ml*> or <extThreads.ml*>: package(threads)
 # generated code
 "extEnum_merge.ml": warn(-27-39)
