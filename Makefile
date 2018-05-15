@@ -2,7 +2,7 @@
 VERSION=$(shell git describe --always --long)
 
 ifndef VERSION
-VERSION=v0.5.2
+VERSION=v0.6
 endif
 
 .PHONY: build lib top doc clean install uninstall test gen gen_ragel gen_metaocaml
