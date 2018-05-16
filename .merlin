@@ -2,3 +2,4 @@ B _build
 B +threads
 FLG -w +a-e-40..42-44-48-58
 PKG extunix extlib pcre zip libevent curl netstring extunix netcgi2 xmlm lwt.unix bytes oUnit yojson lwt.ppx
+EXT meta
