@@ -41,6 +41,7 @@ type config =
     strict_args : bool;
       (** default false, if enabled - will in particular fail on "/path?arg1&arg2", why would anyone want that? *)
     max_time : max_time;
+    cors_allow_all : bool; (* default false, if enabled - automatically set `Access-Control-Allow-Origin: *` for simple requests *)
   }
 
 let default_max_time = {
@@ -70,6 +71,7 @@ let default =
     nodelay = false;
     strict_args = false;
     max_time = default_max_time;
+    cors_allow_all = false;
   }
 
 include Httpev_common
@@ -422,6 +424,15 @@ let send_reply_blocking c (code,hdrs) =
   with
     exn -> abort c exn "send_reply_blocking"; raise exn
 
+let maybe_allow_cors c h =
+  match c.req with
+  | Ready req ->
+    begin match c.server.config.cors_allow_all, req.meth, List.mem_assoc "origin" req.headers, List.mem_assoc "access-control-allow-origin" h with
+    | true, (`GET|`HEAD|`POST), true, false -> ("Access-Control-Allow-Origin","*")::h
+    | _ -> h
+    end
+  | _ -> h
+
 (* this function is called back by user to actually send data *)
 let send_reply_user c req (code,hdrs,body) =
   match code with
@@ -435,6 +446,7 @@ let send_reply_user c req (code,hdrs,body) =
       if c.server.config.access_log_enabled then log_status_apache !(c.server.config.access_log) code (String.length body) req;
       hdrs
   in
+  let hdrs = maybe_allow_cors c hdrs in
   let blocking = Option.is_some req.blocking in
   (* filter headers *)
   let hdrs = hdrs |> List.filter begin fun (k,_) ->
@@ -852,6 +864,7 @@ let send_reply c cout reply =
   | `Body (code,hdrs,s) -> code, hdrs, `Body s
   | `Chunks (code,hdrs,gen) -> code, hdrs, `Chunks gen
   in
+  let hdrs = maybe_allow_cors c hdrs in
   begin match c.req with
   | Ready req ->
     let size = match body with `Body s -> String.length s | `Chunks _ -> 0 in
