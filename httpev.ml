@@ -41,6 +41,7 @@ type config =
     strict_args : bool;
       (** default false, if enabled - will in particular fail on "/path?arg1&arg2", why would anyone want that? *)
     max_time : max_time;
+    auto_options : bool; (* if enabled, OPTIONS method is answered automatically with accepting everything *)
   }
 
 let default_max_time = {
@@ -70,6 +71,7 @@ let default =
     nodelay = false;
     strict_args = false;
     max_time = default_max_time;
+    auto_options = true;
   }
 
 include Httpev_common
@@ -106,6 +108,7 @@ and server = {
   digest_auth : Digest_auth.t option;
   h_childs : (int,unit) Hashtbl.t; (** currently running forked childs *)
   q_wait : (unit -> unit) Stack.t; (** the stack of requests to fork *)
+  auto_options: bool; (** handle HTTP1.1 OPTIONS method automatically *)
 }
 
 let incr_active s = s.active <- s.active + 1
@@ -132,6 +135,7 @@ let make_server_state fd config =
     listen_socket = fd;
     h_childs = Hashtbl.create 16;
     q_wait = Stack.create ();
+    auto_options = config.auto_options;
   }
 
 let show_socket_error fd =
@@ -915,6 +919,8 @@ let send_reply c cout reply =
 let handle_request_lwt c req answer =
   let return x = Lwt.return @@ `Body x in
   match req.version with
+  | (1,1) when c.server.auto_options && req.meth = `OPTIONS ->
+    return @@ auto_options req (* included from Httpev_common *)
   | (1,_) ->
     let auth = match c.server.digest_auth with
     | Some auth -> Digest_auth.check auth req
