@@ -22,6 +22,7 @@ type request = { addr : Unix.sockaddr;
 type reply_status =
   [ `Ok
   | `Created
+  | `No_content
   | `Found
   | `Moved
   | `Bad_request
@@ -86,6 +87,7 @@ let show_request req =
 let status_code : reply_status -> int = function
   | `Ok -> 200
   | `Created -> 201
+  | `No_content -> 204
 
   | `Moved -> 301
   | `Found -> 302
@@ -110,6 +112,7 @@ let status_code : reply_status -> int = function
 let show_http_reply : reply_status -> string = function
   | `Ok -> "HTTP/1.0 200 OK"
   | `Created -> "HTTP/1.0 201 Created"
+  | `No_content -> "HTTP/1.0 204 No Content"
 
   | `Moved -> "HTTP/1.0 301 Moved Permanently"
   | `Found -> "HTTP/1.0 302 Found"
@@ -130,3 +133,10 @@ let show_http_reply : reply_status -> string = function
   | `Version_not_supported -> "HTTP/1.0 505 HTTP Version Not Supported"
 
   | `Custom s -> s
+
+(* basically allow all *)
+let cors_preflight_allow_all = (`No_content, [
+  "Access-Control-Allow-Origin", "*";
+  "Access-Control-Allow-Methods", "GET, POST, OPTIONS, PUT, PATCH, DELETE, HEAD";
+  "Access-Control-Max-Age", "600";
+], "")
