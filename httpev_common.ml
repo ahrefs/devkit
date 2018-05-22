@@ -2,13 +2,23 @@ open Printf
 
 type encoding = Gzip | Identity
 
+type meth = [
+  | `GET
+  | `POST
+  | `PUT
+  | `PATCH
+  | `DELETE
+  | `HEAD
+  | `OPTIONS
+]
+
 type request = { addr : Unix.sockaddr;
                  url : string; (* path and arguments *)
                  path : string;
                  args : (string * string) list;
                  conn : Time.t; (* time when client connected *)
                  recv : Time.t; (* time when client request was fully read *)
-                 meth : [`GET | `POST | `PUT | `PATCH | `DELETE | `HEAD | `OPTIONS];
+                 meth : meth;
                  headers : (string * string) list;
                  body : string;
                  version : int * int; (* client HTTP version *)
