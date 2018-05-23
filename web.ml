@@ -232,13 +232,6 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       set_postfieldsize h (String.length body)
     in
     let setup h =
-      begin match action with
-      | `GET -> ()
-      | `DELETE -> set_customrequest h "DELETE"
-      | `POST -> set_post h true
-      | `PUT -> set_post h true; set_customrequest h "PUT"
-      | `PATCH -> set_post h true; set_customrequest h "PATCH"
-      end;
       begin match body with
       | Some (`Form args) -> set_body_and_headers h "application/x-www-form-urlencoded" (make_url_args args)
       | Some (`Raw (ct,body)) -> set_body_and_headers h ct body
@@ -249,6 +242,11 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
         Option.may (set_httpheader h) headers;
         set_readfunction h (fun _ -> "") (* prevent reading from stdin with POST without body *)
       end;
+      begin match action with
+      | `GET | `DELETE -> ()
+      | `POST | `PUT | `PATCH -> set_post h true
+      end;
+      set_customrequest h (string_of_http_action action);
       if http_1_0 then set_httpversion h HTTP_VERSION_1_0;
       Option.may (set_timeout h) timeout;
       Option.may (set_useragent h) ua;
