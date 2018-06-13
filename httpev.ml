@@ -578,7 +578,7 @@ let handle events fd k =
   Async.setup_simple_event events fd [Ev.READ] begin fun ev fd _ ->
     try
       while true do (* accept as much as possible, socket is nonblocking *)
-        let peer = accept fd in
+        let peer = accept ~cloexec:true fd in
         try
           k peer
         with
@@ -1014,7 +1014,9 @@ let handle_lwt fd k =
   | `Ok (fd,addr as peer) ->
     let task =
       begin
-        try%lwt k peer
+        try%lwt
+        Unix.set_close_on_exec (Lwt_unix.unix_file_descr fd);
+        k peer
         with exn -> log #warn ~exn "accepted (%s)" (Nix.show_addr addr); Lwt.return_unit
       end [%lwt.finally
         Lwt_unix.(Exn.suppress (shutdown fd) SHUTDOWN_ALL);
