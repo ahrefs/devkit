@@ -562,7 +562,7 @@ open Unix
 
 let listen ~name ?(backlog=100) ?(reuseport=false) addr port =
   let addr = ADDR_INET (addr,port) in
-  let fd = socket PF_INET SOCK_STREAM 0 in
+  let fd = socket ~cloexec:true PF_INET SOCK_STREAM 0 in
   try
     setsockopt fd SO_REUSEADDR true;
     if reuseport then U.setsockopt fd SO_REUSEPORT true;
