@@ -71,14 +71,8 @@ module State = struct
       | _ -> Exn.fail "loglevel not recognized, specify either <level> or <facil>=<level> or <prefix>*=<level>"
     end
 
-  let read_env_config ?process_name () =
-    let process_name =
-      match process_name with
-      | None -> Pid.name @@ Pid.self ()
-      | Some name -> name
-    in
-    let process_name = String.uppercase process_name in
-    set_loglevels @@ try Sys.getenv (process_name ^ "_LOG") with Not_found -> ""
+  let read_env_config ?(env="DEVKIT_LOG") () =
+    set_loglevels @@ try Sys.getenv env with Not_found -> ""
 
   let output_ch ch =
     fun str -> try output_string ch str; flush ch with _ -> () (* logging never fails, most probably ENOSPC *)
@@ -136,10 +130,8 @@ let set_utc () = State.utc_timezone := true
 
 (** Update facilities configuration from the environment.
 
-    By default, it reads the configuration in the environment variable
-    [PROCESS_NAME_LOG]. [PROCESS_NAME] can be overwritten using the
-    optionnal [process_name] parameter. By default [PROCESS_NAME] is
-    taken from [Pid.name]. The variable name is always uppercase.
+    By default, it reads the configuration in the environment variable [DEVKIT_LOG]
+    which can be overwritten using the optional [process_name] parameter.
 
     The value of environment variable should match the following grammar: [(\[<facil|prefix*>=\]debug|info|warn|error\[,\])*]
 

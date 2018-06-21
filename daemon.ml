@@ -31,7 +31,7 @@ let signal_exit =
   (* invariant: should_exit_ = (Lwt.state should_exit_lwt = Lwt.Return) *)
   fun () -> should_exit_ := true; Lazy.force do_lwt
 
-(** raise [ShouldExit] if [should_exit] condition is set, otherwise do nothing *)
+(** @raise ShouldExit if [should_exit] condition is set, otherwise do nothing *)
 let break () = if !should_exit_ then raise ShouldExit
 
 (** wait until [should_exit] is set and raise [ShouldExit] *)
