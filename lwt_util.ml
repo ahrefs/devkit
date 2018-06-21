@@ -44,3 +44,5 @@ let action name f x =
   | x -> log #info "action %s done" name; Lwt.return x
 
 let action_do name f = action name f ()
+
+let async f = Lwt.async Daemon.(fun () -> try%lwt unless_exit (f ()) with ShouldExit -> Lwt.return_unit)

@@ -19,3 +19,6 @@ val suppress_exn : string -> (unit -> 'a Lwt.t) -> unit Lwt.t -> 'a Lwt.t
 val action : string -> ('a -> 'b Lwt.t) -> 'a -> 'b Lwt.t
 
 val action_do : string -> (unit -> 'a Lwt.t) -> 'a Lwt.t
+
+(** same as [Lwt.async] but also cancels task on {!Daemon.ShouldExit} *)
+val async : (unit -> unit Lwt.t) -> unit
