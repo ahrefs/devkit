@@ -51,15 +51,7 @@ let unless_exit x = Lwt.pick [wait_exit (); x]
 
 let get_args () =
   [
-    (let set_loglevel s =
-       Stre.nsplitc s ',' |> List.iter begin fun spec ->
-         match Stre.nsplitc spec '=' with
-         | facil :: l :: [] -> Log.set_filter ~name:facil (Logger.level l)
-         | l :: [] -> Log.set_filter @@ Logger.level l
-         | _ -> Exn.fail "loglevel not recognized, specify either <level> or <facil>=<level>"
-       end
-     in
-     "-loglevel", Arg.String set_loglevel, " ([<facil|prefix*>=]debug|info|warn|error[,])+");
+    ("-loglevel", Arg.String Log.set_loglevels, " ([<facil|prefix*>=]debug|info|warn|error[,])+");
     ExtArg.may_str "logfile" logfile "<file> Log file";
     ExtArg.may_str "pidfile" pidfile "<file> PID file";
     "-runas",

@@ -63,6 +63,14 @@ module State = struct
       Hashtbl.iter (fun k x -> if String.starts_with k prefix then Logger.set_filter x level) all
     | Some name -> Logger.set_filter (facility name) level
 
+  let set_loglevels s =
+    Stre.nsplitc s ',' |> List.iter begin fun spec ->
+      match Stre.nsplitc spec '=' with
+      | name :: l :: [] -> set_filter ~name (Logger.level l)
+      | l :: [] -> set_filter @@ Logger.level l
+      | _ -> Exn.fail "loglevel not recognized, specify either <level> or <facil>=<level> or <prefix>*=<level>"
+    end
+
   let read_env_config ?process_name () =
     let process_name =
       match process_name with
@@ -70,21 +78,7 @@ module State = struct
       | Some name -> name
     in
     let process_name = String.uppercase process_name in
-    let facilities =
-      try
-        let env = Sys.getenv (process_name ^ "_LOG") in
-        Stre.nsplitc env ','
-      with Not_found ->
-        []
-    in
-    List.iter begin fun facility ->
-      try
-        let name, level = Stre.splitc facility '=' in
-        let level = Logger.level level in
-        set_filter ~name level
-      with
-      | Not_found | Failure _ -> ()
-    end facilities
+    set_loglevels @@ try Sys.getenv (process_name ^ "_LOG") with Not_found -> ""
 
   let output_ch ch =
     fun str -> try output_string ch str; flush ch with _ -> () (* logging never fails, most probably ENOSPC *)
@@ -137,6 +131,7 @@ include State.M
 
 let facility = State.facility
 let set_filter = State.set_filter
+let set_loglevels = State.set_loglevels
 let set_utc () = State.utc_timezone := true
 
 (** Update facilities configuration from the environment.
@@ -146,8 +141,9 @@ let set_utc () = State.utc_timezone := true
     optionnal [process_name] parameter. By default [PROCESS_NAME] is
     taken from [Pid.name]. The variable name is always uppercase.
 
-    The configuration must be a list of [NAME=LEVEL] values separated
-    by commas. Any invalid level will be skipped.
+    The value of environment variable should match the following grammar: [(\[<facil|prefix*>=\]debug|info|warn|error\[,\])*]
+
+    @raise Failure on invalid level values of wrong format
 *)
 let read_env_config = State.read_env_config
 
