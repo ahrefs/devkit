@@ -25,6 +25,8 @@ or
 {[Logger.set_filter http `Warn]}
 or
 {[Log.set_filter ~name:"http" `Warn]}
+or
+{[Log.set_filter ~name:"http*" `Warn]} to set for all facilities starting with "http"
 
 Output only messages of warning level or higher for all facilities
 {[Log.set_filter `Warn]}
@@ -56,6 +58,9 @@ module State = struct
   let set_filter ?name level =
     match name with
     | None -> default_level := level; Hashtbl.iter (fun _ x -> Logger.set_filter x level) all
+    | Some name when String.ends_with name "*" ->
+      let prefix = String.slice ~last:(-1) name in
+      Hashtbl.iter (fun k x -> if String.starts_with k prefix then Logger.set_filter x level) all
     | Some name -> Logger.set_filter (facility name) level
 
   let read_env_config ?process_name () =

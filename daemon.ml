@@ -59,7 +59,7 @@ let get_args () =
          | _ -> Exn.fail "loglevel not recognized, specify either <level> or <facil>=<level>"
        end
      in
-     "-loglevel", Arg.String set_loglevel, " ([<facil>=]debug|info|warn|error[,])+");
+     "-loglevel", Arg.String set_loglevel, " ([<facil|prefix*>=]debug|info|warn|error[,])+");
     ExtArg.may_str "logfile" logfile "<file> Log file";
     ExtArg.may_str "pidfile" pidfile "<file> PID file";
     "-runas",
