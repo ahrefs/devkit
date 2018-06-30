@@ -8,6 +8,8 @@ open Prelude
 let tests = ref []
 let test name f = let open OUnit in tests := (name >:: f) :: !tests
 
+let strl = Stre.list
+
 let () = test "HtmlStream" begin fun () ->
   Printexc.record_backtrace true;
   let module HS = HtmlStream in
@@ -229,8 +231,7 @@ end
 
 let () = test "Action.stable_partition" begin fun () ->
   let t l n result =
-    let open Action in
-    assert_equal ~msg:(sprintf "stable_partition %d" n) ~printer:(strl (strl string_of_int)) result (stable_partition n l)
+    assert_equal ~msg:(sprintf "stable_partition %d" n) ~printer:(strl (strl string_of_int)) result (Action.stable_partition n l)
   in
   t [] 0 [[]];
   t [] 1 [[]];
@@ -241,9 +242,8 @@ let () = test "Action.stable_partition" begin fun () ->
   t [1;2;3;4;5;6;7;8] 3 [[1;2;3];[4;5;6];[7;8]];
   t [1;1;1;2;2;2;3;3;3;4;4;4;5;5;6;6] 6 [[1;1;1];[2;2;2];[3;3;3];[4;4;4];[5;5];[6;6]];
   let t l n =
-    let open Action in
-    assert_equal ~msg:(sprintf "stable_partition %d" n) ~printer:(strl string_of_int) l (stable_unpartition @@ stable_partition n l);
-    assert_equal ~msg:(sprintf "partition %d" n) ~printer:(strl string_of_int) l (unpartition @@ partition n l)
+    assert_equal ~msg:(sprintf "stable_partition %d" n) ~printer:(strl string_of_int) l Action.(stable_unpartition @@ stable_partition n l);
+    assert_equal ~msg:(sprintf "partition %d" n) ~printer:(strl string_of_int) l Action.(unpartition @@ partition n l)
   in
   t [1;2;3] 0;
   t [1;2;3] 1;
@@ -256,10 +256,9 @@ end
 
 let () = test "Action.chunk" begin fun () ->
   let t l n result =
-    let open Action in
     let printer = strl (strl string_of_int) in
-    assert_equal ~msg:(sprintf "chunk %d" n) ~printer result (List.map List.rev @@ chunk n l);
-    assert_equal ~msg:(sprintf "chunk_a %d" n) ~printer result (List.map Array.to_list @@ chunk_a n @@ Array.of_list l);
+    assert_equal ~msg:(sprintf "chunk %d" n) ~printer result (List.map List.rev @@ Action.chunk n l);
+    assert_equal ~msg:(sprintf "chunk_a %d" n) ~printer result (List.map Array.to_list @@ Action.chunk_a n @@ Array.of_list l);
   in
   t [] 1 [];
   t [] 2 [];
@@ -276,7 +275,7 @@ let () = test "Enum.align" begin fun () ->
   let e2 = List.enum [2;4;5;7;8;] in
   let l = List.of_enum @@ Enum.align compare e1 e2 in
   let expect = [1;2;3;4;5;6;7;8;] in
-  OUnit.assert_equal ~printer:(Action.strl string_of_int) expect l
+  OUnit.assert_equal ~printer:(strl string_of_int) expect l
 end
 
 let () = test "Enum.group_assoc" begin fun () ->
@@ -289,7 +288,7 @@ let () = test "Enum.group_assoc" begin fun () ->
 end
 
 let () = test "Enum.join" @@ fun () ->
-  let printer = Action.strl (uncurry @@ (sprintf "%s, %s" $$ Option.map_default string_of_int "NONE")) in
+  let printer = strl (uncurry @@ (sprintf "%s, %s" $$ Option.map_default string_of_int "NONE")) in
   let t ?left ?right ?multi e1 e2 expect =
     Enum.join ?left ?right ?multi compare (List.enum e1) (List.enum e2) |> List.of_enum |>
     OUnit.assert_equal ~printer expect
@@ -306,7 +305,7 @@ let () = test "Enum.join" @@ fun () ->
   ()
 
 let () = test "Enum.join*" @@ fun () ->
-  let printer = Action.strl (function `Left x -> sprintf "L %d" x | `Right x -> sprintf "R %d" x | `Both (x,y) -> sprintf "(%d,%d)" x y) in
+  let printer = strl (function `Left x -> sprintf "L %d" x | `Right x -> sprintf "R %d" x | `Both (x,y) -> sprintf "(%d,%d)" x y) in
   let t join e1 e2 expect =
     let expect = List.map (function None, None -> assert false | None, Some x -> `Right x | Some x, None -> `Left x | Some x, Some y -> `Both (x,y)) expect in
     join Int.compare id (List.enum e1) (List.enum e2) |> List.of_enum |>
@@ -325,13 +324,13 @@ let () = test "Enum.join*" @@ fun () ->
   ()
 
 let () = test "Enum.uniq" begin fun () ->
-  OUnit.assert_equal ~msg:"1" ~printer:(Action.strl id)
+  OUnit.assert_equal ~msg:"1" ~printer:(strl id)
     ["ds"; "dsa"; "ds"; ]
     (List.of_enum @@ Enum.uniq (=) @@ List.enum ["ds"; "ds"; "dsa"; "dsa"; "ds"; "ds"]);
   OUnit.assert_equal ~msg:"2"
     []
     (List.of_enum @@ Enum.uniq (=) @@ List.enum []);
-  OUnit.assert_equal ~msg:"3" ~printer:(Action.strl string_of_int)
+  OUnit.assert_equal ~msg:"3" ~printer:(strl string_of_int)
     [1;20;1;2;3;44]
     (List.of_enum @@ Enum.uniq (fun x y -> x mod 10 = y mod 10) @@ List.enum [1;11;20;100;0;1;2;3;133;44]);
   OUnit.assert_equal ~msg:"4" ~printer:Std.dump
@@ -344,13 +343,13 @@ let () = test "Enum.take" begin fun () ->
   OUnit.assert_bool "is_empty" (Enum.is_empty e);
   OUnit.assert_bool "peek None" (Enum.peek e = None);
   let e = Enum.take 3 (List.enum @@ List.init 10 id) in
-  OUnit.assert_equal ~printer:(Stre.list string_of_int) [0;1;2] (List.of_enum e)
+  OUnit.assert_equal ~printer:(strl string_of_int) [0;1;2] (List.of_enum e)
 end
 
 let () = test "Enum.iter_while" begin fun () ->
   let e = List.enum [1;2;3;4;5;6;7;] in
   Enum.iter_while (fun x -> if x = 2 then Enum.iter_while (fun x -> x < 6) e; x < 4) e;
-  OUnit.assert_equal ~printer:(Action.strl string_of_int) [6;7] (List.of_enum e)
+  OUnit.assert_equal ~printer:(strl string_of_int) [6;7] (List.of_enum e)
 end
 
 module LRU = struct
@@ -487,7 +486,7 @@ let () = test "idn" @@ fun () ->
 module Bit_list_test = Bit_struct_list.Make(struct let item_bits = 3 let pp = string_of_int end)
 
 let () = test "bit_struct_list" @@ fun () ->
-  let printer l = Action.strl string_of_int l in
+  let printer l = strl string_of_int l in
   let open Bit_list_test in
   let t l = OUnit.assert_equal ~printer l (to_list @@ inject @@ project @@ of_list l) in
   t [ 0; 1; 2; 3; 4; 5; 6; 7; 6; 5; 4; 3; 2; 1; 0 ];

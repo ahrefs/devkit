@@ -25,7 +25,7 @@ module Dyn = struct
 
   type t = (string * json) list
 
-  let show_a = Action.strl (fun (c,_) -> sprintf "%S:''" c)
+  let show_a = Stre.list (fun (c,_) -> sprintf "%S:''" c)
 
   let make_family family =
     let f = List.unique ~cmp:(fun (a,_) (b,_) -> a = b) family in

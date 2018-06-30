@@ -213,7 +213,7 @@ let () =
   let workers = W.create execute 4 in
   print_endline "go";
   let e = Enum.init 100 (sprintf "<%u>") in
-  let f l = printf "got [%s]\n%!" (Util.strl Prelude.id l) in
+  let f l = printf "got [%s]\n%!" (Stre.list Prelude.id l) in
   for i = 1 to 2 do
     W.perform workers (Enum.clone e) f;
     Thread.delay 1.
@@ -270,7 +270,7 @@ let run_forks_simple ?(revive=false) ?wait_stop f args =
       end;
       loop pause
     | dead ->
-      log #info "%d child workers exited (PIDs: %s)" (List.length dead) (Action.strl string_of_int dead);
+      log #info "%d child workers exited (PIDs: %s)" (List.length dead) (Stre.list string_of_int dead);
       List.iter (Hashtbl.remove workers) dead;
       loop pause
   in

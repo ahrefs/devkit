@@ -84,8 +84,9 @@ val stable_unpartition : 'a list list -> 'a list
 
 (** Printing *)
 
-val catmap : ?sep:string -> ('a -> string) -> 'a list -> string
-val strl : ('a -> string) -> 'a list -> string
+val catmap : ?sep:string -> ('a -> string) -> 'a list -> string [@@ocaml.deprecated "use Stre.catmap"]
+val strl : ('a -> string) -> 'a list -> string [@@ocaml.deprecated "use Stre.list"]
+val stra : ('a -> string) -> 'a array -> string [@@ocaml.deprecated "use Stre.array"]
 
 
 (** Array utilities *)
@@ -123,10 +124,6 @@ val binary_search : 'a array -> ('a -> 'b -> int) -> 'b -> bool
 (** [chunk_a n a] splits array [a] into chunks of [n] elements each (except the last which can be shorter), preserving
   the order of elements, i.e. reverse operation is [Array.concat] *)
 val chunk_a : int -> 'a array -> 'a array list
-
-(** Printing *)
-
-val stra : ('a -> string) -> 'a array -> string
 
 
 (** DynArray utilities *)

@@ -12,7 +12,7 @@ val mutable buffer = [||]
 inherit Lwt_engine.poll_based
 method poll fds timeout =
 (*
-  let show = Action.strl (fun (fd,i,o) -> sprintf "%d%s%s" (U.int_of_file_descr fd) (if i then "r" else "") (if o then "w" else "")) in
+  let show = Stre.list (fun (fd,i,o) -> sprintf "%d%s%s" (U.int_of_file_descr fd) (if i then "r" else "") (if o then "w" else "")) in
   log #info "lwt poll %f %s" timeout (show fds);
 *)
   let nfds = List.length fds in

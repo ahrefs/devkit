@@ -4,7 +4,7 @@ open Prelude
 
 let log = Log.from "var"
 
-let show_a = Action.strl (uncurry @@ sprintf "%S:%S")
+let show_a = Stre.list (uncurry @@ sprintf "%S:%S")
 
 module Attr : sig
 type t = private (string * string) list
