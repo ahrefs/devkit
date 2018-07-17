@@ -5,6 +5,11 @@ requires="extlib,pcre,netstring,zip,unix,threads,libevent,curl,curl.lwt,extunix,
 archive(mt,byte)="devkit.cma"
 archive(mt,native)="devkit.cmxa"
 
+package "threads" (
+  description = "system threads code (transitional)"
+  requires = "devkit"
+)
+
 package "gperftools" (
   description = "gperftools support"
   requires = "devkit,gperftools"
