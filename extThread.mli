@@ -26,6 +26,9 @@ module Async_fin : sig
 
   type t
 
+  (** @return if OS has necessary support for this module *)
+  val is_available : unit -> bool
+
   val setup : Libevent.event_base -> t
 
   (** Arrange for callback to be executed in libevent loop, callback should not throw (exceptions are reported and ignored) *)

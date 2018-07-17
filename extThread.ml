@@ -23,9 +23,11 @@ end
 module Async_fin = struct
 
   open Async
-  module U = ExtUnix.Specific
+  module U = ExtUnix.All
 
   type t = { q : (unit -> unit) Mtq.t; evfd : Unix.file_descr; }
+
+  let is_available () = ExtUnix.Config.have `EVENTFD
 
   let setup events =
     let fin = { q = Mtq.create (); evfd = U.eventfd 0; } in
