@@ -1,7 +1,7 @@
 (** Signal handling *)
 
 open ExtLib
-module U = ExtUnix.Specific
+module U = ExtUnix.All
 module Ev = Async.Ev
 
 let log = Log.from "signal"
