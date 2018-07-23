@@ -234,7 +234,13 @@ let output_buf_fd ?(bufsize=1*1024*1024) fd =
   ~flush
   ~close:flush (* do not close file descriptor, flush the buffer *)
 
-let unlimit_soft r = let (_,hard) = U.getrlimit r in U.setrlimit r ~soft:hard ~hard
+let unlimit_soft r =
+  let (soft,hard) = U.getrlimit r in
+  try
+    U.setrlimit r ~soft:hard ~hard
+  with Unix_error ((EPERM|EINVAL as error),_,_) when r = U.RLIMIT_NOFILE ->
+    log #warn "failed to unlimit NOFILE %s -> %s : %s (check kernel limits fs.nr_open/kern.maxfilesperproc/etc), ignored"
+      (U.Rlimit.to_string soft) (U.Rlimit.to_string hard) (error_message error)
 
 (** raise core and nofile soft limits (to the corresponding hard limits) *)
 let raise_limits () =
