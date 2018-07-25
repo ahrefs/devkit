@@ -83,7 +83,7 @@ let read_buf base ?ev ?timeout buf fd err k =
       | End -> Ev.del ev; err `Eof !cur
       | Exn exn -> Ev.del ev; err (`Exn exn) !cur
       | Data n -> cur := !cur + n; if !cur = len then begin Ev.del ev; k buf end
-      | Block -> assert false
+      | Block -> log #warn "Async.read_buf: useless wakeup on fd %d, ignoring" (U.int_of_file_descr fd)
     )
   in
   match read_some fd buf 0 len with
@@ -170,7 +170,7 @@ let receive p ?timeout buf k =
           | End -> error p "receive eof"
           | Exn exn -> error ~exn p "receive"
           | Data n -> cur := !cur + n; if !cur = len then (Ev.del p.read; k buf)
-          | Block -> assert false
+          | Block -> log #warn "Async.receive: useless wakeup on fd %d, ignoring" (U.int_of_file_descr fd)
       with
         exn -> error ~exn p "receive");
     add_event p p.read timeout
