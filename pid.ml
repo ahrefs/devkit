@@ -14,12 +14,12 @@ let host { host; _ } = host
 
 let get_name s = try fst @@ String.split s "." with _ -> s
 let validate_name descr s =
-  try Scanf.sscanf s "%_[a-zA-Z0-9_-\\-\\.]%!" () with _ -> Exn.fail "Pid.self: bad %s %S" descr s
-let sanitize_name = String.map (function 'a'..'z' | 'A'..'Z' | '0'..'9' | '_' | '-' as c -> c | _ -> '_')
+  try Scanf.sscanf s "%_[a-zA-Z0-9_.-]%!" () with _ -> Exn.fail "Pid.self: bad %s %S" descr s
+let sanitize_name = String.map (function 'a'..'z' | 'A'..'Z' | '0'..'9' | '_' | '-' | '.' as c -> c | _ -> '_')
 
 let parse_exn s =
   (* cf self_pid *)
-  Scanf.sscanf s "%u:%u:%[a-zA-Z0-9_.-]@@%[a-zA-Z0-9_-]%!" (fun stamp id name host ->
+  Scanf.sscanf s "%u:%u:%[a-zA-Z0-9_.-]@@%[a-zA-Z0-9_.-]%!" (fun stamp id name host ->
    if host = "" then Exn.fail "empty hostname";
    if name = "" then Exn.fail "empty name";
    { id; host=String.lowercase host; name=get_name @@ String.lowercase name; stamp; })
@@ -30,7 +30,7 @@ let new_self name stamp =
   (* cf parse_exn *)
   validate_name "host" host;
   validate_name "name" name;
-  { host; id; name=String.lowercase name; stamp; }
+  { host; id; name = get_name @@ String.lowercase name; stamp; }
 
 let self = ref @@ dummy
 let self_s = ref @@ ""
