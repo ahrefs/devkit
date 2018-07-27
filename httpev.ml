@@ -36,6 +36,8 @@ type config =
     yield : bool;
       (** do [Lwt_unix.yield ()] after accepting connection to give other lwt threads chance to run (set to [true] when http requests
           processing causes other threads to stuck) *)
+    exit_thread : unit Lwt.t option;
+      (** if set, stop accepting connections as soon as exit_thread terminates (defaults to [Daemon.should_exit_lwt]) *)
     reuseport : bool;
     nodelay : bool;
     strict_args : bool;
@@ -67,6 +69,7 @@ let default =
     max_data_childs = 50;
     max_data_waiting = 200;
     yield = true;
+    exit_thread = Some Daemon.should_exit_lwt;
     reuseport = false;
     nodelay = false;
     strict_args = false;
@@ -1032,7 +1035,11 @@ let handle_lwt config fd k =
     let%lwt () = if config.yield then Lwt_unix.yield () else Lwt.return_unit in
     loop ()
   in
-  let%lwt () = Lwt.pick [Daemon.should_exit_lwt; loop ()] in
+  let%lwt () =
+    match config.exit_thread with
+    | Some exit -> Lwt.pick [ exit; loop (); ]
+    | None -> loop ()
+  in
   log #info "%s %s:%d exit" config.name (Unix.string_of_inet_addr config.ip) config.port;
   Lwt.return_unit
 
