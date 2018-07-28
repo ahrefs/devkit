@@ -52,7 +52,7 @@ val status_s : string        -> ?dump:('a -> string) -> (unit -> 'a Lwt.t) -> 'a
 
 (** [async ?log name run_thread] works like [name] + [Lwt.async run_thread], but thread is marked as "background" (just for display
     purposes).  Pass [~log] to log thread failure with devkit logger (level = warn). *)
-val async : ?log:Log.logger -> string -> (unit -> 'a Lwt.t) -> unit
+val async : ?log:Log.logger -> string -> (unit -> unit Lwt.t) -> unit
 
 (** [ignore_result == async]. Deprecated.
     Note: this function takes argument [run_thread] that creates thread, not the thread itself, this differs from [Lwt.ignore_result].
