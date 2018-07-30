@@ -143,11 +143,14 @@ let date_w3_string = format_date_w3 $ Unix.localtime
 let date8_gmt_string = format_date8 $ Unix.gmtime
 let date8_string = format_date8 $ Unix.localtime
 
+let date8h_gmt_string = format_date8h $ Unix.gmtime
+let date8h_string = format_date8h $ Unix.localtime
+
 let date8hm_gmt_string = format_date8hm $ Unix.gmtime
 let date8hm_string = format_date8hm $ Unix.localtime
 
-let date8h_gmt_string = format_date8h $ Unix.gmtime
-let date8h_string = format_date8h $ Unix.localtime
+let date8hms_gmt_string = format_date8hms $ Unix.gmtime
+let date8hms_string = format_date8hms $ Unix.localtime
 
 let date4_gmt_string = format_date4 $ Unix.gmtime
 let date4_string = format_date4 $ Unix.localtime
