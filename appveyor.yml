@@ -4,6 +4,7 @@ platform:
 environment:
   FORK_USER: ocaml
   FORK_BRANCH: master
+  OPAM_SWITCH: 4.05.0+mingw64c
   CYG_ROOT: C:\cygwin64
 
 install:
