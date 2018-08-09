@@ -121,7 +121,7 @@ let starts_with s ?(pos=0) prefix =
   if String.length s < pos + String.length prefix then false else
   try
     for i = 0 to String.length prefix - 1 do
-      if s.[pos + i] <> prefix.[i] then raise Not_found
+      if s.[pos + i] <> prefix.[i] then raise_notrace Not_found
     done;
     true
   with Not_found ->
@@ -133,7 +133,7 @@ let istarts_with s ?(pos=0) prefix =
   try
   for i = 0 to String.length prefix - 1 do
     let c1 = s.[pos + i] and c2 = prefix.[i] in
-    if c1 <> c2 && Char.lowercase_ascii c1 <> Char.lowercase_ascii c2 then raise Not_found
+    if c1 <> c2 && Char.lowercase_ascii c1 <> Char.lowercase_ascii c2 then raise_notrace Not_found
   done; true
   with Not_found -> false
 
@@ -148,7 +148,7 @@ let iexists s sub =
   if sub = "" then true else
   try
   for i = 0 to String.length s - String.length sub do
-    if istarts_with s ~pos:i sub then raise Exit;
+    if istarts_with s ~pos:i sub then raise_notrace Exit;
   done; false
   with Exit -> true
 
