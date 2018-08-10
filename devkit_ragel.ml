@@ -118,7 +118,7 @@ and do_eof_trans () =
 	cs.contents <- _ipv4_trans_targs.(state.trans);
 
 	begin try if _ipv4_trans_actions.(state.trans) = 0 then
-		raise Goto_again_ipv4;
+		raise_notrace Goto_again_ipv4;
 
 	match _ipv4_trans_actions.(state.trans) with
 	| 3 ->
@@ -218,7 +218,7 @@ and do_eof_trans () =
 	cs.contents <- _ipv4_trans_targs.(state.trans);
 
 	begin try if _ipv4_trans_actions.(state.trans) = 0 then
-		raise Goto_again_ipv4;
+		raise_notrace Goto_again_ipv4;
 
 	match _ipv4_trans_actions.(state.trans) with
 	| 3 ->
@@ -627,7 +627,7 @@ and do_eof_trans () =
 	cs.contents <- _compact_duration_trans_targs.(state.trans);
 
 	begin try if _compact_duration_trans_actions.(state.trans) = 0 then
-		raise Goto_again_compact_duration;
+		raise_notrace Goto_again_compact_duration;
 
 	match _compact_duration_trans_actions.(state.trans) with
 	| 1 ->
