@@ -93,7 +93,8 @@ let read_buf base ?ev ?timeout buf fd err k =
   | Block -> later 0
   | Data n -> later n
 
-let read_n base ?ev ?timeout n fd err k = read_buf base ?ev ?timeout (Bytes.create n) fd err k
+let read_n base ?ev ?timeout n fd err k =
+  read_buf base ?ev ?timeout (Bytes.create n) fd err (fun buf -> k (Bytes.unsafe_to_string buf))
 
 (** Call [f] with [delay]-second pauses between invocations.
     Set [stop] to [true] to stop the timer.
