@@ -1084,7 +1084,9 @@ let setup_fd_lwt fd config answer =
       (* reusing same buffer! *)
       let cout = Lwt_io.(of_fd ~buffer ~close:Lwt.return ~mode:output fd) in
       begin try%lwt
-        timeout config.max_time.send (send_reply client cout reply)
+        match reply with
+        | `Chunks _ -> send_reply client cout reply
+        | _ -> timeout config.max_time.send (send_reply client cout reply)
       with exn ->
         !!error;
         log #warn ~exn "send_reply %s" (show_client client);
