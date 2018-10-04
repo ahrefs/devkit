@@ -23,6 +23,8 @@ method poll fds timeout =
   else
     buffer <- Array.of_list @@ List.map convert fds;
 
+  let timeout = if timeout < 0. then - 1. /. 1000. else timeout in
+
   let l = U.poll buffer ~n:nfds timeout |> List.map (fun (fd,f) -> fd, U.Poll.is_inter f readmask, U.Poll.is_inter f writemask) in
 (*   log #info "lwt poll done %s" (show l); *)
   l
