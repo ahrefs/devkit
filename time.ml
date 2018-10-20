@@ -207,7 +207,15 @@ let show_compact_duration ?(full=false) ?cut t =
 let compact_duration = show_compact_duration
 
 (** parse compact_duration representation (except for fractional seconds) *)
-let of_compact_duration s = Devkit_ragel.parse_compact_duration s
+let of_compact_duration s =
+  match s with
+  | "" -> invalid_arg "of_compact_duration empty input"
+  | _ ->
+    let s = match s.[0] with
+    | '0'..'9' -> s
+    | _ -> "1"^s
+  in
+  Devkit_ragel.parse_compact_duration s
 
 let minutes x = float @@ 60 * x
 let hours x = minutes @@ 60 * x
