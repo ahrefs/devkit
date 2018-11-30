@@ -37,8 +37,10 @@ type reply_status =
   | `Moved
   | `Bad_request
   | `Unauthorized
+  | `Payment_required
   | `Forbidden
   | `Not_found
+  | `Method_not_allowed
   | `Not_acceptable
   | `Conflict
   | `Length_required
@@ -104,8 +106,10 @@ let status_code : reply_status -> int = function
 
   | `Bad_request -> 400
   | `Unauthorized -> 401
+  | `Payment_required -> 402
   | `Forbidden -> 403
   | `Not_found -> 404
+  | `Method_not_allowed -> 405
   | `Not_acceptable -> 406
   | `Conflict -> 409
   | `Length_required -> 411
@@ -129,8 +133,10 @@ let show_http_reply : reply_status -> string = function
 
   | `Bad_request -> "HTTP/1.0 400 Bad Request"
   | `Unauthorized -> "HTTP/1.0 401 Unauthorized"
+  | `Payment_required -> "HTTP/1.0 402 Payment Required"
   | `Forbidden -> "HTTP/1.0 403 Forbidden"
   | `Not_found -> "HTTP/1.0 404 Not Found"
+  | `Method_not_allowed -> "HTTP/1.0 405 Method Not Allowed"
   | `Not_acceptable -> "HTTP/1.0 406 Not Acceptable"
   | `Conflict -> "HTTP/1.0 409 Conflict"
   | `Length_required -> "HTTP/1.0 411 Length Required"
