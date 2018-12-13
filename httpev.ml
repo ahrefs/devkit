@@ -1041,12 +1041,7 @@ let handle_lwt config fd k =
     | Some exit -> Lwt.pick [ exit; loop (); ]
     | None -> loop ()
   in
-  let desc =
-    match config.connection with
-    | ADDR_INET (ip, port) -> sprintf "%s:%d" (Unix.string_of_inet_addr ip) port
-    | ADDR_UNIX path -> sprintf "%S" path
-  in
-  log #info "%s %s exit" config.name desc;
+  log #info "%s %s exit" config.name (Nix.show_addr config.connection);
   Lwt.return_unit
 
 module BuffersCache = Cache.Reuse(struct type t = Lwt_bytes.t let create () = Lwt_bytes.create buffer_size let reset = ignore end)
