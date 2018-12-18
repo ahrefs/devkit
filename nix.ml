@@ -130,13 +130,13 @@ let make_inet_addr_exn host port =
 let inet_addr_of_string s =
   let open Unix in
   try
-    try
+    if String.contains s ':' then
       let (host, port) = String.split s ":" in
       let port = int_of_string port in
       match host with
       | "*" -> ADDR_INET (inet_addr_any, port)
       | host -> make_inet_addr_exn host port
-    with Invalid_string -> (* There is no : in the string *)
+    else
       let port = int_of_string s in
       ADDR_INET (inet_addr_loopback, port)
   with Failure _ | Not_found -> (* The port or the host is invalid *)
