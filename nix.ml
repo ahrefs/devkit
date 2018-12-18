@@ -139,7 +139,7 @@ let inet_addr_of_string s =
     else
       let port = int_of_string s in
       ADDR_INET (inet_addr_loopback, port)
-  with Failure _ | Not_found -> (* The port or the host is invalid *)
+  with _ -> (* The port or the host is invalid *)
     Exn.fail "invalid INET addr %S" s
 
 let unix_addr_of_string s =
