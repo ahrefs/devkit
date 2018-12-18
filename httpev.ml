@@ -19,8 +19,7 @@ type max_time = { headers : Time.t; body : Time.t; send : Time.t; }
 (** server configuration *)
 type config =
   {
-    ip : Unix.inet_addr;
-    port : int;
+    connection : Unix.sockaddr;
     backlog : int;
     log_epipe : bool;
     mutable debug : bool; (** more logging *)
@@ -54,8 +53,7 @@ let default_max_time = {
 
 let default =
   {
-    ip = Unix.inet_addr_loopback;
-    port = 8080;
+    connection = ADDR_INET (Unix.inet_addr_loopback, 8080);
     backlog = 100;
     log_epipe = false;
     debug = false;
@@ -563,9 +561,9 @@ module Tcp = struct
 
 open Unix
 
-let listen ~name ?(backlog=100) ?(reuseport=false) addr port =
-  let addr = ADDR_INET (addr,port) in
-  let fd = socket ~cloexec:true PF_INET SOCK_STREAM 0 in
+let listen ~name ?(backlog=100) ?(reuseport=false) addr =
+  let domain = domain_of_sockaddr addr in
+  let fd = socket ~cloexec:true domain SOCK_STREAM 0 in
   try
     setsockopt fd SO_REUSEADDR true;
     if reuseport then U.setsockopt fd SO_REUSEPORT true;
@@ -639,7 +637,7 @@ let reap_orphans srv =
   in loop ()
 
 let start_listen config =
-  Tcp.listen ~name:config.name ~backlog:config.backlog ~reuseport:config.reuseport config.ip config.port
+  Tcp.listen ~name:config.name ~backlog:config.backlog ~reuseport:config.reuseport config.connection
 
 let setup_server_fd fd config answer =
   let server = make_server_state fd config in
@@ -770,7 +768,10 @@ let serve_text req ?status text =
   serve req ?status "text/plain" text
 
 let run ?(ip=Unix.inet_addr_loopback) port answer =
-  server { default with ip = ip; port = port } answer
+  server { default with connection = ADDR_INET (ip, port) } answer
+
+let run_unix path answer =
+  server { default with connection = ADDR_UNIX path } answer
 
 (** {2 Forked workers} *)
 
@@ -1040,7 +1041,7 @@ let handle_lwt config fd k =
     | Some exit -> Lwt.pick [ exit; loop (); ]
     | None -> loop ()
   in
-  log #info "%s %s:%d exit" config.name (Unix.string_of_inet_addr config.ip) config.port;
+  log #info "%s %s exit" config.name (Nix.show_addr config.connection);
   Lwt.return_unit
 
 module BuffersCache = Cache.Reuse(struct type t = Lwt_bytes.t let create () = Lwt_bytes.create buffer_size let reset = ignore end)

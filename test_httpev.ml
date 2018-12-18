@@ -18,8 +18,7 @@ let run http_port =
   let main () =
     let http_config = { Httpev.default with
       Httpev.events = Async.Ev.init ();
-      ip = Unix.inet_addr_any;
-      port = http_port;
+      connection = ADDR_INET (Unix.inet_addr_any, http_port);
       max_request_size = 128 * 1024;
     } in
     Httpev.server http_config http_handle;

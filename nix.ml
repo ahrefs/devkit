@@ -127,6 +127,44 @@ let make_inet_addr_exn host port =
   if Array.length a = 0 then Exn.fail "make_inet_addr %s %d" host port else
   ADDR_INET (a.(0), port)
 
+let inet_addr_of_string s =
+  let open Unix in
+  try
+    if String.contains s ':' then
+      let (host, port) = String.split s ":" in
+      let port = int_of_string port in
+      match host with
+      | "*" -> ADDR_INET (inet_addr_any, port)
+      | host -> make_inet_addr_exn host port
+    else
+      let port = int_of_string s in
+      ADDR_INET (inet_addr_loopback, port)
+  with _ -> (* The port or the host is invalid *)
+    Exn.fail "invalid INET addr %S" s
+
+let unix_addr_of_string s =
+  let open Unix in
+  if String.starts_with s "unix:" then
+    ADDR_UNIX (String.slice ~first:5 s)
+  else
+    Exn.fail "invalid UNIX addr %S" s
+
+(**
+   Convert a string to a {Unix.sockaddr}.
+
+   Formats supported are:
+   - unix:file_path
+   - host:port
+   - *:port, using {Unix.inet_addr_any}
+   - port, using {Unix.inet_addr_loopback}
+ *)
+let sockaddr_of_string s =
+  try unix_addr_of_string s
+  with Failure _ ->
+  try inet_addr_of_string s
+  with Failure _ ->
+    Exn.fail "sockaddr_of_string %s" s
+
 (** Execute process and capture stdout to string, @return empty string on error *)
 let read_process cmd =
   try
