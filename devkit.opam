@@ -16,6 +16,7 @@ build-doc: [
   [make "doc"]
 ]
 depends: [
+  "ocaml" {>= "4.04.0"}
   "ocamlfind" {build}
   "dune" {build}
   "camlp4" {build}
@@ -38,4 +39,3 @@ depopts: [
   "gperftools"
   "jemalloc"
 ]
-available: [ocaml-version >= "4.04.0"]
