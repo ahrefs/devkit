@@ -1,7 +1,0 @@
-lib: [
-  "_build/install/default/lib/devkit_jemalloc/META" {"META"}
-  "_build/install/default/lib/devkit_jemalloc/opam" {"opam"}
-]
-doc: [
-  "_build/install/default/doc/devkit_jemalloc/README"
-]

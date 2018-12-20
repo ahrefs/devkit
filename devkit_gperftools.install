@@ -1,7 +1,0 @@
-lib: [
-  "_build/install/default/lib/devkit_gperftools/META" {"META"}
-  "_build/install/default/lib/devkit_gperftools/opam" {"opam"}
-]
-doc: [
-  "_build/install/default/doc/devkit_gperftools/README"
-]
