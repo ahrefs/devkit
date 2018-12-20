@@ -1,0 +1,7 @@
+lib: [
+  "_build/install/default/lib/devkit_core/META" {"META"}
+  "_build/install/default/lib/devkit_core/opam" {"opam"}
+]
+doc: [
+  "_build/install/default/doc/devkit_core/README"
+]

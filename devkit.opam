@@ -17,7 +17,7 @@ build-doc: [
 ]
 depends: [
   "ocamlfind" {build}
-  "ocamlbuild" {build}
+  "dune" {build}
   "camlp4" {build}
   ("extlib" {>= "1.7.0"} | "extlib-compat" {>= "1.7.0"})
   "ounit"
