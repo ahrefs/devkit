@@ -1,13 +1,20 @@
 (library
   (public_name devkit)
   (libraries
+    devkit_core
+    devkit_gperftools
+    devkit_jemalloc)
+  (modules))
+
+(library
+  (name devkit_core)
+  (public_name devkit.core)
+  (libraries
     threads ; must come first
     curl
     curl.lwt
     extlib
     extunix
-    gperftools
-    jemalloc_ctl
     libevent
     lwt
     lwt.unix
@@ -18,6 +25,8 @@
     zip)
   (modules :standard \
            stage_merge
+           memory_gperftools
+           memory_jemalloc
            myocamlbuild)
   (preprocess
     (per_module
@@ -29,3 +38,19 @@
        lwt_util
        web))
   ))
+
+(library
+  (name devkit_gperftools)
+  (public_name devkit.gperftools)
+  (libraries
+    devkit_core
+    gperftools)
+  (modules memory_gperftools))
+
+(library
+  (name devkit_jemalloc)
+  (public_name devkit.jemalloc)
+  (libraries
+    devkit_core
+    jemalloc_ctl)
+  (modules memory_jemalloc))
