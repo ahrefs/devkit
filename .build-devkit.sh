@@ -1,4 +1,4 @@
-#! /bin/sh
+#! /usr/bin/env bash
 set -e -u
 
 ./.build-ci-utils.sh
