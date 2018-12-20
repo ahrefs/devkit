@@ -1,5 +1,7 @@
 (** Memory reporting for gperftools, call [setup] in every binary linked with gperftools *)
 
+open Devkit_core
+
 let show_crt_info () =
   let bytes = Action.bytes_string in
   let p x = try bytes @@ Gperftools.get_numeric_property x with _ -> "?" in

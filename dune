@@ -4,12 +4,11 @@
     devkit_core
     devkit_gperftools
     devkit_jemalloc)
-  (modules))
+  (modules devkit))
 
 (library
   (name devkit_core)
   (public_name devkit.core)
-  (wrapped false)
   (libraries
     threads ; must come first
     curl
@@ -25,6 +24,7 @@
     yojson
     zip)
   (modules :standard \
+           devkit
            stage_merge
            memory_gperftools
            memory_jemalloc
@@ -43,7 +43,6 @@
 (library
   (name devkit_gperftools)
   (public_name devkit.gperftools)
-  (wrapped false)
   (libraries
     devkit_core
     gperftools)
@@ -52,7 +51,6 @@
 (library
   (name devkit_jemalloc)
   (public_name devkit.jemalloc)
-  (wrapped false)
   (libraries
     devkit_core
     jemalloc_ctl)
