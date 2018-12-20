@@ -9,6 +9,7 @@
 (library
   (name devkit_core)
   (public_name devkit.core)
+  (wrapped false)
   (libraries
     threads ; must come first
     curl
@@ -42,6 +43,7 @@
 (library
   (name devkit_gperftools)
   (public_name devkit.gperftools)
+  (wrapped false)
   (libraries
     devkit_core
     gperftools)
@@ -50,6 +52,7 @@
 (library
   (name devkit_jemalloc)
   (public_name devkit.jemalloc)
+  (wrapped false)
   (libraries
     devkit_core
     jemalloc_ctl)
