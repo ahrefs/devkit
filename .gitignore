@@ -1,8 +1,6 @@
 _build
 /devkit.docdir
-/*.byte
-/*.native
 
-.*.sw[a-z]
 .exrc
+.merlin
 TAGS

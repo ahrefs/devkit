@@ -1,0 +1,31 @@
+(library
+  (public_name devkit)
+  (libraries
+    threads ; must come first
+    curl
+    curl.lwt
+    extlib
+    extunix
+    gperftools
+    jemalloc_ctl
+    libevent
+    lwt
+    lwt.unix
+    netstring
+    oUnit
+    pcre
+    yojson
+    zip)
+  (modules :standard \
+           stage_merge
+           myocamlbuild)
+  (preprocess
+    (per_module
+      ((action (run camlp4o %{input-file})) htmlStream php_serialize)
+      ((pps lwt_ppx)
+       httpev
+       logstash
+       lwt_flag
+       lwt_util
+       web))
+  ))
