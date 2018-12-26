@@ -1,9 +1,7 @@
 #! /usr/bin/env bash
 set -e -u
 
-./.build-ci-utils.sh
-. ./ci-utils/prelude.sh
-. ./ci-utils/opam-setup.sh
+. /shared/ci-utils/opam-setup.sh
 
 echo "-- install and upgrade opam deps"
 
