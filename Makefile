@@ -5,7 +5,7 @@ ifndef VERSION
 VERSION=v0.7
 endif
 
-.PHONY: build lib top doc clean install uninstall test gen gen_ragel gen_metaocaml
+.PHONY: build lib doc clean install uninstall test gen gen_ragel gen_metaocaml
 
 INSTALL_FILES=$(filter-out \
   _build/myocamlbuild% _build/test.cm% _build/extEnum_merge.cmi _build/stage_merge.%, \
@@ -27,16 +27,17 @@ extEnum_merge.ml: stage_merge.ml
 %.ml: %.ml.rl
 		ragel -O -F1 $< -o $@
 
-build: lib top build-test
+build: lib build-test
 
 EXTRA_TARGETS := $(shell ocamlfind query gperftools -format "devkit_gperftools.cma devkit_gperftools.cmxa" 2> /dev/null)
 EXTRA_TARGETS += $(shell ocamlfind query jemalloc_ctl -format "devkit_jemalloc.cma devkit_jemalloc.cmxa" 2> /dev/null)
 
 lib:
-		$(OCAMLBUILD) $(BUILDFLAGS) devkit.cma devkit.cmxa $(EXTRA_TARGETS)
+		# FIXME EXTRA TARGETS
+		dune build $(DUNEFLAGS)
 
 top:
-		$(OCAMLBUILD) $(BUILDFLAGS) devkit.top
+		dune utop $(DUNEFLAGS)
 
 build-test:
 		$(OCAMLBUILD) $(BUILDFLAGS) test.byte test.native
