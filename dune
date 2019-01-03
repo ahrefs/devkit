@@ -67,3 +67,12 @@
     devkit_core
     jemalloc_ctl)
   (modules memory_jemalloc))
+
+(executable
+  (name test)
+  (libraries devkit)
+  (modules test test_httpev))
+
+(alias
+  (name runtest)
+  (action (run ./test.exe)))

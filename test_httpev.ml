@@ -1,6 +1,7 @@
 (** Bare-bones httpev server example *)
 
 open Printf
+open Devkit
 
 let log = Httpev.Hidden.log
 

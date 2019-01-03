@@ -27,7 +27,7 @@ extEnum_merge.ml: stage_merge.ml
 %.ml: %.ml.rl
 		ragel -O -F1 $< -o $@
 
-build: lib build-test
+build: lib
 
 EXTRA_TARGETS := $(shell ocamlfind query gperftools -format "devkit_gperftools.cma devkit_gperftools.cmxa" 2> /dev/null)
 EXTRA_TARGETS += $(shell ocamlfind query jemalloc_ctl -format "devkit_jemalloc.cma devkit_jemalloc.cmxa" 2> /dev/null)
@@ -39,11 +39,8 @@ lib:
 top:
 		dune utop $(DUNEFLAGS)
 
-build-test:
-		$(OCAMLBUILD) $(BUILDFLAGS) test.byte test.native
-
-test: build-test
-		_build/test.native
+test:
+		dune runtest $(DUNEFLAGS)
 
 doc:
 		$(OCAMLBUILD) devkit.docdir/index.html
