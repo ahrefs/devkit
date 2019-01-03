@@ -30,7 +30,9 @@
            memory_gperftools
            memory_jemalloc
            myocamlbuild
-           stage_merge)
+           stage_merge
+           test
+           test_httpev)
   (preprocess
     (per_module
       ((action (run camlp4o %{input-file})) htmlStream php_serialize)
