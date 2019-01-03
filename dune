@@ -2,8 +2,9 @@
   (public_name devkit)
   (libraries
     devkit_core
-    devkit_gperftools
-    devkit_jemalloc)
+    devkit_gperftools ; FIXME must be conditional
+    devkit_jemalloc ; FIXME must be conditional
+  )
   (modules devkit))
 
 (library
