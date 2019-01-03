@@ -11,6 +11,7 @@
   (public_name devkit.core)
   (libraries
     threads ; must come first
+    devkit_meta
     curl
     curl.lwt
     extlib
@@ -25,10 +26,11 @@
     zip)
   (modules :standard \
            devkit
-           stage_merge
+           extEnum_merge
            memory_gperftools
            memory_jemalloc
-           myocamlbuild)
+           myocamlbuild
+           stage_merge)
   (preprocess
     (per_module
       ((action (run camlp4o %{input-file})) htmlStream php_serialize)
@@ -39,6 +41,13 @@
        lwt_util
        web))
   ))
+
+(library
+  (name devkit_meta)
+  (public_name devkit.meta)
+  (libraries extlib)
+  (modules extEnum_merge)
+  (flags :standard -w -27-39))
 
 (library
   (name devkit_gperftools)
