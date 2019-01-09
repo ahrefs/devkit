@@ -1,10 +1,7 @@
 (library
   (public_name devkit)
   (libraries
-    devkit_core
-    devkit_gperftools ; FIXME must be conditional
-    devkit_jemalloc ; FIXME must be conditional
-  )
+    devkit_core)
   (modules devkit))
 
 (library
@@ -55,6 +52,7 @@
 (library
   (name devkit_gperftools)
   (public_name devkit.gperftools)
+  (optional)
   (libraries
     devkit_core
     gperftools)
@@ -63,6 +61,7 @@
 (library
   (name devkit_jemalloc)
   (public_name devkit.jemalloc)
+  (optional)
   (libraries
     devkit_core
     jemalloc_ctl)
