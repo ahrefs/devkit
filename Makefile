@@ -1,11 +1,6 @@
 
 .PHONY: build lib doc clean install uninstall test gen gen_ragel gen_metaocaml
 
-INSTALL_FILES=$(filter-out \
-  _build/myocamlbuild% _build/test.cm% _build/extEnum_merge.cmi _build/stage_merge.%, \
-  $(wildcard _build/*.cmx* _build/*.cmi _build/*.mli _build/*.ml _build/*.cma _build/*.cmt* \
-						 _build/*.lib _build/*.a _build/*.dll _build/*.so))
-
 OCAMLBUILD=ocamlbuild -use-ocamlfind -no-links -j 0
 
 target: build

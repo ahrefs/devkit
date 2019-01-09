@@ -27,7 +27,6 @@
            extEnum_merge
            memory_gperftools
            memory_jemalloc
-           myocamlbuild
            stage_merge
            test
            test_httpev)
