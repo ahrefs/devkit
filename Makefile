@@ -43,7 +43,7 @@ test:
 		dune runtest $(DUNEFLAGS)
 
 doc:
-		$(OCAMLBUILD) devkit.docdir/index.html
+		dune build $(DUNEFLAGS) @doc
 
 install: lib
 		ocamlfind install -patch-version "$(VERSION:v%=%)" devkit META $(sort $(INSTALL_FILES))
