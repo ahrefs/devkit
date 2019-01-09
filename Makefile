@@ -1,10 +1,4 @@
 
-VERSION=$(shell git describe --always --long)
-
-ifndef VERSION
-VERSION=v0.7
-endif
-
 .PHONY: build lib doc clean install uninstall test gen gen_ragel gen_metaocaml
 
 INSTALL_FILES=$(filter-out \
@@ -46,16 +40,14 @@ doc:
 		dune build $(DUNEFLAGS) @doc
 
 install: lib
-		ocamlfind install -patch-version "$(VERSION:v%=%)" devkit META $(sort $(INSTALL_FILES))
+		dune install
 
 uninstall:
-		ocamlfind remove devkit
+		dune uninstall
 
-reinstall:
-		$(MAKE) uninstall
-		$(MAKE) install
+reinstall: uninstall install
 
 clean:
-		ocamlbuild -clean
+		dune clean
 
 distclean: clean
