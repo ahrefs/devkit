@@ -16,7 +16,7 @@ build-doc: [
   [make "doc"]
 ]
 depends: [
-  "ocaml" {>= "4.04.0"}
+  "ocaml" {>= "4.05.0"}
   "ocamlfind" {build}
   "dune" {build & >= "1.5"}
   "camlp4" {build}
