@@ -41,7 +41,7 @@ let ($) f g = fun x -> f @@ g x
 
 let print_code code =
   let open Format in
-  Print_code.format_code std_formatter (Print_code.close_code code);
+  format_code std_formatter (close_code code);
   pp_print_newline std_formatter ();
   pp_print_newline std_formatter ()
 
