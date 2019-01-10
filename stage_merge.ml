@@ -58,6 +58,10 @@ let ret_full _k v = match v with Left x -> .< `Left .~x >. | Right x -> .< `Righ
 let ret_add_key f k v = .< .~k, .~(f k v) >.
 
 let () =
+  print_endline "[@@@ocaml.warning \"-27-39\"]";
+  print_endline ""
+
+let () =
   let bool k = k false; k true in
   bool @@ fun assoc -> bool @@ fun multi -> bool @@ fun right -> bool @@ fun left -> bool @@ fun by ->
     match by, assoc with
