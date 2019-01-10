@@ -1,5 +1,5 @@
 _build
-/devkit.docdir
+/stage_merge.byte
 
 .exrc
 .merlin
