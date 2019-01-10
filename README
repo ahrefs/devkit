@@ -10,9 +10,13 @@ Released under the terms of LGPL-2.1 with OCaml linking exception.
 Development
 ===========
 
-Install OCaml dependencies : `opam install . --deps-only`
+Install OCaml dependencies :
 
-External dependencies : `opam list -s -e debian --rec --required-by=devkit`
+  opam install . --deps-only
+
+External dependencies :
+
+  opam list -s -e --resolve=devkit
 
 To update ragel-generated code :
 
@@ -21,4 +25,4 @@ To update ragel-generated code :
 
 To update metaocaml-generated code :
 
-  opam exec --switch=4.04+BER -- make -B gen_metaocaml
+  opam exec --switch=4.07.1+BER -- make gen_metaocaml
