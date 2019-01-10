@@ -9,7 +9,6 @@
   (public_name devkit.core)
   (libraries
     threads ; must come first
-    devkit_meta
     curl
     curl.lwt
     extlib
@@ -24,10 +23,9 @@
     zip)
   (modules :standard \
            devkit
-           extEnum_merge
+           stage_merge
            memory_gperftools
            memory_jemalloc
-           stage_merge
            test
            test_httpev)
   (preprocess
@@ -40,13 +38,6 @@
        lwt_util
        web))
   ))
-
-(library
-  (name devkit_meta)
-  (public_name devkit.meta)
-  (libraries extlib)
-  (modules extEnum_merge)
-  (flags :standard -w -27-39))
 
 (library
   (name devkit_gperftools)

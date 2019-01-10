@@ -99,7 +99,7 @@ let join_assoc ?(left=false) ?(right=false) ?(multi=true) f e1 e2 =
   in
   from next
 
-include Devkit_meta.ExtEnum_merge
+include ExtEnum_merge
 
 let group equal fold zero e =
   let current = ref None in
