@@ -43,12 +43,12 @@ let open_in ic =
     let flags = IO.read_byte ic in
     if flags land 0xE0 <> 0 then
       raise(Error("bad flags, not a gzip file"));
-    for i = 1 to 6 do ignore(IO.read_byte ic) done;
+    for _ = 1 to 6 do ignore(IO.read_byte ic) done;
     if flags land 0x04 <> 0 then begin
       (* Skip extra data *)
       let len1 = IO.read_byte ic in
       let len2 = IO.read_byte ic in
-      for i = 1 to len1 + len2 lsl 8 do ignore(IO.read_byte ic) done
+      for _ = 1 to len1 + len2 lsl 8 do ignore(IO.read_byte ic) done
     end;
     if flags land 0x08 <> 0 then begin
       (* Skip original file name *)
@@ -176,7 +176,7 @@ let open_out ?(level = 6) oc =
   IO.write_byte oc 0x8B;                  (* ID2 *)
   IO.write_byte oc 8;                     (* compression method *)
   IO.write_byte oc 0;                     (* flags *)
-  for i = 1 to 4 do IO.write_byte oc 0 done; (* mtime *)
+  for _ = 1 to 4 do IO.write_byte oc 0 done; (* mtime *)
   IO.write_byte oc 0;                     (* xflags *)
   IO.write_byte oc 0xFF;                  (* OS (unknown) *)
   { out_chan = oc;
@@ -219,7 +219,7 @@ let output_byte oz b =
 
 let write_int32 oc n =
   let r = ref n in
-  for i = 1 to 4 do
+  for _ = 1 to 4 do
     IO.write_byte oc (Int32.to_int !r);
     r := Int32.shift_right_logical !r 8
   done

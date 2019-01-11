@@ -1,3 +1,5 @@
+[@@@ocaml.warning "-27-39"]
+
 let join_inner_by =
 fun cmp_1 ->
   fun k1_2 ->

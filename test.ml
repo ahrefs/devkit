@@ -3,7 +3,7 @@ open OUnit
 open Printf
 open ExtLib
 
-open Prelude
+open Devkit
 
 let tests = ref []
 let test name f = let open OUnit in tests := (name >:: f) :: !tests

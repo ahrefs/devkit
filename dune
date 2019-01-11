@@ -1,0 +1,67 @@
+(library
+  (public_name devkit)
+  (libraries
+    devkit_core)
+  (modules devkit))
+
+(library
+  (name devkit_core)
+  (public_name devkit.core)
+  (libraries
+    threads ; must come first
+    curl
+    curl.lwt
+    extlib
+    extunix
+    libevent
+    lwt
+    lwt.unix
+    netstring
+    oUnit
+    pcre
+    yojson
+    zip)
+  (modules :standard \
+           devkit
+           stage_merge
+           memory_gperftools
+           memory_jemalloc
+           test
+           test_httpev)
+  (preprocess
+    (per_module
+      ((action (run camlp4o %{input-file})) htmlStream php_serialize)
+      ((pps lwt_ppx)
+       httpev
+       logstash
+       lwt_flag
+       lwt_util
+       web))
+  ))
+
+(library
+  (name devkit_gperftools)
+  (public_name devkit.gperftools)
+  (optional)
+  (libraries
+    devkit_core
+    gperftools)
+  (modules memory_gperftools))
+
+(library
+  (name devkit_jemalloc)
+  (public_name devkit.jemalloc)
+  (optional)
+  (libraries
+    devkit_core
+    jemalloc_ctl)
+  (modules memory_jemalloc))
+
+(executable
+  (name test)
+  (libraries devkit)
+  (modules test test_httpev))
+
+(alias
+  (name runtest)
+  (action (run ./test.exe)))

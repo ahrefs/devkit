@@ -1,8 +1,8 @@
 _build
-/devkit.docdir
-/*.byte
-/*.native
+/stage_merge.byte
 
-.*.sw[a-z]
 .exrc
+.merlin
 TAGS
+
+*.install
