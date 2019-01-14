@@ -1,4 +1,4 @@
-opam-version: "1.2"
+opam-version: "2.0"
 maintainer: "igor@ahrefs.com"
 authors: "Ahrefs <github@ahrefs.com>"
 license: "LGPL-2.1 with OCaml linking exception"
@@ -8,16 +8,11 @@ bug-reports: "https://github.com/ahrefs/devkit/issues"
 build: [
   ["dune" "subst"] {pinned}
   ["dune" "build" "-p" name "-j" jobs]
-]
-build-test: [
-  [make "test"]
-]
-build-doc: [
-  [make "doc"]
+  [make "test"] {with-test}
+  [make "doc"] {with-doc}
 ]
 depends: [
   "ocaml" {>= "4.05.0"}
-  "ocamlfind" {build}
   "dune" {build & >= "1.5"}
   "camlp4" {build}
   ("extlib" {>= "1.7.0"} | "extlib-compat" {>= "1.7.0"})
@@ -28,7 +23,7 @@ depends: [
   "ocamlnet"
   "pcre"
   "extunix" {>= "0.1.4"}
-  "lwt" {>="2.5.2"}
+  "lwt" {>= "2.5.2"}
   "lwt_ppx"
   "base-bytes"
   "base-unix"
