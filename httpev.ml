@@ -696,8 +696,12 @@ let () =
 
 (** {2 Utilities} *)
 
-module Args(T : sig val req : request end) : sig
+module type Args = sig
+
   exception Bad of string
+
+  val req : request
+
   val get : string -> string option
   (** Get optional parameter. @return None if parameter is missing *)
 
@@ -717,8 +721,11 @@ module Args(T : sig val req : request end) : sig
   val int64 : ?default:int64 -> string -> int64
   val array : string -> string list
   (** @param name array name without brackets e.g. [array "x"] to extract [x] from /request?x[]=1&x[]=2 *)
-end =
+end
+
+module Args(T : sig val req : request end) : Args =
 struct
+  let req = T.req
   let arg name = List.assoc name T.req.args
   exception Bad of string
   let get = Exn.catch arg
@@ -1102,3 +1109,40 @@ let setup_lwt config answer =
 
 let server_lwt config answer =
   Lwt_main.run @@ setup_lwt config answer
+
+module Answer = struct
+
+let return ?(status=`Ok) ?(extra=[]) ~typ data : [> `Body of reply_status reply' ] Lwt.t =
+  Lwt.return @@ `Body (status, ("Content-Type",typ) :: extra, data)
+
+let text = return ~typ:"text/plain"
+let binary = return ~typ:"application/octet-stream"
+let printf ?status ?extra fmt = ksprintf (fun s -> text ?status ?extra s) fmt
+let json = return ~typ:"application/json"
+let yojson ?status ?extra x = json ?status ?extra (Yojson.Safe.to_string x)
+
+let error status s = text ~status s
+let not_found = error `Not_found
+let bad_request = error `Bad_request
+let internal_error = error `Internal_server_error
+
+exception No_path
+
+let random_ref () = Random.int64 Int64.max_int
+
+let rest ~show_exn req answer =
+  try%lwt
+    let module Arg = Args(struct let req = req end) in
+    answer (module Arg : Args) (req.meth,req.path)
+  with
+  | No_path -> bad_request @@ sprintf "unrecognized path %s %s" (show_method req.meth) req.url
+  | Arg.Bad s -> bad_request @@ sprintf "bad parameter %s in %s" s req.url
+  | exn ->
+    let ref = random_ref () in
+    log#warn ~exn "failed ref:%Ld %s" ref (show_request req);
+    if show_exn then
+      internal_error @@ sprintf "internal error ref:%Ld : %s" ref (match exn with Failure s -> s | _ -> Exn.str exn)
+    else
+      internal_error @@ sprintf "undisclosed internal error ref:%Ld" ref
+
+end
