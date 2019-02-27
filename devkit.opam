@@ -34,3 +34,4 @@ depopts: [
   "gperftools"
   "jemalloc"
 ]
+version: "1.0"
