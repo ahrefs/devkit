@@ -182,12 +182,13 @@ let common_prefix s1 s2 =
   while !i < min_len && s1.[!i] = s2.[!i] do incr i done;
   !i
 
-let shorten limit s =
+let shorten ?(escape=false) limit s =
+  let escape = if escape then String.escaped else id in
   let limit = max limit 24 in
-  if String.length s <= limit then s
+  if String.length s <= limit then escape s
   else
     let limit = limit - 20 in
-    Printf.sprintf "%s..[+%d bytes]..%s" (slice ~last:limit s) (String.length s - limit - 4) (slice ~first:(-4) s)
+    Printf.sprintf "%s..[+%d bytes]..%s" (escape @@ slice ~last:limit s) (String.length s - limit - 4) (escape @@ slice ~first:(-4) s)
 
 let array_concat sep a =
   match a with

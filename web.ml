@@ -258,8 +258,8 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       let action = string_of_http_action action in
       let body = match body with
       | None -> ""
-      | Some (`Form args) -> String.concat " " @@ List.map (fun (k,v) -> sprintf "%s=%S" k (Stre.shorten 64 v)) args
-      | Some (`Raw (ct,body)) -> sprintf "%s %s" ct (Stre.shorten 64 body)
+      | Some (`Form args) -> String.concat " " @@ List.map (fun (k,v) -> sprintf "%s=\"%s\"" k (Stre.shorten ~escape:true 64 v)) args
+      | Some (`Raw (ct,body)) -> sprintf "%s \"%s\"" ct (Stre.shorten ~escape:true 64 body)
       | Some (`Chunked (ct,_f)) -> sprintf "%s chunked" ct
       in
       log #info "%s #%d %s %s" action nr_http url body
