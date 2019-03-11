@@ -12,19 +12,21 @@ let default def f x = try f x with _ -> def
 let suppress f x = try f x with _ -> ()
 let map f x = try `Ok (f x) with exn -> `Exn exn
 
-let to_string = function
+let to_string exn =
+  match exn with
   | Unix.Unix_error (e,f,s) -> sprintf "Unix_error %s(%s) %s" f s (Unix.error_message e)
   | Curl.CurlException (_,n,s) -> sprintf "Curl.CurlException(%u,%s)" n s
   | Pcre.Error err -> sprintf "Pcre.Error(%s)"
     begin match err with
-    | Pcre.Partial -> "Partial"
-    | Pcre.BadPartial -> "BadPartial"
-    | Pcre.BadPattern(m,p) -> sprintf "BadPattern(%s,%i)" m p
-    | Pcre.BadUTF8 -> "BadUTF8"
-    | Pcre.BadUTF8Offset -> "BadUTF8Offset"
-    | Pcre.MatchLimit -> "MatchLimit"
-    | Pcre.RecursionLimit -> "RecursionLimit"
-    | Pcre.InternalError s -> sprintf "InternalError(%s)" s
+    | Partial -> "Partial"
+    | BadPartial -> "BadPartial"
+    | BadPattern(m,p) -> sprintf "BadPattern(%s,%i)" m p
+    | BadUTF8 -> "BadUTF8"
+    | BadUTF8Offset -> "BadUTF8Offset"
+    | MatchLimit -> "MatchLimit"
+    | RecursionLimit -> "RecursionLimit"
+    | InternalError s -> sprintf "InternalError(%s)" s
+    | _ -> Printexc.to_string exn
     end
   | exn -> Printexc.to_string exn
 
