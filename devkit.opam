@@ -5,6 +5,7 @@ license: "LGPL-2.1 with OCaml linking exception"
 homepage: "https://github.com/ahrefs/devkit"
 dev-repo: "git://github.com/ahrefs/devkit.git"
 bug-reports: "https://github.com/ahrefs/devkit/issues"
+synopsis: "Development kit - general purpose library"
 build: [
   ["dune" "subst"] {pinned}
   ["dune" "build" "-p" name "-j" jobs]
@@ -28,7 +29,7 @@ depends: [
   "base-bytes"
   "base-unix"
   "base-threads"
-  "yojson"
+  "yojson" {>= "1.6.0"}
 ]
 depopts: [
   "gperftools"

@@ -183,7 +183,7 @@ let is_same_day timestamp =
   Time.now () -. Time.days 1 < timestamp
 
 type logger = <
-  event : (string * Yojson.Safe.json) list -> unit;
+  event : (string * Yojson.Safe.t) list -> unit;
   write : unit -> unit;
   reload : unit -> unit;
   flush : unit -> unit;

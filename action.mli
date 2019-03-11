@@ -204,7 +204,7 @@ class timer_start : Time.t ->
     method record : string -> Time.t -> unit
     method mark : string -> unit
     method show : string
-    method json : (string * Yojson.Safe.json) list
+    method json : (string * Yojson.Safe.t) list
     method get : Time.t
     method get_str : string
     method get_state : Time.t * (string * Time.t) list

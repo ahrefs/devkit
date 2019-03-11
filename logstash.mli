@@ -9,7 +9,7 @@ val setup : ?pause:Time.t -> Libevent.event_base -> unit
 val setup_lwt : ?pause:Time.t -> unit -> unit
 
 type logger = <
-  event : (string * Yojson.Safe.json) list -> unit; (** write event manually *)
+  event : (string * Yojson.Safe.t) list -> unit; (** write event manually *)
   write : unit -> unit; (** write Var counters explicitly *)
   reload : unit -> unit; (** reopen output file *)
   flush : unit -> unit; (** force flush *)
