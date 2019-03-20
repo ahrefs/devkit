@@ -1,6 +1,8 @@
 devkit
 ======
 
+[![Build Status](https://travis-ci.org/ahrefs/devkit.svg?branch=master)](https://travis-ci.org/ahrefs/devkit)
+
 General purpose OCaml library (development kit)
 Copyright (c) 2009 Ahrefs
 Released under the terms of LGPL-2.1 with OCaml linking exception.
