@@ -21,7 +21,14 @@ let rawurldecode s = try Netencoding.Url.decode ~plus:false s with _ -> s
 let urldecode s = try Netencoding.Url.decode ~plus:true s with _ -> s
 
 let htmlencode = Netencoding.Html.encode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
-let htmldecode = Netencoding.Html.decode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
+let htmldecode_exn = Netencoding.Html.decode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
+let htmldecode =
+  (* U+FFFD REPLACEMENT CHARACTER *)
+  let u_FFFD = "\xEF\xBF\xBD" in
+  let subst _ = u_FFFD in
+  let lookup _ = u_FFFD in
+  Netencoding.Html.decode ~subst ~lookup ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
+
 (* TODO uncomment when httpev becomes less strict everywhere *)
 let make_url_args = String.concat "&" $ List.map (function (* (k, "") -> urlencode k | *) (k,v) -> urlencode k ^ "=" ^ urlencode v)
 
