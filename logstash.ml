@@ -263,3 +263,36 @@ let setup_error_log () =
     end;
     chain_hook level facil s
   end
+
+let lifetime ?(extra="") ~events ~version () =
+  let text = sprintf "%s start version %s" (Pid.self_name ()) version in
+  events#event [
+    "event", `String "start";
+    "text", `String text;
+    "extra", `String extra;
+    "cmdline", `String Nix.cmdline;
+    "cwd", `String (Sys.getcwd ());
+    "user", `String (try Unix.(getpwuid @@ geteuid ()).pw_name with _ -> "");
+    "version", `String version;
+  ];
+  events#flush ();
+  Signal.set_exit begin fun () ->
+    events#event [
+      "event", `String "signal.stop";
+      "text", `String (sprintf "%s received stop signal" (Pid.self_name ()));
+      "version", `String version;
+    ];
+    events#flush ();
+  end;
+  let pid = Unix.getpid () in
+  at_exit begin fun () ->
+    match pid = Unix.getpid () with
+    | false -> () (* forked child *)
+    | true ->
+      events#event [
+        "event", `String "exit";
+        "text", `String (sprintf "%s exit" (Pid.self_name ()));
+        "version", `String version;
+      ];
+      events#flush ();
+  end

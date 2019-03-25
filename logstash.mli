@@ -33,3 +33,10 @@ module Dyn : sig
   val add_bytes : t -> (string * json) list -> int -> unit
   val add_time : t -> (string * json) list -> Time.t -> unit
 end
+
+(** Log events related to the life of the program:
+    - [start]
+    - [signal.stop]
+    - [exit]
+*)
+val lifetime : ?extra:string -> events:logger -> version:string -> unit -> unit
