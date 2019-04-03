@@ -325,9 +325,10 @@ let header_referer req =
 let log_access_apache ch code size ?(background=false) req =
   try
     let now = Time.now () in
-    fprintf ch "%s - - [%s] %S %d %dB . %S %S %.3f %s%s\n%!"
+    fprintf ch "%s - - [%s] %S %d %dB . %S %S %.3f %s %S%s\n%!"
       (show_client_addr req) (Time.to_string now) req.line code size
       (header_referer req) (header_safe req "user-agent") (now -. req.conn) (header_safe req "host")
+      (header_safe req "x-request-id")
       (if background then " (BG)" else "")
   with exn ->
     log #warn ~exn "access log : %s" @@ show_request req
