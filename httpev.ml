@@ -311,17 +311,6 @@ let write_f c (data,ack) ev fd _flags =
     | false, Unix.Unix_error (Unix.EPIPE,_,_) -> ()
     | _ -> log #warn ~exn "write_f %s" (show_client c)
 
-let find_header req name =
-  List.assoc (String.lowercase name) req.headers
-
-let header_exn req name =
-  try find_header req name with _ -> Exn.fail "header %S" name
-
-let header_safe req name = try find_header req name with _ -> ""
-
-let header_referer req =
-  try find_header req "Referer" with _ -> try find_header req "Referrer" with _ -> ""
-
 let log_access_apache ch code size ?(background=false) req =
   try
     let now = Time.now () in

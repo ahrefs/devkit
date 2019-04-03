@@ -85,16 +85,22 @@ let show_client_addr req =
 let client_addr req = match req.addr with Unix.ADDR_INET (addr,port) -> addr, port | _ -> assert false
 let client_ip req = fst @@ client_addr req
 
+let find_header req name = List.assoc (String.lowercase_ascii name) req.headers
+let header_exn req name = try find_header req name with _ -> Exn.fail "header %S" name
+let header_safe req name = try find_header req name with _ -> ""
+let header_referer req = try find_header req "Referer" with _ -> try find_header req "Referrer" with _ -> ""
+
 let show_request req =
-  sprintf "#%d %s time %.4f (recv %.4f) %s %s%s %S"
+  sprintf "#%d %s time %.4f (recv %.4f) %s %s%s %S %S"
     req.id
     (show_client_addr req)
     (Time.get () -. req.conn)
     (req.recv -. req.conn)
     (show_method req.meth)
-    (Exn.default "" (List.assoc "host") req.headers)
+    (header_safe req "host")
     req.url
-    (Exn.default "" (List.assoc "user-agent") req.headers)
+    (header_safe req "user-agent")
+    (header_safe req "x-request-id")
 
 let status_code : reply_status -> int = function
   | `Ok -> 200
