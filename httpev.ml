@@ -35,6 +35,7 @@ type config =
     yield : bool;
       (** do [Lwt_unix.yield ()] after accepting connection to give other lwt threads chance to run (set to [true] when http requests
           processing causes other threads to stuck) *)
+    single : bool; (** only process one request at a time (intended for preforked workers) *)
     exit_thread : unit Lwt.t option;
       (** if set, stop accepting connections as soon as exit_thread terminates (defaults to [Daemon.should_exit_lwt]) *)
     reuseport : bool;
@@ -67,6 +68,7 @@ let default =
     max_data_childs = 50;
     max_data_waiting = 200;
     yield = true;
+    single = false;
     exit_thread = Some Daemon.should_exit_lwt;
     reuseport = false;
     nodelay = false;
@@ -1003,7 +1005,7 @@ let handle_client_lwt client cin answer =
 
 let accept_hook = ref (fun () -> ())
 
-let handle_lwt fd k =
+let handle_lwt ~single fd k =
   !accept_hook ();
   match%lwt Exn_lwt.map Lwt_unix.accept fd with
   | `Exn (Unix.Unix_error (Unix.EMFILE,_,_)) ->
@@ -1024,12 +1026,17 @@ let handle_lwt fd k =
         Lwt_unix.close fd
       ]
     in
-    Lwt.ignore_result task; (* "fork" processing *)
-    Lwt.return_unit
+    if single then
+      task
+    else
+    begin
+      Lwt.ignore_result task; (* "fork" processing *)
+      Lwt.return_unit
+    end
 
 let handle_lwt config fd k =
   let rec loop () =
-    let%lwt () = handle_lwt fd k in
+    let%lwt () = handle_lwt ~single:config.single fd k in
     let%lwt () = if config.yield then Lwt_unix.yield () else Lwt.return_unit in
     loop ()
   in
