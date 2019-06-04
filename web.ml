@@ -148,8 +148,8 @@ module type HTTP = sig
     (string * string) list -> [> `Error of string | `Ok of string ] IO.t
 end
 
-let simple_result ?(verbose=false) = function
-  | `Ok (code, s) when code / 100 = 2 -> `Ok s
+let simple_result ?(is_ok=(fun code -> code / 100 = 2)) ?(verbose=false) = function
+  | `Ok (code, s) when is_ok code -> `Ok s
   | `Error code -> `Error (sprintf "(%d) %s" (Curl.errno code) (Curl.strerror code))
   | `Ok (n, content) -> `Error (sprintf "http %d%s" n (if verbose then ": " ^ content else ""))
 
