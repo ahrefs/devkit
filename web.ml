@@ -72,6 +72,7 @@ type http_action =
 | `PUT
 | `PATCH
 | `DELETE
+| `CUSTOM of string
 ]
 
 let string_of_http_action : http_action -> string = function
@@ -80,6 +81,7 @@ let string_of_http_action : http_action -> string = function
   | `PUT -> "PUT"
   | `PATCH -> "PATCH"
   | `DELETE -> "DELETE"
+  | `CUSTOM s -> s
 
 let http_action_of_string : string -> http_action = function
   | "GET" -> `GET
@@ -250,7 +252,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
         set_readfunction h (fun _ -> "") (* prevent reading from stdin with POST without body *)
       end;
       begin match action with
-      | `GET | `DELETE -> ()
+      | `GET | `DELETE | `CUSTOM _ -> ()
       | `POST | `PUT | `PATCH -> set_post h true
       end;
       set_customrequest h (string_of_http_action action);
