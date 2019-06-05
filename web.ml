@@ -148,10 +148,13 @@ module type HTTP = sig
     (string * string) list -> [> `Error of string | `Ok of string ] IO.t
 end
 
-let simple_result ?(is_ok=(fun code -> code / 100 = 2)) ?(verbose=false) = function
-  | `Ok (code, s) when is_ok code -> `Ok s
-  | `Error code -> `Error (sprintf "(%d) %s" (Curl.errno code) (Curl.strerror code))
-  | `Ok (n, content) -> `Error (sprintf "http %d%s" n (if verbose then ": " ^ content else ""))
+let show_result ?(verbose=false) = function
+| `Error code -> sprintf "(%d) %s" (Curl.errno code) (Curl.strerror code)
+| `Ok (n, content) -> sprintf "http %d%s" n (if verbose then ": " ^ content else "")
+
+let simple_result ?(is_ok=(fun code -> code / 100 = 2)) ?verbose = function
+| `Ok (code, s) when is_ok code -> `Ok s
+| r -> `Error (show_result ?verbose r)
 
 let nr_http = ref 0
 
@@ -461,8 +464,7 @@ let http_do ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?(http_1_0=false) (act
   end;
   match http_gets ~setup url with
   | `Ok (code, s) when code / 100 = 2 -> `Ok s
-  | `Error code -> `Error (sprintf "(%d) %s" (errno code) (strerror code))
-  | `Ok (n, _) -> `Error (sprintf "http %d" n)
+  | r -> `Error (show_result r)
 
 (* http://www.w3.org/Protocols/rfc2616/rfc2616-sec10.html *)
 let string_of_http_code = function
