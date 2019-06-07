@@ -31,6 +31,9 @@ module Async_fin : sig
 
   val setup : Libevent.event_base -> t
 
+  (** Destructor. All queued events are lost *)
+  val shutdown : t -> unit
+
   (** Arrange for callback to be executed in libevent loop, callback should not throw (exceptions are reported and ignored) *)
   val callback : t -> (unit -> unit) -> unit
 

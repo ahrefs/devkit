@@ -46,6 +46,8 @@ module Async_fin = struct
     setup_simple_event events fin.evfd [Ev.READ] begin fun _ fd _ -> reset fd; loop () end;
     fin
 
+  let shutdown { q; evfd } = Mtq.clear q; Unix.close evfd
+
   let callback fin f =
     Mtq.put fin.q f;
     U.eventfd_write fin.evfd 1L
