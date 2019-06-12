@@ -149,6 +149,21 @@ let unix_addr_of_string s =
   else
     Exn.fail "invalid UNIX addr %S" s
 
+let parse_addr_port_exn s =
+  match Stre.splitc s ':' with
+  | exception Not_found ->
+      Exn.fail "bad host in %S (must be host:port)" s
+  | host, port ->
+      let port = try int_of_string port with exn -> Exn.fail ~exn "bad port %s in %S" port s in
+      (host, port)
+
+(** Parse input as [ip:port]
+  @return a tuple representing ip and port *)
+let parse_ip_port_exn s =
+  let ip, port = parse_addr_port_exn s in
+  let ip = try Unix.inet_addr_of_string ip with exn -> Exn.fail ~exn "bad ip %s in %S" ip s in
+  (ip, port)
+
 (**
    Convert a string to a {Unix.sockaddr}.
 
