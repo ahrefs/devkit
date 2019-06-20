@@ -29,6 +29,11 @@ type group = { k : string; attr : Attr.t; mutable get : (unit -> (string * t opt
 
 let h_families = Hashtbl.create 10
 
+let show_value = function
+| Time t -> Time.compact_duration t
+| Count c -> string_of_int c
+| Bytes b -> Action.bytes_string b
+
 let make_family ~name ~k ~attr =
   let family = Attr.make (("class",name)::attr) in
   let (_:Attr.t) = Attr.add (k,"") family in (* check that all keys are unique *)
@@ -60,17 +65,17 @@ let cc f = make_cc (fun n -> Some (Count n)) f
 let cc_ms f = make_cc (fun n -> Some (Time (float n /. 1000.))) f
 
 class typ name ?(attr=[]) k_name = (* name+attr - family of counters *)
+let get_all h =
+  Hashtbl.fold begin fun k v acc -> (* return all counters created for this instance *)
+    match v () with
+    | exception exn -> log #warn ~exn "variable %S %s failed" name (show_a @@ (k_name,k)::attr); acc
+    | v -> (k, v) :: acc end h []
+in
 object(self)
   val h = Hashtbl.create 7
   val family = make_family ~k:k_name ~attr ~name
   initializer
-    let get () =
-      Hashtbl.fold begin fun k v acc -> (* return all counters created for this instance *)
-        match v () with
-        | exception exn -> log #warn ~exn "variable %S %s failed" name (show_a @@ (k_name,k)::attr); acc
-        | v -> (k, v) :: acc end h []
-    in
-    register family get
+    register family (fun () -> get_all h)
   method ref : 'a. 'a -> ('a -> t) -> string -> 'a ref = fun init f name ->
     let v = ref init in
     Hashtbl.replace h name (fun () -> some @@ f !v);
@@ -83,6 +88,10 @@ object(self)
   method bytes name = self#ref 0 (fun x -> Bytes x) name
   method time name = self#ref 0. (fun x -> Time x) name
   method unregister () = unregister family
+  method get =
+    get_all h |> List.filter_map (fun (k,v) -> match v with None -> None | Some v -> Some (k,v))
+  method show =
+    self#get |> List.map (fun (k,v) -> sprintf "%s: %s" k (show_value v)) |> String.concat ", "
 end
 
 let iter f =
@@ -129,12 +138,7 @@ let list_stats filter =
       let klass = List.assoc "class" attrs in
       if not @@ List.mem klass filter then raise Not_found; (* not interested stats *)
       let attrs = List.remove_assoc "class" attrs |> List.map (uncurry @@ sprintf "%s.%s") |> String.join "," in
-      let value =
-        match v with
-        | Time t -> Time.compact_duration t
-        | Count c -> string_of_int c
-        | Bytes b -> Action.bytes_string b
-      in
+      let value = show_value v in
       tuck l @@ sprintf "%s %s : %s" klass attrs value
     with Not_found -> ()
   end;

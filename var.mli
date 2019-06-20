@@ -17,6 +17,8 @@ object
   method bytes : string -> int ref
   method time : string -> float ref
   method unregister : unit -> unit
+  method get : (string * t) list
+  method show : string
 end
 
 (** [cc pp type ?attr key] new set of counters with designated [type], [attr]ibutes and [key] name
