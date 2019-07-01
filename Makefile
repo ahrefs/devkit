@@ -5,7 +5,7 @@ OCAMLBUILD=ocamlbuild -use-ocamlfind -no-links -j 0
 
 target: build
 
-gen_ragel: devkit_ragel.ml
+gen_ragel: devkit_ragel.ml htmlStream_ragel.ml
 
 gen_metaocaml:
 		OCAMLFIND_TOOLCHAIN=metaocaml ocamlfind ocamlc -linkpkg -package extlib stage_merge.ml -o stage_merge.byte

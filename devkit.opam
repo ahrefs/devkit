@@ -15,7 +15,6 @@ build: [
 depends: [
   "ocaml" {>= "4.05.0"}
   "dune" {build & >= "1.5"}
-  "camlp4" {build}
   ("extlib" {>= "1.7.0"} | "extlib-compat" {>= "1.7.0"})
   "ounit"
   "camlzip"
@@ -35,4 +34,4 @@ depopts: [
   "gperftools"
   "jemalloc"
 ]
-version: "1.0"
+version: "1.1"
