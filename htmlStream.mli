@@ -14,6 +14,12 @@ type ctx
 val init : unit -> ctx
 val get_lnum : ctx -> int
 
+(**
+  Scan string for html tags.
+  NB
+  1. self-closing tags (e.g. [<x/>]) will result in two tags generated [<x></x>] (except for [<a/>])
+  2. unfinished tags at the end of input are ignored
+*)
 val parse : ?ctx:ctx -> (elem -> unit) -> string -> unit
 
 (** @return html string for [elem] *)

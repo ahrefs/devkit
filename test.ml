@@ -15,7 +15,7 @@ let () = test "HtmlStream" begin fun () ->
   let module HS = HtmlStream in
   let (==>) s s' =
   try
-    let s'' = Control.wrapped_output (IO.output_string ()) (fun io -> Stream.iter (IO.nwrite_string io $ HS.show_raw') (HS.parse (Stream.of_string s))) in
+    let s'' = Control.wrapped_output (IO.output_string ()) (fun io -> HS.parse (IO.nwrite_string io $ HS.show_raw') s) in
     if s' = s'' then () else
       failwith (sprintf "%s ==> %s (got %s)" s s' s'')
   with
@@ -23,18 +23,20 @@ let () = test "HtmlStream" begin fun () ->
   | exn -> assert_failure (sprintf "%s ==> %s (exn %s)\n%s" s s' (Exn.str exn) (Printexc.get_backtrace ()))
   in
   "<q>dsds<qq>" ==> "<q>dsds<qq>";
-  "<>" ==> "<>";
-  "< q>" ==> "<>";
+  "<>" ==> "";
+  "< q>" ==> "<q>";
   "<q>" ==> "<q>";
-  "<q><b>dsad</b></Q><Br/><a a a>" ==> "<q><b>dsad</b></q><br><a a='' a=''>";
-  "<q x= a=2><q x a=2><q a=2/><q AAaa=2 />" ==> "<q x='a'><q x='' a='2'><q a='2'><q aaaa='2'>";
-  "dAs<b a=\"d'dd\" b='q&q\"qq'></q a=2></><a'a>" ==> "dAs<b a='d'dd' b='q&q\"qq'></q></><a>";
-  "dsad<v" ==> "dsad<v>";
+  "<q><b>dsad</b></Q><Br/><a a a>" ==> "<q><b>dsad</b></q><br></br><a a='' a=''>";
+  "<q x= a=2><q x a=2><q a=2/><q AAaa=2 />" ==> "<q x='a=2'><q x='' a='2'><q a='2/'><q aaaa='2'></q>";
+  "dAs<b a=\"d'dd\" b='q&q\"qq'></q a=2></><a'a>" ==> "dAs<b a='d'dd' b='q&q\"qq'></q></>";
+  "dsad<v" ==> "dsad";
   "dsa" ==> "dsa";
   "" ==> "";
-  "<" ==> "<>";
+  "<" ==> "";
+(*
   "<a q=>" ==> "<a q=''>";
   "<a q='>" ==> "<a q='>'>";
+*)
   "<a b='&amp;'>&amp;</a>" ==> "<a b='&amp;'>&amp;</a>";
   "<a b='&'>&</a>" ==> "<a b='&'>&</a>";
 end
