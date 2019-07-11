@@ -57,7 +57,7 @@ sig
   val project : t -> T.t
   val inject_list : T.t list -> t list
   val project_list : t list -> T.t list
-end
+end[@@deprecated "use Fresh instead"]
 
 module Fresh(T : sig type t val compare : t -> t -> int end)() :
 sig
