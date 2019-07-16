@@ -51,7 +51,7 @@ module TimeLimited2(E: Set.OrderedType)
 
   let get t v =
     (* lock is not needed *)
-    Lock.locked t.lock (fun () -> M.find_opt v t.m)
+    Lock.locked t.lock (fun () -> M.find_opt (v, t.limit) t.m)
 
   let count t = Lock.locked t.lock (fun () -> M.cardinal t.m)
 
