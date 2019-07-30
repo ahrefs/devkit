@@ -117,10 +117,13 @@ let setup_sys () =
   do_install := install_sys;
   reinstall ()
 
-let setup_libevent t =
+let setup_libevent' t =
   verbose := true;
   do_install := (install_libevent t);
   reinstall ()
+
+let setup_libevent = setup_libevent'
+let setup_libevent_ events = setup_libevent' @@ init events
 
 let setup_lwt () =
   verbose := true;
