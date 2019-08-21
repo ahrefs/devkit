@@ -59,7 +59,7 @@ val async : ?log:Log.logger -> string -> (unit -> unit Lwt.t) -> unit
     Reason: functions of this module may be used during evaluation of [(run_thread ()) : 'a Lwt.t], so we need to prepare Lwt thread
     storage before the evaluation of [(run_thread ())].
  *)
-val ignore_result : ?log:Log.logger -> string -> (unit -> 'a Lwt.t) -> unit
+val ignore_result : ?log:Log.logger -> string -> (unit -> unit Lwt.t) -> unit
 
 (** Adds line to current thread's last logs.
     When marking is enabled, but current thread is not marked/named, line is added to special "<top>" thread logs. *)
