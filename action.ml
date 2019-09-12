@@ -145,8 +145,9 @@ let file_lines_exn file =
 
 let make_config_lines =
   List.filter_map begin fun s ->
+    let (s, _comment) = Stre.dividec s '#' in
     let s = String.strip s in
-    if s <> "" && s.[0] <> '#' then Some s else None
+    if s <> "" then Some s else None
   end
 
 let config_lines_exn = make_config_lines $ file_lines_exn
