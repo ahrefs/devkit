@@ -53,7 +53,7 @@
   (optional)
   (libraries
     devkit_core
-    jemalloc_ctl)
+    jemalloc)
   (modules memory_jemalloc))
 
 (executable
