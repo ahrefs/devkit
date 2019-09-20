@@ -1,7 +1,7 @@
 (** Memory reporting for jemalloc, call [setup] in every binary linked with jemalloc *)
 
 open Devkit_core
-open Jemalloc_ctl
+open Jemalloc
 
 let show_crt_info () =
   let b = Action.bytes_string in
