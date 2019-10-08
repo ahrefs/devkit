@@ -19,6 +19,7 @@
     netstring
     oUnit
     pcre
+    stdlib-shims
     yojson
     zip)
   (modules :standard \

@@ -10,7 +10,7 @@ gen_ragel: devkit_ragel.ml htmlStream_ragel.ml
 gen_metaocaml:
 		OCAMLFIND_TOOLCHAIN=metaocaml ocamlfind ocamlc -linkpkg -package extlib stage_merge.ml -o stage_merge.byte
 		rm stage_merge.cm*
-		./stage_merge.byte | sed s/Stdlib/Pervasives/g > extEnum_merge.ml
+		./stage_merge.byte > extEnum_merge.ml
 		ocamlfind ocamlc -package extlib -i extEnum_merge.ml > extEnum_merge.mli
 
 %.ml: %.ml.rl
