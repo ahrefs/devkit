@@ -2,6 +2,12 @@ open Prelude
 
 let () = assert (Sys.word_size = 64)
 
+(* reexport exceptions *)
+include (Devkit_ragel : sig
+  exception Parse_ipv4 of string
+  exception Parse_compact_duration of string
+end)
+
 type ipv4 = int32
 type ipv4_cidr = int32 * int32
 
@@ -69,7 +75,7 @@ let cidr_of_string_exn s =
     let ip = ipv4_of_string_exn ip in
     Int32.logand ip mask, mask)
 
-let cidr_of_string_exn s = try ipv4_of_string_exn s, -1l with Invalid_argument _ -> cidr_of_string_exn s
+let cidr_of_string_exn s = try ipv4_of_string_exn s, -1l with Parse_ipv4 _ -> cidr_of_string_exn s
 
 let range_of_cidr (ip0,mask) = ip0, make_broadcast ip0 mask
 
