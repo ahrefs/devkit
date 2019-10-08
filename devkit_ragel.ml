@@ -74,23 +74,25 @@ exception Goto_eof_trans_ipv4
 # 7 "devkit_ragel.ml.rl"
 
 
+exception Parse_ipv4 of string
+
 let parse_ipv4 data =
   let cs = ref 0 and p = ref 0 and pe = ref (String.length data) and eof = ref (String.length data) in
   let n = ref 0 in
   let ip = ref 0l in
   let set () =
-    if !n > 255 then invalid_arg "parse_ipv4";
+    if !n > 255 then raise (Parse_ipv4 data);
     ip := Int32.logor (Int32.shift_left !ip 8) (Int32.of_int !n)
   in
   
-# 87 "devkit_ragel.ml"
+# 89 "devkit_ragel.ml"
 	begin
 	cs.contents <- ipv4_start;
 	end;
 
-# 18 "devkit_ragel.ml.rl"
+# 20 "devkit_ragel.ml.rl"
   
-# 94 "devkit_ragel.ml"
+# 96 "devkit_ragel.ml"
 	begin
 	let state = { keys = 0; trans = 0; } in
 	let rec do_start () =
@@ -143,7 +145,7 @@ and do_eof_trans () =
 # 4 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
-# 147 "devkit_ragel.ml"
+# 149 "devkit_ragel.ml"
 		| _ -> ()
 	with Goto_again_ipv4 -> () end;
 
@@ -164,7 +166,7 @@ and do_test_eof () =
 # 5 "devkit_ragel.ml.rl"
 		begin  set ()  end;
 	()
-# 168 "devkit_ragel.ml"
+# 170 "devkit_ragel.ml"
 		| _ -> ()
 	end
 	with Goto_again_ipv4 -> do_again ()
@@ -174,23 +176,23 @@ and do_test_eof () =
 	in do_start ()
 	end;
 
-# 19 "devkit_ragel.ml.rl"
-  if !cs >= ipv4_first_final then !ip else invalid_arg "parse_ipv4"
+# 21 "devkit_ragel.ml.rl"
+  if !cs >= ipv4_first_final then !ip else raise (Parse_ipv4 data)
 
 let is_ipv4_slow data =
   let cs = ref 0 and p = ref 0 and pe = ref (String.length data) and eof = ref (String.length data) in
   let n = ref 0 in
   let set () = if !n > 255 then raise Not_found in
   
-# 186 "devkit_ragel.ml"
+# 188 "devkit_ragel.ml"
 	begin
 	cs.contents <- ipv4_start;
 	end;
 
-# 26 "devkit_ragel.ml.rl"
+# 28 "devkit_ragel.ml.rl"
   try
   
-# 194 "devkit_ragel.ml"
+# 196 "devkit_ragel.ml"
 	begin
 	let state = { keys = 0; trans = 0; } in
 	let rec do_start () =
@@ -243,7 +245,7 @@ and do_eof_trans () =
 # 4 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
-# 247 "devkit_ragel.ml"
+# 249 "devkit_ragel.ml"
 		| _ -> ()
 	with Goto_again_ipv4 -> () end;
 
@@ -264,7 +266,7 @@ and do_test_eof () =
 # 5 "devkit_ragel.ml.rl"
 		begin  set ()  end;
 	()
-# 268 "devkit_ragel.ml"
+# 270 "devkit_ragel.ml"
 		| _ -> ()
 	end
 	with Goto_again_ipv4 -> do_again ()
@@ -274,12 +276,12 @@ and do_test_eof () =
 	in do_start ()
 	end;
 
-# 28 "devkit_ragel.ml.rl"
+# 30 "devkit_ragel.ml.rl"
   !cs >= ipv4_first_final
   with Not_found -> false
 
 
-# 283 "devkit_ragel.ml"
+# 285 "devkit_ragel.ml"
 let _is_ipv4_trans_keys : int array = Array.concat [ [|
 	0; 0; 48; 57; 46; 57; 48; 57; 46; 57; 48; 57; 46; 57; 48; 57; 
 	46; 57; 46; 46; 46; 57; 46; 53; 46; 57; 46; 46; 46; 57; 46; 53; 
@@ -351,20 +353,20 @@ exception Goto_match_is_ipv4
 exception Goto_again_is_ipv4
 exception Goto_eof_trans_is_ipv4
 
-# 36 "devkit_ragel.ml.rl"
+# 38 "devkit_ragel.ml.rl"
 
 
 let is_ipv4 data =
   let cs = ref 0 and p = ref 0 and pe = ref (String.length data) in
   
-# 361 "devkit_ragel.ml"
+# 363 "devkit_ragel.ml"
 	begin
 	cs.contents <- is_ipv4_start;
 	end;
 
-# 41 "devkit_ragel.ml.rl"
+# 43 "devkit_ragel.ml.rl"
   
-# 368 "devkit_ragel.ml"
+# 370 "devkit_ragel.ml"
 	begin
 	let state = { keys = 0; trans = 0; } in
 	let rec do_start () =
@@ -406,11 +408,11 @@ and do_test_eof () =
 	in do_start ()
 	end;
 
-# 42 "devkit_ragel.ml.rl"
+# 44 "devkit_ragel.ml.rl"
   !cs >= is_ipv4_first_final
 
 
-# 414 "devkit_ragel.ml"
+# 416 "devkit_ragel.ml"
 let _compact_duration_trans_keys : int array = Array.concat [ [|
 	0; 0; 115; 115; 48; 110; 115; 115; 46; 110; 48; 109; 48; 109; 48; 109; 
 	109; 109; 48; 57; 46; 115; 48; 115; 48; 115; 48; 115; 109; 115; 48; 57; 
@@ -583,23 +585,25 @@ exception Goto_match_compact_duration
 exception Goto_again_compact_duration
 exception Goto_eof_trans_compact_duration
 
-# 57 "devkit_ragel.ml.rl"
+# 59 "devkit_ragel.ml.rl"
 
+
+exception Parse_compact_duration of string
 
 let parse_compact_duration data =
-  if data = "" then invalid_arg "parse_compact_duration: empty";
+  if data = "" then raise (Parse_compact_duration data);
   let cs = ref 0 and p = ref 0 and pe = ref (String.length data) and eof = ref (String.length data) in
   let n = ref 0 and f = ref 0. and fna = ref 0 and fn = ref 0 in
   let t = ref 0 in
   
-# 596 "devkit_ragel.ml"
+# 600 "devkit_ragel.ml"
 	begin
 	cs.contents <- compact_duration_start;
 	end;
 
-# 65 "devkit_ragel.ml.rl"
+# 69 "devkit_ragel.ml.rl"
   
-# 603 "devkit_ragel.ml"
+# 607 "devkit_ragel.ml"
 	begin
 	let state = { keys = 0; trans = 0; } in
 	let rec do_start () =
@@ -631,70 +635,70 @@ and do_eof_trans () =
 
 	match _compact_duration_trans_actions.(state.trans) with
 	| 1 ->
-# 49 "devkit_ragel.ml.rl"
+# 51 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
 	| 3 ->
-# 50 "devkit_ragel.ml.rl"
+# 52 "devkit_ragel.ml.rl"
 		begin  fn := 0; fna := 0  end;
 	()
 	| 4 ->
-# 50 "devkit_ragel.ml.rl"
+# 52 "devkit_ragel.ml.rl"
 		begin  fn := 10 * !fn + (Char.code data.[p.contents] - Char.code '0') ; fna := !fna + 1;  end;
 	()
 	| 5 ->
-# 49 "devkit_ragel.ml.rl"
+# 51 "devkit_ragel.ml.rl"
 		begin  n := 0;  end;
-# 49 "devkit_ragel.ml.rl"
+# 51 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
 	| 2 ->
-# 50 "devkit_ragel.ml.rl"
+# 52 "devkit_ragel.ml.rl"
 		begin  fn := 0; fna := 0  end;
-# 50 "devkit_ragel.ml.rl"
+# 52 "devkit_ragel.ml.rl"
 		begin  fn := 10 * !fn + (Char.code data.[p.contents] - Char.code '0') ; fna := !fna + 1;  end;
 	()
 	| 11 ->
-# 46 "devkit_ragel.ml.rl"
+# 48 "devkit_ragel.ml.rl"
 		begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0;  end;
-# 49 "devkit_ragel.ml.rl"
+# 51 "devkit_ragel.ml.rl"
 		begin  n := 0;  end;
-# 49 "devkit_ragel.ml.rl"
+# 51 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
 	| 9 ->
-# 47 "devkit_ragel.ml.rl"
+# 49 "devkit_ragel.ml.rl"
 		begin  f := !f +. (float(!n) /. 1_000.) +. (float(!fn) /. (1000. *. 10. ** float(!fna))); fn := 0; fna := 0;  end;
-# 49 "devkit_ragel.ml.rl"
+# 51 "devkit_ragel.ml.rl"
 		begin  n := 0;  end;
-# 49 "devkit_ragel.ml.rl"
+# 51 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
 	| 13 ->
-# 52 "devkit_ragel.ml.rl"
+# 54 "devkit_ragel.ml.rl"
 		begin  t := !t + !n*24*60*60; end;
-# 49 "devkit_ragel.ml.rl"
+# 51 "devkit_ragel.ml.rl"
 		begin  n := 0;  end;
-# 49 "devkit_ragel.ml.rl"
+# 51 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
 	| 15 ->
-# 53 "devkit_ragel.ml.rl"
+# 55 "devkit_ragel.ml.rl"
 		begin  t := !t + !n*60*60;  end;
-# 49 "devkit_ragel.ml.rl"
+# 51 "devkit_ragel.ml.rl"
 		begin  n := 0;  end;
-# 49 "devkit_ragel.ml.rl"
+# 51 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
 	| 17 ->
-# 54 "devkit_ragel.ml.rl"
+# 56 "devkit_ragel.ml.rl"
 		begin  t := !t + !n*60;  end;
-# 49 "devkit_ragel.ml.rl"
+# 51 "devkit_ragel.ml.rl"
 		begin  n := 0;  end;
-# 49 "devkit_ragel.ml.rl"
+# 51 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
-# 698 "devkit_ragel.ml"
+# 702 "devkit_ragel.ml"
 		| _ -> ()
 	with Goto_again_compact_duration -> () end;
 
@@ -712,36 +716,36 @@ and do_test_eof () =
 	begin try
 	begin match _compact_duration_eof_actions.(cs.contents) with
 	| 6 ->
-# 46 "devkit_ragel.ml.rl"
+# 48 "devkit_ragel.ml.rl"
 		begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0;  end;
 	()
 	| 8 ->
-# 47 "devkit_ragel.ml.rl"
+# 49 "devkit_ragel.ml.rl"
 		begin  f := !f +. (float(!n) /. 1_000.) +. (float(!fn) /. (1000. *. 10. ** float(!fna))); fn := 0; fna := 0;  end;
 	()
 	| 10 ->
-# 48 "devkit_ragel.ml.rl"
+# 50 "devkit_ragel.ml.rl"
 		begin  f := !f +. float(!n) /. 1_000_000_000.;  end;
 	()
 	| 12 ->
-# 52 "devkit_ragel.ml.rl"
+# 54 "devkit_ragel.ml.rl"
 		begin  t := !t + !n*24*60*60; end;
 	()
 	| 14 ->
-# 53 "devkit_ragel.ml.rl"
+# 55 "devkit_ragel.ml.rl"
 		begin  t := !t + !n*60*60;  end;
 	()
 	| 16 ->
-# 54 "devkit_ragel.ml.rl"
+# 56 "devkit_ragel.ml.rl"
 		begin  t := !t + !n*60;  end;
 	()
 	| 7 ->
-# 50 "devkit_ragel.ml.rl"
+# 52 "devkit_ragel.ml.rl"
 		begin  fn := 0; fna := 0  end;
-# 46 "devkit_ragel.ml.rl"
+# 48 "devkit_ragel.ml.rl"
 		begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0;  end;
 	()
-# 745 "devkit_ragel.ml"
+# 749 "devkit_ragel.ml"
 		| _ -> ()
 	end
 	with Goto_again_compact_duration -> do_again ()
@@ -751,5 +755,5 @@ and do_test_eof () =
 	in do_start ()
 	end;
 
-# 66 "devkit_ragel.ml.rl"
-  if !cs >= compact_duration_first_final then float !t +. !f else invalid_arg "parse_compact_duration"
+# 70 "devkit_ragel.ml.rl"
+  if !cs >= compact_duration_first_final then float !t +. !f else raise (Parse_compact_duration data);

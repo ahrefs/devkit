@@ -6,17 +6,19 @@
  write data;
 }%%
 
+exception Parse_ipv4 of string
+
 let parse_ipv4 data =
   let cs = ref 0 and p = ref 0 and pe = ref (String.length data) and eof = ref (String.length data) in
   let n = ref 0 in
   let ip = ref 0l in
   let set () =
-    if !n > 255 then invalid_arg "parse_ipv4";
+    if !n > 255 then raise (Parse_ipv4 data);
     ip := Int32.logor (Int32.shift_left !ip 8) (Int32.of_int !n)
   in
   %%write init;
   %%write exec;
-  if !cs >= ipv4_first_final then !ip else invalid_arg "parse_ipv4"
+  if !cs >= ipv4_first_final then !ip else raise (Parse_ipv4 data)
 
 let is_ipv4_slow data =
   let cs = ref 0 and p = ref 0 and pe = ref (String.length data) and eof = ref (String.length data) in
@@ -56,11 +58,13 @@ let is_ipv4 data =
  write data;
 }%%
 
+exception Parse_compact_duration of string
+
 let parse_compact_duration data =
-  if data = "" then invalid_arg "parse_compact_duration: empty";
+  if data = "" then raise (Parse_compact_duration data);
   let cs = ref 0 and p = ref 0 and pe = ref (String.length data) and eof = ref (String.length data) in
   let n = ref 0 and f = ref 0. and fna = ref 0 and fn = ref 0 in
   let t = ref 0 in
   %%write init;
   %%write exec;
-  if !cs >= compact_duration_first_final then float !t +. !f else invalid_arg "parse_compact_duration"
+  if !cs >= compact_duration_first_final then float !t +. !f else raise (Parse_compact_duration data);
