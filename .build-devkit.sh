@@ -7,7 +7,7 @@ echo "-- install and upgrade opam deps"
 
 cmd opam uninstall devkit
 cmd opam upgrade --fixup
-cmd opam install --deps-only devkit
+cmd opam install --with-doc --deps-only ./devkit.opam
 
 echo "+++ build"
 
