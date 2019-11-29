@@ -252,7 +252,11 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
         set_readfunction h f
       | None ->
         Option.may (set_httpheader h) headers;
-        set_readfunction h (fun _ -> "") (* prevent reading from stdin with POST without body *)
+        (* prevent reading from stdin with POST without body *)
+        set_readfunction h (fun _ -> "");
+        (* prevent libcurl 7.66.0+ from sending Transfer-Encoding: chunked for POST without body.
+           See https://github.com/curl/curl/pull/4138. *)
+        set_postfieldsize h 0
       end;
       begin match action with
       | `GET | `DELETE | `CUSTOM _ -> ()
