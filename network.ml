@@ -2,11 +2,8 @@ open Prelude
 
 let () = assert (Sys.word_size = 64)
 
-(* reexport exceptions *)
-include (Devkit_ragel : sig
-  exception Parse_ipv4 of string
-  exception Parse_compact_duration of string
-end)
+(* reexport exception *)
+include (Devkit_ragel : sig exception Parse_ipv4 of string end)
 
 type ipv4 = int32
 type ipv4_cidr = int32 * int32

@@ -3,11 +3,18 @@
 type ipv4
 type ipv4_cidr
 
+exception Parse_ipv4 of string
+
 val ipv4_null : ipv4
 val bytes_of_ipv4 : ipv4 -> int * int * int * int
 val string_of_ipv4 : ipv4 -> string
+
+(** @raise Parse_ipv4 if input is not an IP *)
 val ipv4_of_string_exn : string -> ipv4
+
+(** @return ip 0.0.0.0 when input is not an IP *)
 val ipv4_of_string_null : string -> ipv4
+
 val ipv4_of_int32 : int32 -> ipv4
 val int32_of_ipv4 : ipv4 -> int32
 val is_ipv4_slow : string -> bool

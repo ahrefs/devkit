@@ -11,6 +11,8 @@ type t = float
 (* duration in seconds *)
 type duration = float
 
+include (Devkit_ragel : sig exception Parse_compact_duration of string end)
+
 let compare = Float.compare
 
 let get = Unix.gettimeofday
