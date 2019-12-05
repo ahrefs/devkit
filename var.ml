@@ -95,10 +95,13 @@ object(self)
 end
 
 let iter f =
-  h_families |> Hashtbl.iter begin fun _name g -> (* iterate over counter families *)
+  h_families |> Hashtbl.iter begin fun name g -> (* iterate over counter families *)
     match g.get with
     | [get] -> (* no duplicates in this family *)
-      get () |> List.iter begin fun (k,v) ->
+      let l = get () in
+      let l' = List.sort_uniq (fun (a,_) (b,_) -> String.compare a b) l in
+      if List.length l <> List.length l' then log#warn "var %s : duplicate keys found and will be ignored" (show_a @@ Attr.get name);
+      l' |> List.iter begin fun (k,v) ->
         let attr = (g.k, k) :: Attr.get g.attr in (* this was checked to be valid in [register] *)
         match v with Some v -> f attr v | _ -> ()
       end

@@ -82,13 +82,14 @@ let common_fields () =
 let get () =
   let open Var in
   let l = ref [] in
-  Var.iter begin fun attr v ->
+  Var.iter begin fun attr' v ->
     let (previous,attr) =
-      try Hashtbl.find state attr with
+      try Hashtbl.find state attr' with
       | Not_found ->
-        let a = List.map (fun (k, s) -> escape k, `String s) attr in
+        let a = List.map (fun (k, s) -> escape k, `String s) attr' in
         let x = ref (zero v), a in
-        Hashtbl.add state attr x; x
+        Hashtbl.add state attr' x;
+        x
     in
     let this = (common_fields () @ attr : (string * json) list :> (string * [> json ]) list) in
     match v, !previous with
@@ -103,7 +104,7 @@ let get () =
       if delta > epsilon_float then begin previous := v; tuck l @@ `Assoc (("seconds", `Float delta) :: this) end
     | Count _, Bytes _ | Count _, Time _
     | Bytes _, Count _ | Bytes _, Time _
-    | Time _, Count _ | Time _, Bytes _ -> () (* cannot happen *)
+    | Time _, Count _ | Time _, Bytes _ -> log #warn "the impossible happened : mismatched type for %S" (show_a attr')
   end;
   dynamic |> Hashtbl.iter begin fun attr v ->
     let attr = List.map (fun (k, s) -> escape k, s) attr in
