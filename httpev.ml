@@ -688,9 +688,28 @@ let () =
 
 (** {2 Utilities} *)
 
-module type Args = sig
-
+(** get request params *)
+module Param = struct
+  let get_exn req name = List.assoc name req.args
   exception Bad of string
+  let get req = Exn.catch (get_exn req)
+  let get_int req = Exn.catch (int_of_string $ get_exn req)
+  let make f req ?default name =
+    match get req name, default with
+    | None, None -> raise (Bad name)
+    | None, Some s -> s
+    | Some s, _ -> try f s with _ -> raise (Bad name)
+  let str = make id
+  let int64 = make Int64.of_string
+  let int = make int_of_string
+  let float = make float_of_string
+  let bool = make bool_of_string
+  let array req name =
+    let name = name ^ "[]" in
+    req.args |> List.filter (fun (name',_) -> name = name') |> List.map snd
+end
+
+module type Args = sig
 
   val req : request
 
@@ -715,26 +734,19 @@ module type Args = sig
   (** @param name array name without brackets e.g. [array "x"] to extract [x] from /request?x[]=1&x[]=2 *)
 end
 
+(** functor version of {!Param} because somebody thought it is good idea *)
 module Args(T : sig val req : request end) : Args =
 struct
+  open Param
   let req = T.req
-  let arg name = List.assoc name T.req.args
-  exception Bad of string
-  let get = Exn.catch arg
-  let get_int = Exn.catch (int_of_string $ arg)
-  let make f ?default name =
-    match get name, default with
-    | None, None -> raise (Bad name)
-    | None, Some s -> s
-    | Some s, _ -> try f s with _ -> raise (Bad name)
-  let str = make id
-  let int64 = make Int64.of_string
-  let int = make int_of_string
-  let float = make float_of_string
-  let bool = make bool_of_string
-  let array name =
-    let name = name ^ "[]" in
-    T.req.args |> List.filter (fun (name',_) -> name = name') |> List.map snd
+  let get = get req
+  let get_int = get_int req
+  let str = str req
+  let int64 = int64 req
+  let int = int req
+  let float = float req
+  let bool = bool req
+  let array = array req
 end
 
 let noclose_io io =
