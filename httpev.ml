@@ -713,6 +713,8 @@ module type Args = sig
 
   val req : request
 
+  exception Bad of string
+
   val get : string -> string option
   (** Get optional parameter. @return None if parameter is missing *)
 
@@ -737,7 +739,7 @@ end
 (** functor version of {!Param} because somebody thought it is good idea *)
 module Args(T : sig val req : request end) : Args =
 struct
-  open Param
+  include Param
   let req = T.req
   let get = get req
   let get_int = get_int req
