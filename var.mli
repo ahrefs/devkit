@@ -1,4 +1,8 @@
-(** Global register for various types of counters *)
+(**
+  Global register for various types of counters.
+  {!Logstash} module will send all [Var] counters to logstash automatically.
+  Counters must be mononotonically increasing for logstash to send correct deltas to Elasticsearch.
+*)
 
 type attributes = (string * string) list
 type t = Time of Time.t | Count of int | Bytes of int
