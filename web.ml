@@ -113,17 +113,17 @@ module type HTTP = sig
   val with_curl : (Curl.t -> 'a IO.t) -> 'a IO.t
   val with_curl_cache : (Curl.t -> 'a IO.t) -> 'a IO.t
   val http_gets :
-    ?setup:(CurlCache.t -> unit) ->
+    ?setup:(Curl.t -> unit) ->
     ?max_size:int ->
-    ?check:(CurlCache.t -> bool) ->
-    ?result:(CurlCache.t -> Curl.curlCode -> unit IO.t) ->
+    ?check:(Curl.t -> bool) ->
+    ?result:(Curl.t -> Curl.curlCode -> unit IO.t) ->
     string -> [ `Error of Curl.curlCode | `Ok of int * string ] IO.t
 
   type ('body,'ret) http_request_ =
     ?ua:string ->
     ?timeout:int ->
     ?verbose:bool ->
-    ?setup:(CurlCache.t -> unit) ->
+    ?setup:(Curl.t -> unit) ->
     ?max_size:int ->
     ?http_1_0:bool ->
     ?headers:string list ->
@@ -140,7 +140,7 @@ module type HTTP = sig
     ?ua:string ->
     ?timeout:int ->
     ?verbose:bool ->
-    ?setup:(CurlCache.t -> unit) ->
+    ?setup:(Curl.t -> unit) ->
     ?http_1_0:bool ->
     ?headers:string list ->
     ?action:http_action ->
@@ -166,7 +166,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     ?ua:string ->
     ?timeout:int ->
     ?verbose:bool ->
-    ?setup:(CurlCache.t -> unit) ->
+    ?setup:(Curl.t -> unit) ->
     ?max_size:int ->
     ?http_1_0:bool ->
     ?headers:string list ->
