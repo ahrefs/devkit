@@ -3,9 +3,6 @@
 module U = ExtUnix.Specific
 module Enum = ExtEnum
 
-module Int = Factor.Int
-module Float = Factor.Float
-
 let ($) f g = fun x -> f (g x)
 let ($$) f g = fun x y -> f (g x) (g y)
 let (!!) = Lazy.force
