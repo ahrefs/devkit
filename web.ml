@@ -118,6 +118,20 @@ module type CURL = sig
   val perform : Curl.t -> Curl.curlCode t
 end
 
+type ('body,'ret) http_request_ =
+  ?ua:string ->
+  ?timeout:int ->
+  ?verbose:bool ->
+  ?setup:(Curl.t -> unit) ->
+  ?timer:Action.timer ->
+  ?max_size:int ->
+  ?http_1_0:bool ->
+  ?headers:string list ->
+  ?body:'body ->
+  http_action -> string -> 'ret
+
+type 'ret http_request = ([ `Form of (string * string) list | `Raw of string * string ], 'ret)  http_request_
+
 module type HTTP = sig
   module IO : IO_TYPE
   val with_curl : (Curl.t -> 'a IO.t) -> 'a IO.t
@@ -130,24 +144,13 @@ module type HTTP = sig
     ?result:(Curl.t -> Curl.curlCode -> unit IO.t) ->
     string -> [ `Error of Curl.curlCode | `Ok of int * string ] IO.t
 
-  type ('body,'ret) http_request_ =
-    ?ua:string ->
-    ?timeout:int ->
-    ?verbose:bool ->
-    ?setup:(Curl.t -> unit) ->
-    ?timer:Action.timer ->
-    ?max_size:int ->
-    ?http_1_0:bool ->
-    ?headers:string list ->
-    ?body:'body ->
-    http_action -> string -> 'ret IO.t
+  type ('body,'ret) request_ = ('body,'ret IO.t) http_request_
+  type 'ret request = 'ret IO.t http_request
 
-  type 'ret http_request = ([ `Form of (string * string) list | `Raw of string * string ], 'ret)  http_request_
-
-  val http_request' : [> `Error of Curl.curlCode | `Ok of int * string ] http_request
-  val http_request :  [> `Error of string | `Ok of string ] http_request
-  val http_request_exn : string http_request
-  val http_query : (string * string, [> `Error of string | `Ok of string ]) http_request_
+  val http_request' : [> `Error of Curl.curlCode | `Ok of int * string ] request
+  val http_request :  [> `Error of string | `Ok of string ] request
+  val http_request_exn : string request
+  val http_query : (string * string, [> `Error of string | `Ok of string ]) request_
   val http_submit :
     ?ua:string ->
     ?timeout:int ->
@@ -175,19 +178,8 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
 
   module IO = IO
 
-  type ('body,'ret) http_request_ =
-    ?ua:string ->
-    ?timeout:int ->
-    ?verbose:bool ->
-    ?setup:(Curl.t -> unit) ->
-    ?timer:Action.timer ->
-    ?max_size:int ->
-    ?http_1_0:bool ->
-    ?headers:string list ->
-    ?body:'body ->
-    http_action -> string -> 'ret IO.t
-
-  type 'ret http_request = ([ `Form of (string * string) list | `Raw of string * string ], 'ret)  http_request_
+  type ('body,'ret) request_ = ('body,'ret IO.t) http_request_
+  type 'ret request = 'ret IO.t http_request
 
   open IO
 
