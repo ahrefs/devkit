@@ -42,7 +42,7 @@ val chunk_e : int -> 'a Enum.t -> 'a Enum.t Enum.t
 
 (**
   find the minimum element in the list
-  @param cmp compare function, default [Pervasives.compare]
+  @param cmp compare function, default [Stdlib.compare]
   @raise Empty_list when list is empty
 *)
 val list_min : ?cmp:('a -> 'a -> int) -> 'a list -> 'a

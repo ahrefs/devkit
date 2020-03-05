@@ -50,7 +50,7 @@ let class_c ip = Int32.logand 0xFFFFFF00l ip
 module IPv4 = struct
 type t = ipv4
 let equal = (=)
-let compare = Pervasives.compare
+let compare = Stdlib.compare
 let null = ipv4_null
 let to_bytes = bytes_of_ipv4
 let to_string = string_of_ipv4

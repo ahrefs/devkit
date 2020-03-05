@@ -290,14 +290,14 @@ let io_copy input output =
 
 let io_null = IO.create_out ~write:(fun _ -> ()) ~output:(fun _ _ len -> len) ~flush:id ~close:id
 
-let compare_by f a b = Pervasives.compare (f a) (f b)
+let compare_by f a b = Stdlib.compare (f a) (f b)
 let compare2 f g (a,b) (a',b') =
   match f a a' with
   | 0 -> g b b'
   | x -> x
 let compare2_by f g (a,b) (a',b') =
-  match Pervasives.compare (f a) (f a') with
-  | 0 -> Pervasives.compare (g b) (g b')
+  match Stdlib.compare (f a) (f a') with
+  | 0 -> Stdlib.compare (g b) (g b')
   | x -> x
 let compare_fst f (a,_) (a',_) = f a a'
 

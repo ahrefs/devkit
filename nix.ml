@@ -96,7 +96,7 @@ let handle_sig_exit_with ~exit fin =
 (*         log #info "Received signal %i (exit)..." n; *)
         (try fin () with exn -> log #warn ~exn "handle_sig_exit");
 (*         log #info "Signal handler done.%s" (if exit then " Exiting." else ""); *)
-        if exit then Pervasives.exit 0)))
+        if exit then Stdlib.exit 0)))
     [Sys.sigint; Sys.sigterm]
 
 (**
