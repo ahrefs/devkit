@@ -22,6 +22,8 @@ val name : t -> string
 (** @return string representation of pid, can be read back by [parse_pid_exn] *)
 val to_string : t -> string
 
+val make : id:int -> host:string -> stamp:int -> string -> t
+
 val compare : t -> t -> int
 val equal : t -> t -> bool
 

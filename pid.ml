@@ -24,6 +24,11 @@ let parse_exn s =
    if name = "" then Exn.fail "empty name";
    { id; host=String.lowercase host; name=get_name @@ String.lowercase name; stamp; })
 
+let make ~id ~host ~stamp name =
+  validate_name "name" name;
+  validate_name "host" host;
+  { id; host; stamp; name }
+
 let new_self name stamp =
   let id = Unix.getpid () in
   let host = String.lowercase @@ Unix.gethostname () in
