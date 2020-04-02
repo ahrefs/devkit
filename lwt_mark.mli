@@ -54,13 +54,6 @@ val status_s : string        -> ?dump:('a -> string) -> (unit -> 'a Lwt.t) -> 'a
     purposes).  Pass [~log] to log thread failure with devkit logger (level = warn). *)
 val async : ?log:Log.logger -> string -> (unit -> unit Lwt.t) -> unit
 
-(** [ignore_result == async]. Deprecated.
-    Note: this function takes argument [run_thread] that creates thread, not the thread itself, this differs from [Lwt.ignore_result].
-    Reason: functions of this module may be used during evaluation of [(run_thread ()) : 'a Lwt.t], so we need to prepare Lwt thread
-    storage before the evaluation of [(run_thread ())].
- *)
-val ignore_result : ?log:Log.logger -> string -> (unit -> unit Lwt.t) -> unit
-
 (** Adds line to current thread's last logs.
     When marking is enabled, but current thread is not marked/named, line is added to special "<top>" thread logs. *)
 val log   : string        -> unit

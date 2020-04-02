@@ -82,13 +82,6 @@ val unpartition : 'a list array -> 'a list
 val stable_partition : int -> 'a list -> 'a list list
 val stable_unpartition : 'a list list -> 'a list
 
-(** Printing *)
-
-val catmap : ?sep:string -> ('a -> string) -> 'a list -> string [@@ocaml.deprecated "use Stre.catmap"]
-val strl : ('a -> string) -> 'a list -> string [@@ocaml.deprecated "use Stre.list"]
-val stra : ('a -> string) -> 'a array -> string [@@ocaml.deprecated "use Stre.array"]
-
-
 (** Array utilities *)
 
 val array_random_exn : ?state:Random.State.t -> 'a array -> 'a

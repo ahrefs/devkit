@@ -660,11 +660,9 @@ let setup_server config answer =
 let setup_fd fd config answer = let (_:server) = setup_server_fd fd config answer in ()
 let setup config answer = let (_:server) = setup_server config answer in ()
 
-let run config answer =
+let server config answer =
   setup config answer;
   Ev.dispatch config.events
-
-let server = run (* deprecated *)
 
 let header n v = n,v
 let forbidden = `Forbidden, [], "forbidden"

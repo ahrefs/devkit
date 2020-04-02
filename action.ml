@@ -29,10 +29,6 @@ let ewma alpha : ewma =
   (fun f -> if compare nan !x = 0 then x := f else x := !x +. alpha *. (f -. !x)),
   (fun () -> if compare nan !x = 0 then 0. else !x)
 
-let catmap = Stre.catmap
-let strl = Stre.list
-let stra = Stre.array
-
 let uniq p e =
   let h = Hashtbl.create 16 in
   Enum.filter (fun x ->

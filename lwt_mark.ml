@@ -182,8 +182,6 @@ let async ?log name run_thread =
     with_new_mark ?log ~name:(Lazy.from_val name) ~kind:Background @@
     run_thread
 
-let ignore_result = async
-
 let log_do msg =
   let mark = Option.default top_mark (Lwt.get key) in
   log_add_line mark msg

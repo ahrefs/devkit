@@ -136,13 +136,6 @@ module type HTTP = sig
   module IO : IO_TYPE
   val with_curl : (Curl.t -> 'a IO.t) -> 'a IO.t
   val with_curl_cache : (Curl.t -> 'a IO.t) -> 'a IO.t
-  val http_gets :
-    ?setup:(Curl.t -> unit) ->
-    ?timer:Action.timer ->
-    ?max_size:int ->
-    ?check:(Curl.t -> bool) ->
-    ?result:(Curl.t -> Curl.curlCode -> unit IO.t) ->
-    string -> [ `Error of Curl.curlCode | `Ok of int * string ] IO.t
 
   type ('body,'ret) request_ = ('body,'ret IO.t) http_request_
   type 'ret request = 'ret IO.t http_request
@@ -360,7 +353,6 @@ module Http_lwt = Http(IO_lwt)(Curl_lwt_for_http)
 
 let with_curl = Http_blocking.with_curl
 let with_curl_cache = Http_blocking.with_curl_cache
-let http_gets = Http_blocking.http_gets
 let http_request' = Http_blocking.http_request'
 let http_request = Http_blocking.http_request
 let http_request_exn = Http_blocking.http_request_exn

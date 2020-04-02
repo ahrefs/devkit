@@ -42,18 +42,6 @@ let handle t sigs f =
   let _ = U.signalfd ~fd:t.fd ~sigs ~flags:[] () in
   ()
 
-let handle_exit t f = handle t [Sys.sigterm; Sys.sigint]
-  (fun n ->
-    log #info "Received signal %i (exit)..." n;
-    (try f () with exn -> log #warn ~exn "Signal.handle_exit");
-    log #info "Signal handler done.";)
-
-let handle_reload t f = handle t [Sys.sighup]
-  (fun n ->
-    log #info "Received signal %i (reload)..." n;
-    (try f () with exn -> log #warn ~exn "Signal.handle_reload");
-    log #info "Signal handler done.")
-
 (** {2 Lwt} *)
 
 let h_lwt = Hashtbl.create 10
@@ -64,9 +52,6 @@ let lwt_handle sigs f =
     let sig_id = Lwt_unix.on_signal signo (fun (_:int) -> f ()) in
     Hashtbl.replace h_lwt signo sig_id
   end
-
-let lwt_handle_exit = lwt_handle [Sys.sigterm; Sys.sigint]
-let lwt_handle_reload = lwt_handle [Sys.sighup]
 
 (** {2 generic registration} *)
 

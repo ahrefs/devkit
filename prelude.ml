@@ -21,19 +21,6 @@ let eprintfn fmt = Printf.ksprintf prerr_endline fmt
 let curry f a b = f (a, b)
 let uncurry f (a,b) = f a b
 
-module New(T : sig type t end)() =
-struct
-  type t = T.t
-  let inj = id
-  let proj = id
-  let inj_list = id
-  let proj_list = id
-  let inject = id
-  let project = id
-  let inject_list = id
-  let project_list = id
-end
-
 module Fresh(T : sig type t val compare : t -> t -> int end)() =
 struct
   type t = T.t
