@@ -1,6 +1,6 @@
 (** Unique process identification *)
 
-type t = private {
+type t = {
   host : string; (** machine hostname (no spaces allowed) *)
   id : int; (** process id *)
   name : string; (** application id (no spaces allowed), for information. *)
