@@ -598,6 +598,34 @@ let handle events fd k =
   in
   setup ()
 
+let handle_lwt ?(single=false) fd k =
+  match%lwt Exn_lwt.map Lwt_unix.accept fd with
+  | `Exn (Unix.Unix_error (Unix.EMFILE,_,_)) ->
+    let pause = 2. in
+    log #error "too many open files, disabling accept for %s" (Time.duration_str pause);
+    Lwt_unix.sleep pause
+  | `Exn Lwt.Canceled -> log #info "canceling accept loop"; Lwt.fail Lwt.Canceled
+  | `Exn exn -> log #warn ~exn "accept"; Lwt.return_unit
+  | `Ok (fd,addr as peer) ->
+    let task =
+      begin
+        try%lwt
+        Unix.set_close_on_exec (Lwt_unix.unix_file_descr fd);
+        k peer
+        with exn -> log #warn ~exn "accepted (%s)" (Nix.show_addr addr); Lwt.return_unit
+      end [%lwt.finally
+        Lwt_unix.(Exn.suppress (shutdown fd) SHUTDOWN_ALL);
+        Lwt_unix.close fd
+      ]
+    in
+    if single then
+      task
+    else
+    begin
+      Lwt.ignore_result task; (* "fork" processing *)
+      Lwt.return_unit
+    end
+
 end
 
 let check_hung_requests server =
@@ -1017,38 +1045,10 @@ let handle_client_lwt client cin answer =
 
 let accept_hook = ref (fun () -> ())
 
-let handle_lwt ~single fd k =
-  !accept_hook ();
-  match%lwt Exn_lwt.map Lwt_unix.accept fd with
-  | `Exn (Unix.Unix_error (Unix.EMFILE,_,_)) ->
-    let pause = 2. in
-    log #error "too many open files, disabling accept for %s" (Time.duration_str pause);
-    Lwt_unix.sleep pause
-  | `Exn Lwt.Canceled -> log #info "canceling accept loop"; Lwt.fail Lwt.Canceled
-  | `Exn exn -> log #warn ~exn "accept"; Lwt.return_unit
-  | `Ok (fd,addr as peer) ->
-    let task =
-      begin
-        try%lwt
-        Unix.set_close_on_exec (Lwt_unix.unix_file_descr fd);
-        k peer
-        with exn -> log #warn ~exn "accepted (%s)" (Nix.show_addr addr); Lwt.return_unit
-      end [%lwt.finally
-        Lwt_unix.(Exn.suppress (shutdown fd) SHUTDOWN_ALL);
-        Lwt_unix.close fd
-      ]
-    in
-    if single then
-      task
-    else
-    begin
-      Lwt.ignore_result task; (* "fork" processing *)
-      Lwt.return_unit
-    end
-
 let handle_lwt config fd k =
   let rec loop () =
-    let%lwt () = handle_lwt ~single:config.single fd k in
+    !accept_hook ();
+    let%lwt () = Tcp.handle_lwt ~single:config.single fd k in
     let%lwt () = if config.yield then Lwt_unix.yield () else Lwt.return_unit in
     loop ()
   in
