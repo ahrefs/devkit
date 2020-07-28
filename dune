@@ -8,7 +8,7 @@
   (name devkit_core)
   (public_name devkit.core)
   (libraries
-    threads ; must come first
+    threads.posix ; must come first
     curl
     curl.lwt
     extlib
@@ -17,7 +17,6 @@
     lwt
     lwt.unix
     netstring
-    oUnit
     pcre
     stdlib-shims
     yojson
@@ -59,7 +58,7 @@
 
 (executable
   (name test)
-  (libraries devkit)
+  (libraries devkit extlib libevent netstring ounit2 yojson)
   (modules test test_httpev))
 
 (rule
