@@ -1,7 +1,7 @@
 (library
   (public_name devkit)
   (libraries
-    devkit_core)
+    (re_export devkit_core))
   (modules devkit))
 
 (library
@@ -62,6 +62,6 @@
   (libraries devkit)
   (modules test test_httpev))
 
-(alias
-  (name runtest)
+(rule
+  (alias runtest)
   (action (run ./test.exe)))
