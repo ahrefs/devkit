@@ -63,3 +63,13 @@ val perform : ('a,'b) t -> 'a Enum.t -> ('b -> unit) -> unit
 module Forks(T:WorkerT) : Workers
   with type task = T.task
    and type result = T.result
+
+module Services : sig
+  type t
+
+  val start : int -> (int -> unit Lwt.t) -> t Lwt.t
+
+  val rolling_restart : ?wait:int -> timeout:float -> t -> unit Lwt.t
+
+  val stop : timeout:float -> t -> unit Lwt.t
+end

@@ -29,15 +29,17 @@ let reap l =
   | Unix_error (ECHILD,_,_) -> true (* exited *)
   | exn -> log #warn ~exn "Worker PID %d lost (wait)" pid; true) l
 
-let hard_kill l =
+let hard_kill1 pid =
   let open Unix in
+  try
+    kill pid Sys.sigkill; log #warn "Worker PID %d killed with SIGKILL" pid
+  with
+  | Unix_error (ESRCH,_,_) -> ()
+  | exn -> log #warn ~exn "Worker PID %d (SIGKILL)" pid
+
+let hard_kill l =
   let (_,live) = reap l in
-  live |> List.iter begin fun pid ->
-    try
-      kill pid Sys.sigkill; log #warn "Worker PID %d killed with SIGKILL" pid
-    with
-    | Unix_error (ESRCH,_,_) -> ()
-    | exn -> log #warn ~exn "Worker PID %d (SIGKILL)" pid end
+  List.iter hard_kill1 live
 
 let killall signo pids =
   pids |> List.iter begin fun pid ->
@@ -304,3 +306,72 @@ let run_forks' f l =
   | [] -> ()
   | [x] -> f x
   | l -> run_forks f l
+
+module Services = struct
+  type t = {
+    mutable pids : int list;
+    work : int -> unit Lwt.t;
+  }
+
+  let start n work =
+    let rec start_forked i =
+      if i >= n then Lwt.return_nil
+      else (
+        match Nix.fork () with
+        | `Child ->
+          let%lwt () = work i in
+          exit 0
+        | `Forked pid ->
+          log#debug "Starting worker %d with pid %d" i pid;
+          Lwt.map (fun pids -> pid :: pids) (start_forked (i + 1))
+      )
+    in
+    Lwt.map (fun pids -> { pids; work }) (start_forked 0)
+
+  let wait pid =
+    try%lwt Lwt.map fst (Lwt_unix.waitpid [] pid) with
+    | Unix.Unix_error (ECHILD, _, _) -> Lwt.return pid
+    | exn ->
+      log#warn ~exn "Worker PID %d lost (wait)" pid;
+      Lwt.return pid
+
+  let kill ~timeout pid =
+    let graceful =
+      Unix.kill pid Sys.sigterm;
+      let%lwt _ = wait pid in
+      log#debug "Worker PID %d killed with SIGTERM" pid;
+      Lwt.return_unit
+    in
+    let ungraceful =
+      let%lwt () = Lwt_unix.sleep timeout in
+      hard_kill1 pid;
+      Lwt.return_unit
+    in
+    Lwt.pick [ graceful; ungraceful ]
+
+  let rolling_restart ?wait ~timeout workers =
+    let%lwt pids =
+      Lwt_list.mapi_s begin fun i pid ->
+        log#debug "Restarting worker %d with PID %d\n%!" i pid;
+        let%lwt () = kill ~timeout pid in
+        Option.may Unix.sleep wait;
+        match Nix.fork () with
+        | `Child ->
+           let%lwt () = workers.work i in
+           exit 0
+        | `Forked pid' ->
+           log#debug "Worker %d started with PID %d\n%!" i pid';
+           Lwt.return pid'
+      end
+      workers.pids
+    in
+    workers.pids <- pids;
+    Lwt.return_unit
+
+  let stop ~timeout { pids; _ } =
+    log#info "Stopping workers";
+    Lwt_list.iteri_p begin fun i pid ->
+      log#debug "Stopping worker %d with PID %d" i pid;
+      kill ~timeout pid
+    end pids
+end

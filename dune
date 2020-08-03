@@ -35,6 +35,7 @@
        logstash
        lwt_flag
        lwt_util
+       parallel
        web))
   ))
 
