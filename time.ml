@@ -131,6 +131,20 @@ let format_date8hms =
     put_2d s 12 t.tm_sec;
     Bytes.unsafe_to_string s
 
+(** YYYY-MM-DD hh:mm:ss *)
+let format_date8hms =
+  let template = "2019-__-__ __:__:__" in
+  fun t ->
+    let open Unix in
+    let s = Bytes.of_string template in
+    replace_year_2019 s (t.tm_year + 1900);
+    put_2d s 5 (t.tm_mon+1);
+    put_2d s 8 t.tm_mday;
+    put_2d s 11 t.tm_hour;
+    put_2d s 14 t.tm_min;
+    put_2d s 17 t.tm_sec;
+    Bytes.unsafe_to_string s
+
 (** MMDD *)
 let format_date4 t =
   let open Unix in
@@ -153,6 +167,9 @@ let date8hm_string = format_date8hm $ Unix.localtime
 
 let date8hms_gmt_string = format_date8hms $ Unix.gmtime
 let date8hms_string = format_date8hms $ Unix.localtime
+
+let basic_gmt_string = format_basic $ Unix.gmtime
+let basic_string = format_basic $ Unix.localtime
 
 let date4_gmt_string = format_date4 $ Unix.gmtime
 let date4_string = format_date4 $ Unix.localtime
