@@ -2,6 +2,8 @@ open OUnit
 open Printf
 open ExtLib
 
+module U = ExtUnix.Specific
+
 open Devkit
 
 let tests = ref []
@@ -180,6 +182,13 @@ let () = test "Time.show_duration" begin fun () ->
   t (Time.days 365) "1 year 0 days 0 hours 0 mins 0 secs";
   t (Time.days 10) "10 days 0 hours 0 mins 0 secs";
   t 93784. "1 day 2 hours 3 mins 4 secs";
+end
+
+let () = test "Time.basic_string" begin fun () ->
+  let t n s = assert_equal ~printer:id s (Time.basic_gmt_string n) in
+  t (U.timegm @@ U.strptime "%Y%m%d %H%M%S" "20200101 123456") "2020-01-01 12:34:56";
+  t (U.timegm @@ U.strptime "%Y%m%d %H%M%S" "20190101 123456") "2019-01-01 12:34:56";
+  t (U.timegm @@ U.strptime "%Y%m%d %H%M%S" "20090101 123456") "2009-01-01 12:34:56";
 end
 
 let () = test "Time.compact_duration" begin fun () ->

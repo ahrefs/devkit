@@ -59,7 +59,7 @@
 
 (executable
   (name test)
-  (libraries devkit extlib libevent netstring ounit2 yojson)
+  (libraries devkit extlib extunix libevent netstring ounit2 yojson)
   (modules test test_httpev))
 
 (rule
