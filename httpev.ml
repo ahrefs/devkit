@@ -79,6 +79,10 @@ let default =
 
 include Httpev_common
 
+type http_server_bind =
+  | Systemd of Lwt_unix.file_descr
+  | Connection of Unix.sockaddr
+
 type partial_body = {
   line1 : string;
   content_length : int option;
@@ -1118,6 +1122,24 @@ let setup_lwt config answer =
 
 let server_lwt config answer =
   Lwt_main.run @@ setup_lwt config answer
+
+let setup_bind_lwt addr config answer =
+  let connection =
+    match addr, Systemd.Daemon.listen_fds_lwt () with
+    | None, [] -> Exn.fail "bind not provided and no systemd socket available"
+    | None, fd :: fds ->
+      if fds <> [] then
+        log#warn "more than one fd is provided by systemd, only the first one is used and the other ones are ignored";
+      Systemd fd
+    | Some addr, _ -> Connection addr
+  in
+  match connection with
+  | Systemd fd ->
+    log#info "starting httpev in systemd mode";
+    setup_fd_lwt fd config answer
+  | Connection connection ->
+    log#info "starting httpev on %s" (Nix.show_addr connection);
+    setup_lwt { config with connection } answer
 
 module Answer = struct
 
