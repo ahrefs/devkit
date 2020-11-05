@@ -78,8 +78,10 @@ let method_of_string = function
 
 let show_client_addr req =
   let orig = Nix.show_addr req.addr in
+  let try_header = try List.assoc "x-real-ip" req.headers with Not_found -> orig in
   match req.addr with
-  | Unix.ADDR_INET (addr,_) when addr = Unix.inet_addr_loopback -> (try List.assoc "x-real-ip" req.headers with Not_found -> orig)
+  | Unix.ADDR_INET (addr,_) when addr = Unix.inet_addr_loopback -> try_header
+  | Unix.ADDR_UNIX _ -> try_header
   | _ -> orig
 
 let client_addr req = match req.addr with Unix.ADDR_INET (addr,port) -> addr, port | _ -> assert false
