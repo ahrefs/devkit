@@ -44,6 +44,7 @@ type config =
       (** default false, if enabled - will in particular fail on "/path?arg1&arg2", why would anyone want that? *)
     max_time : max_time;
     cors_allow_all : bool; (* default false, if enabled - automatically set `Access-Control-Allow-Origin: *` for simple requests *)
+    on_recv_timeout : [ `Reply_bad_request | `Drop_connection ]; (** what to do on receive timeout, [`Reply_bad_request] by default *)
   }
 
 let default_max_time = {
@@ -75,6 +76,7 @@ let default =
     strict_args = false;
     max_time = default_max_time;
     cors_allow_all = false;
+    on_recv_timeout = `Reply_bad_request;
   }
 
 include Httpev_common
@@ -1091,11 +1093,19 @@ let setup_fd_lwt fd config answer =
         try%lwt
           handle_client_lwt client cin answer
         with exn ->
-          !!error;
+        !!error;
+        match exn, config.on_recv_timeout with
+        | Lwt_unix.Timeout, `Drop_connection ->
+          log #info ~exn "dropped #%d %s" req_id (show_client client);
+          Lwt.return `No_reply
+        | exn, _ ->
           let (http_error,msg) = make_error exn in
           log #warn "error for %s : %s" (show_client client) msg;
           Lwt.return @@ `Body (http_error,[],"")
       in
+      match reply with
+      | `No_reply -> Lwt.return_unit
+      | `Body _ | `Chunks _ as reply ->
       if config.nodelay then
         Lwt_unix.setsockopt fd TCP_NODELAY true;
       (* reusing same buffer! *)
