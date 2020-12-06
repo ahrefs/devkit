@@ -49,11 +49,15 @@ val ipv4_matches : ipv4 -> ipv4_cidr -> bool
 val is_ipv4_special : ipv4 -> bool
 val special_cidr : ipv4_cidr list
 
-(** @return ip address of this machine on private network, with 127.0.0.1 as a fallback *)
-val private_network_ip : unit -> Unix.inet_addr
+(** @return ip address of this machine on private network, with 127.0.0.1 as a fallback, NB ipv4 only *)
+val private_ipv4_network_ip : unit -> Unix.inet_addr
 
-(** @return interfaces and associated ip addresses of this machine on public network *)
-val public_network_ips : unit -> (string * Unix.inet_addr) list
+(** @return interfaces and associated ip addresses of this machine on public network. NB ipv4 only *)
+val public_ipv4_network_ips : unit -> (string * Unix.inet_addr) list
 
-(** @return interfaces and associated ip addresses of this machine on private network *)
-val private_network_ips : unit -> (string * Unix.inet_addr) list
+(** @return interfaces and associated ip addresses of this machine on private network. NB ipv4 only *)
+val private_ipv4_network_ips : unit -> (string * Unix.inet_addr) list
+
+val private_network_ip : unit -> Unix.inet_addr [@ocaml.deprecated "use private_ipv4_network_ip instead"]
+val public_network_ips : unit -> (string * Unix.inet_addr) list [@ocaml.deprecated "use public_ipv4_network_ips instead"]
+val private_network_ips : unit -> (string * Unix.inet_addr) list [@ocaml.deprecated "use private_ipv4_network_ips instead"]
