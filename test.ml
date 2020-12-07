@@ -318,7 +318,7 @@ let () = test "Enum.join*" @@ fun () ->
   let printer = strl (function `Left x -> sprintf "L %d" x | `Right x -> sprintf "R %d" x | `Both (x,y) -> sprintf "(%d,%d)" x y) in
   let t join e1 e2 expect =
     let expect = List.map (function None, None -> assert false | None, Some x -> `Right x | Some x, None -> `Left x | Some x, Some y -> `Both (x,y)) expect in
-    join Int.compare id (List.enum e1) (List.enum e2) |> List.of_enum |>
+    join Factor.Int.compare id (List.enum e1) (List.enum e2) |> List.of_enum |>
     OUnit.assert_equal ~printer expect
   in
   t Enum.join_full_multi_by_key [1;2;3;4;] [0;2;4;8;] [ None, Some 0; Some 1, None; Some 2, Some 2; Some 3, None; Some 4, Some 4; None, Some 8; ];
