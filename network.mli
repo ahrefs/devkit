@@ -58,6 +58,6 @@ val public_ipv4_network_ips : unit -> (string * Unix.inet_addr) list
 (** @return interfaces and associated ip addresses of this machine on private network. NB ipv4 only *)
 val private_ipv4_network_ips : unit -> (string * Unix.inet_addr) list
 
-val private_network_ip : unit -> Unix.inet_addr [@ocaml.deprecated "use private_ipv4_network_ip instead"]
-val public_network_ips : unit -> (string * Unix.inet_addr) list [@ocaml.deprecated "use public_ipv4_network_ips instead"]
-val private_network_ips : unit -> (string * Unix.inet_addr) list [@ocaml.deprecated "use private_ipv4_network_ips instead"]
+val private_network_ip : unit -> Unix.inet_addr [@@ocaml.deprecated "use private_ipv4_network_ip instead"]
+val public_network_ips : unit -> (string * Unix.inet_addr) list [@@ocaml.deprecated "use public_ipv4_network_ips instead"]
+val private_network_ips : unit -> (string * Unix.inet_addr) list [@@ocaml.deprecated "use private_ipv4_network_ips instead"]
