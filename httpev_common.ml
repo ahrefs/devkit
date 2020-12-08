@@ -76,13 +76,12 @@ let method_of_string = function
   | "OPTIONS" -> `OPTIONS
   | s -> Exn.fail "method_of_string %s" s
 
-let show_client_addr req =
-  let orig = Nix.show_addr req.addr in
-  let try_header = try List.assoc "x-real-ip" req.headers with Not_found -> orig in
+let show_client_addr ?(via=[Unix.inet_addr_loopback]) req =
+  let header_or default = try List.assoc "x-real-ip" req.headers with Not_found -> default in
   match req.addr with
-  | Unix.ADDR_INET (addr,_) when addr = Unix.inet_addr_loopback -> try_header
-  | Unix.ADDR_UNIX _ -> try_header
-  | _ -> orig
+  | Unix.ADDR_UNIX _ -> header_or @@ Nix.show_addr req.addr
+  | ADDR_INET (addr,_) when List.mem addr via -> header_or @@ Unix.string_of_inet_addr addr
+  | ADDR_INET (addr,_) -> Unix.string_of_inet_addr addr
 
 let client_addr req = match req.addr with Unix.ADDR_INET (addr,port) -> addr, port | _ -> assert false
 let client_ip req = fst @@ client_addr req
