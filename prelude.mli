@@ -69,8 +69,3 @@ val round : float -> float
 val atoi : string -> string -> int
 
 val call_me_maybe : ('a -> unit) option -> 'a -> unit
-
-(** {2 Floored division remainder } *)
-val unsigned_mod : int -> int -> int
-val unsigned_mod32 : int32 -> int32 -> int32
-val unsigned_mod64 : int64 -> int64 -> int64

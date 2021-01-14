@@ -48,9 +48,5 @@ let call_me_maybe f x =
   | None -> ()
   | Some f -> f x
 
-let unsigned_mod x y = match x mod y with z when z >= 0 -> z | z -> y + z
-let unsigned_mod32 x y = match Int32.rem x y with z when z >= 0l -> z | z -> Int32.add y z
-let unsigned_mod64 x y = match Int64.rem x y with z when z >= 0L -> z | z -> Int64.add y z
-
 let () =
   Lwt_engine.set @@ new Lwt_engines.poll
