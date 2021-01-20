@@ -1,5 +1,5 @@
 
-.PHONY: build lib doc clean install uninstall test gen gen_ragel gen_metaocaml
+.PHONY: build lib doc clean install uninstall test gen gen_ragel gen_metaocaml archive
 
 OCAMLBUILD=ocamlbuild -use-ocamlfind -no-links -j 0
 
@@ -42,3 +42,9 @@ clean:
 		dune clean
 
 distclean: clean
+
+VERSION=$(shell git describe --tag --always)
+NAME=devkit-$(VERSION)
+
+archive:
+	git archive --prefix=$(NAME)/ HEAD | bzip2 > $(NAME).tbz
