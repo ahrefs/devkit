@@ -36,5 +36,5 @@ depopts: [
 ]
 conflicts: [
   "jemalloc" {< "0.2"}
-  "ocaml-option-32bit"
 ]
+available: arch != "arm32" & arch != "x86_32"
