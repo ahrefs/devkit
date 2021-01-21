@@ -10,8 +10,19 @@ let timely period f =
 
 let timely_loop' ?(immediate=false) period f =
   let rec loop () =
-    let%lwt () = try%lwt f () with exn -> log #error ~exn "timely_loop_lwt"; Lwt.return_unit in
-    let%lwt () = Lwt_unix.sleep period in
+    let%lwt () =
+      try%lwt
+        let%lwt () = f () in
+        let%lwt () = Lwt_unix.sleep period in
+        Lwt.return_unit
+      with
+      | Lwt.Canceled as exn ->
+        log #info ~exn "timely_loop_lwt";
+        raise exn
+      | exn ->
+        log #error ~exn "timely_loop_lwt";
+        Lwt.return_unit
+    in
     loop ()
   in
   let%lwt () = if immediate then Lwt.return_unit else Lwt_unix.sleep period in
