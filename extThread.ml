@@ -1,4 +1,3 @@
-
 let log = Log.self
 
 type 'a t = [ `Exn of exn | `None | `Ok of 'a ] ref * Thread.t
@@ -10,7 +9,7 @@ let join_exn t = match join t with `Ok x -> x | `Exn exn -> raise exn
 let map f a = Array.map join_exn @@ Array.map (detach f) a
 let mapn ?(n=8) f l =
   assert (n > 0);
-  Action.partition n l |> map (List.map @@ Exn.map f) |> Action.unpartition
+  Action.distribute n l |> map (List.map @@ Exn.map f) |> Action.undistribute
 
 let locked mutex f = Mutex.lock mutex; Std.finally (fun () -> Mutex.unlock mutex) f ()
 

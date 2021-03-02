@@ -70,13 +70,16 @@ val slice : int -> int -> 'a list -> 'a list
 
 (** Partitioning a list into chunks *)
 
-(** [chunk_e n e] splits enum [e] into chunks of [n] elements each (except the last which can be shorter).
+(** [chunk n l] splits list [l] into chunks of [n] elements each (except the last which can be shorter).
   NB the order in result is not specified FIXME? *)
 val chunk : int -> 'a list -> 'a list list
 
-(** [partition n l] splits [l] into [n] chunks, does not preserve the order of the elements. *)
-val partition : int -> 'a list -> 'a list array
-val unpartition : 'a list array -> 'a list
+(** [distribute n l] splits [l] into [n] chunks, does not preserve the order of the elements. *)
+val distribute : int -> 'a list -> 'a list array
+val undistribute : 'a list array -> 'a list
+
+val partition : int -> 'a list -> 'a list array [@@ocaml.deprecated "use Action.distribute"]
+val unpartition : 'a list array -> 'a list [@@ocaml.deprecated "use Action.undistribute"]
 
 (** [stable_partition l n] splits [l] into [n] chunks, preserves the order of the elements. *)
 val stable_partition : int -> 'a list -> 'a list list

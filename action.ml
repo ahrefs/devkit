@@ -93,14 +93,14 @@ let shuffle ?state a =
      )
    done
 
-let partition n l =
+let distribute n l =
   assert (n >= 0);
   if n < 2 then [| l |] else
   let a = Array.make n [] in
-  ExtList.List.iteri (fun i x -> let i = i mod n in a.(i) <- x :: a.(i)) l;
+  List.iteri (fun i x -> let i = i mod n in a.(i) <- x :: a.(i)) l;
   a
 
-let unpartition a =
+let undistribute a =
   match a with
   | [| l |] -> l
   | _ ->
@@ -117,6 +117,9 @@ let unpartition a =
   done;
   assert (Array.for_all ((=)[]) a);
   List.rev !l
+
+let partition = distribute
+let unpartition = undistribute
 
 let stable_partition n l =
   assert (n >= 0);

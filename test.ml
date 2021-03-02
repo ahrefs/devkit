@@ -253,7 +253,7 @@ let () = test "Action.stable_partition" begin fun () ->
   t [1;1;1;2;2;2;3;3;3;4;4;4;5;5;6;6] 6 [[1;1;1];[2;2;2];[3;3;3];[4;4;4];[5;5];[6;6]];
   let t l n =
     assert_equal ~msg:(sprintf "stable_partition %d" n) ~printer:(strl string_of_int) l Action.(stable_unpartition @@ stable_partition n l);
-    assert_equal ~msg:(sprintf "partition %d" n) ~printer:(strl string_of_int) l Action.(unpartition @@ partition n l)
+    assert_equal ~msg:(sprintf "distribute %d" n) ~printer:(strl string_of_int) l Action.(undistribute @@ distribute n l)
   in
   t [1;2;3] 0;
   t [1;2;3] 1;
