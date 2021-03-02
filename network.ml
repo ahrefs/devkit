@@ -120,6 +120,9 @@ let private_ipv4_network_ip () =
   | [] -> Unix.inet_addr_loopback
   | (_,ip)::_ -> ip
 
+let public_ipv4_network_ip () = match public_ipv4_network_ips () with [] -> None | (_,ip)::_ -> Some ip
+let public_ipv4_network_ip_exn () = match public_ipv4_network_ip () with None -> Exn.fail "Network: no public ipv4 address" | Some ip -> ip
+
 let public_network_ips = public_ipv4_network_ips
 let private_network_ips = private_ipv4_network_ips
 let private_network_ip = private_ipv4_network_ip
