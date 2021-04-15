@@ -31,8 +31,11 @@ let timely_loop' ?(immediate=false) period f =
 (* run f every period seconds; run immediately if immediate is true; stop when wait thread terminates *)
 let timely_loop ?immediate ?(wait=Daemon.wait_exit ()) period f = Lwt.pick [ wait; timely_loop' ?immediate period f; ]
 
-(* cancel t1 when t2 terminates *)
-let ensure_order t1 t2 = (t2) [%finally Lwt.wrap1 Lwt.cancel t1; ]
+(* cancel t1 when t2 terminates; join so that cancelling the resulting promise cancels both t1 and t2 *)
+let ensure_order t1 t2 =
+  let ignore t = let%lwt _ = t in Lwt.return_unit in
+  let%lwt () = Lwt.join [ ignore t1; (ignore t2) [%finally Lwt.wrap1 Lwt.cancel t1; ]; ] in
+  t2
 
 (* wait for t to terminate, suppress any exception, and call cleanup () afterwards *)
 let suppress_exn name cleanup t =
