@@ -46,7 +46,7 @@ module Daemon = struct
       log#warn "listen_fds: LISTEN_FDS %d is not positive" n;
       []
     | Some n ->
-      let fds = List.init n (fun x -> ExtUnixAll.file_descr_of_int (x + sd_listen_fds_start)) in
+      let fds = List.init n (fun x -> ExtUnix.All.file_descr_of_int (x + sd_listen_fds_start)) in
       List.iter Unix.set_close_on_exec fds;
       fds
 
