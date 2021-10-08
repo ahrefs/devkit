@@ -28,6 +28,7 @@ let htmldecode =
   let subst _ = u_FFFD in
   let lookup _ = u_FFFD in
   Netencoding.Html.decode ~subst ~lookup ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
+let htmldecode_relaxed = Netencoding.Html.decode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ~lookup:(sprintf "&%s;") ()
 
 (* TODO uncomment when httpev becomes less strict everywhere *)
 let make_url_args = String.concat "&" $ List.map (function (* (k, "") -> urlencode k | *) (k,v) -> urlencode k ^ "=" ^ urlencode v)
