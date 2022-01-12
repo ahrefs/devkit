@@ -65,6 +65,7 @@ let cc f = make_cc (fun n -> Some (Count n)) f
 let cc_ms f = make_cc (fun n -> Some (Time (float n /. 1000.))) f
 
 class typ name ?(attr=[]) k_name = (* name+attr - family of counters *)
+let name = name in
 let get_all h =
   Hashtbl.fold begin fun k v acc -> (* return all counters created for this instance *)
     match v () with
@@ -76,9 +77,10 @@ object(self)
   val family = make_family ~k:k_name ~attr ~name
   initializer
     register family (fun () -> get_all h)
-  method ref : 'a. 'a -> ('a -> t) -> string -> 'a ref = fun init f name ->
+  method ref : 'a. 'a -> ('a -> t) -> string -> 'a ref = fun init f counter_name ->
+    if Hashtbl.exists h counter_name then log#warn "counter %s already exists for %s" counter_name name;
     let v = ref init in
-    Hashtbl.replace h name (fun () -> some @@ f !v);
+    Hashtbl.replace h counter_name (fun () -> some @@ f !v);
     v
   (* f() either returns Some value, either returns None, informing that value could not be obtained *)
   method get_count name f = Hashtbl.replace h name (fun () -> match f() with | Some x -> Some (Count x) | _ -> None)
