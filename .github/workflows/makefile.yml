@@ -1,0 +1,35 @@
+name: Makefile CI
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v2
+
+    - name: Set up OCaml
+      uses: ocaml/setup-ocaml@v2
+      with:
+        ocaml-compiler: 4.13.1
+        dune-cache: true
+
+    - name: Install OS deps
+      run: sudo apt update && sudo apt install -y libcurl4-gnutls-dev libevent-dev
+
+    - name: Install OCaml deps
+      run: opam install . --deps-only --with-test
+      
+    - name: Build
+      run: opam exec -- dune build
+
+    - name: Test
+      run: opam exec -- dune runtest
