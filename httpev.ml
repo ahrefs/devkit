@@ -1051,7 +1051,7 @@ let handle_lwt config fd k =
   let rec loop () =
     !accept_hook ();
     let%lwt () = Tcp.handle_lwt ~single:config.single fd k in
-    let%lwt () = if config.yield then Lwt_unix.yield () else Lwt.return_unit in
+    let%lwt () = if config.yield then Lwt.pause () else Lwt.return_unit in
     loop ()
   in
   let%lwt () =
