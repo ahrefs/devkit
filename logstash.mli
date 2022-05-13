@@ -1,4 +1,3 @@
-
 type json = [ `Float of float | `Int of int | `String of string ]
 
 (** Export counters registered with {!Var} as logstash events *)
