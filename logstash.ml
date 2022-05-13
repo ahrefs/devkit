@@ -265,7 +265,7 @@ let setup_error_log () =
     chain_hook level facil s
   end
 
-let lifetime ?(extra="") ~events ~version () =
+let lifetime ?(extra="") ?(start=(fst Action.uptime#get_state)) ~events ~version () =
   let text = sprintf "%s start version %s" (Pid.self_name ()) version in
   events#event [
     "event", `String "start";
@@ -282,6 +282,8 @@ let lifetime ?(extra="") ~events ~version () =
       "event", `String "signal.stop";
       "text", `String (sprintf "%s received stop signal" (Pid.self_name ()));
       "version", `String version;
+      "start", `Int (Time.to_ms start);
+      "uptime", `String (Time.ago_str start);
     ];
     events#flush ();
   end;
@@ -294,6 +296,8 @@ let lifetime ?(extra="") ~events ~version () =
         "event", `String "exit";
         "text", `String (sprintf "%s exit" (Pid.self_name ()));
         "version", `String version;
+        "start", `Int (Time.to_ms start);
+        "uptime", `String (Time.ago_str start);
       ];
       events#flush ();
   end

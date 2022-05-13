@@ -39,4 +39,4 @@ end
     - [signal.stop]
     - [exit]
 *)
-val lifetime : ?extra:string -> events:logger -> version:string -> unit -> unit
+val lifetime : ?extra:string -> ?start:Time.t -> events:logger -> version:string -> unit -> unit
