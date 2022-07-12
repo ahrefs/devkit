@@ -161,9 +161,6 @@ let enum_matches rex s =
 
 let enum_extract rex s = enum_matches rex s |> Enum.map (flip Pcre.get_substring 1)
 
-let string_of_stream s =
-  let b = Buffer.create 32 in Stream.iter (Buffer.add_char b) s; Buffer.contents b
-
 module ASCII = struct
 let is_alpha = function
 | 'a'..'z' | 'A'..'Z' -> true
