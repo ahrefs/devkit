@@ -32,8 +32,11 @@ let get_num = int_of_string $ String.replace_chars (fun c -> if Stre.ASCII.is_di
 
 let pagesize = Int64.to_int ExtUnix.Specific.(sysconf PAGESIZE)
 
-(** @return virtual memory info *)
-let get_vm_info () =
+(**
+  @param swap whether to compute swap used, can be slow (many seconds), default [false]
+  @return virtual memory info
+*)
+let get_vm_info ?(swap=false) () =
   let (vsize,rss) =
     match Action.file_lines "/proc/self/statm" with
     | [] -> Log.self #warn "cannot read /proc/self/statm, no VM info"; (0,0)
@@ -42,15 +45,19 @@ let get_vm_info () =
   let nr_maps = List.length @@ Action.file_lines ("/proc/self/maps") in (* FIXME deleted *)
   (* process smaps *)
   let swap_used =
-    Action.file_lines ("/proc/self/smaps") |>
-    List.fold_left (fun acc s -> if String.starts_with s "Swap:" then acc + get_num s else acc) 0
+    match swap with
+    | false -> 0
+    | true ->
+      Action.file_lines ("/proc/self/smaps") |>
+      List.fold_left (fun acc s -> if String.starts_with s "Swap:" then acc + get_num s else acc) 0
   in
   { rss; vsize; nr_maps; swap_used = swap_used * 1024; }
 
 let show_vm_info () =
   let bytes = Action.bytes_string in
   let { rss; vsize; nr_maps; swap_used } = get_vm_info () in
-  sprintf "VM: rss %s, vsz %s, swap %s, maps %d" (bytes rss) (bytes vsize) (bytes swap_used) nr_maps
+  let swap = if swap_used > 0 then sprintf " %s," (bytes swap_used) else "" in
+  sprintf "VM: rss %s, vsz %s,%s maps %d" (bytes rss) (bytes vsize) swap nr_maps
 
 let show_gc_heap ?(st=Gc.quick_stat ()) () =
   let open Action in
