@@ -235,7 +235,7 @@ let run_forks_simple ?(revive=false) ?wait_stop f args =
   let launch f x =
     match Nix.fork () with
     | `Child ->
-      let () = try f x with exn -> log #warn ~exn ~backtrace:true "worker failed" in
+      let () = try f x with exn -> log #error ~exn ~backtrace:true "worker failed" in
       exit 0
     | `Forked pid -> Hashtbl.add workers pid x; pid
   in
