@@ -191,7 +191,7 @@ let acceptable_encoding headers =
   match Exn.catch (List.assoc "accept-encoding") headers with
   | Some str ->
     let encodings = split str ',' |> List.filter_map begin fun s ->
-      match split (String.lowercase s) ';' with
+      match split (String.lowercase_ascii s) ';' with
       | [ enc ] -> Some (enc, None)
       | [ enc; q ] -> Some (enc, Some q)
       | _ -> log #warn "bad accept-encoding record, ignoring : %S" s; None
@@ -245,7 +245,7 @@ let make_request_exn ~line1 ~headers ~body c =
 
 let extract_header s =
   let open String in
-  try let (n,v) = split s ":" in lowercase (strip n), strip v with _ -> failed Header s
+  try let (n,v) = split s ":" in lowercase_ascii (strip n), strip v with _ -> failed Header s
 
 let extract_headers data =
   match String.nsplit data "\r\n" with

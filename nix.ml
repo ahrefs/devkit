@@ -282,7 +282,7 @@ let output_buf_fd ?(bufsize=1*1024*1024) fd =
       check_flush ()
     end
   in
-  IO.create_out ~write:(fun c -> buf.[!len] <- c; incr len; check_flush ())
+  IO.create_out ~write:(fun c -> Bytes.set buf !len c; incr len; check_flush ())
   ~output:(fun s p l -> output s p l; l)
   ~flush
   ~close:flush (* do not close file descriptor, flush the buffer *)

@@ -22,7 +22,7 @@ let parse_exn s =
   Scanf.sscanf s "%u:%u:%[a-zA-Z0-9_.-]@@%[a-zA-Z0-9_.-]%!" (fun stamp id name host ->
    if host = "" then Exn.fail "empty hostname";
    if name = "" then Exn.fail "empty name";
-   { id; host=String.lowercase host; name=get_name @@ String.lowercase name; stamp; })
+   { id; host=String.lowercase_ascii host; name=get_name @@ String.lowercase_ascii name; stamp; })
 
 let make ~id ~host ~stamp name =
   validate_name "name" name;
@@ -31,11 +31,11 @@ let make ~id ~host ~stamp name =
 
 let new_self name stamp =
   let id = Unix.getpid () in
-  let host = String.lowercase @@ Unix.gethostname () in
+  let host = String.lowercase_ascii @@ Unix.gethostname () in
   (* cf parse_exn *)
   validate_name "host" host;
   validate_name "name" name;
-  { host; id; name = get_name @@ String.lowercase name; stamp; }
+  { host; id; name = get_name @@ String.lowercase_ascii name; stamp; }
 
 let self = ref @@ dummy
 let self_s = ref @@ ""

@@ -278,11 +278,11 @@ let log_do ?name f = log ?name f ()
 let io_copy input output =
   try
     let size = 16 * 1024 in
-    let s = String.create size in
+    let b = Bytes.create size in
     while true do
-      let n = IO.input input s 0 size in
+      let n = IO.input input b 0 size in
       if n = 0 then raise IO.No_more_input;
-      let (_:int) = IO.really_output output s 0 n in
+      let (_:int) = IO.really_output output b 0 n in
       ()
     done
   with IO.No_more_input -> ()
@@ -422,7 +422,7 @@ let random_ascii ?state n = String.init n (fun _ -> Char.chr (Char.code '!' + ra
 
 let parse_bytes_unit s =
   let unit_of_string s =
-    match Stre.drop_suffix (String.lowercase s) "b" with
+    match Stre.drop_suffix (String.lowercase_ascii s) "b" with
     | "" -> 1
     | "k" -> 1024
     | "m" -> 1024 * 1024

@@ -1,4 +1,3 @@
-
 open Prelude
 open Printf
 open ExtLib
@@ -61,7 +60,7 @@ let int = make_node string_of_int int_of_string
 let long = make_node Int64.to_string Int64.of_string
 let string = make_node id id
 let float = make_node string_of_float float_of_string
-let bool = make_node string_of_bool (fun s -> match String.lowercase s with
+let bool = make_node string_of_bool (fun s -> match String.lowercase_ascii s with
                                               | "false" | "no" -> false
                                               | "true" | "yes" -> true
                                               | s -> fail "not a boolean : %S" s)
@@ -174,4 +173,3 @@ initializer
 method save () = save root filename
 method load () = load root filename
 end
-
