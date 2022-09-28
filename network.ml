@@ -104,7 +104,7 @@ let public_ipv4_network_ips () =
     match ipv4_of_string_exn ip with
     | exception _ -> false
     | ip -> not @@ is_ipv4_special ip
-  end |> List.map (fun (iface,ip) -> iface, Unix.inet_addr_of_string ip)
+  end |> List.map (fun (iface,ip) -> iface, Unix.inet_addr_of_string ip) |> List.sort Stdlib.compare
 
 let private_ipv4_network_ips () =
   (* RFC 1918 *)
@@ -113,7 +113,7 @@ let private_ipv4_network_ips () =
     match ipv4_of_string_exn ip with
     | exception _ -> false
     | ip -> List.exists (ipv4_matches ip) private_net
-  end |> List.map (fun (iface,ip) -> iface, Unix.inet_addr_of_string ip)
+  end |> List.map (fun (iface,ip) -> iface, Unix.inet_addr_of_string ip) |> List.sort Stdlib.compare
 
 let private_ipv4_network_ip () =
   match private_ipv4_network_ips () with
