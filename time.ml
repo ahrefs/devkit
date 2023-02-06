@@ -155,6 +155,15 @@ let format_date4 t =
   put_2d s 2 t.tm_mday;
   Bytes.unsafe_to_string s
 
+(** YYYYMM *)
+let format_date_yyyymm =
+  let template = "2021__" in
+  fun t ->
+    let s = Bytes.of_string template in
+    replace_year_2021 s t;
+    put_2d s 4 (t.tm_mon+1);
+    Bytes.unsafe_to_string s
+
 let date_w3_gmt_string = format_date_w3 $ Unix.gmtime
 let date_w3_string = format_date_w3 $ Unix.localtime
 
@@ -175,6 +184,9 @@ let basic_string = format_basic $ Unix.localtime
 
 let date4_gmt_string = format_date4 $ Unix.gmtime
 let date4_string = format_date4 $ Unix.localtime
+
+let date_gmt_yyyymm_string = format_date_yyyymm $ Unix.gmtime
+let date_yyyymm_string = format_date_yyyymm $ Unix.localtime
 
 (** unix timestamp to RFC-2822 date
     Example: Tue, 15 Nov 1994 12:45:26 GMT *)
