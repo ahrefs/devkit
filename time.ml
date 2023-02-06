@@ -23,11 +23,11 @@ let put_2d s ofs n =
   Bytes.unsafe_set s ofs (unsafe_digit (n / 10));
   Bytes.unsafe_set s (ofs+1) (unsafe_digit (n mod 10))
 
-let replace_year_2021 s t =
+let replace_year_2023 s t =
   let year = t.Unix.tm_year + 1900 in
-  if year <> 2021 then
+  if year <> 2023 then
   begin
-    if year >= 2021 && year < 2030 then
+    if year >= 2023 && year < 2030 then
       Bytes.unsafe_set s 3 (unsafe_digit (year mod 10))
     else
       Bytes.unsafe_blit (Bytes.unsafe_of_string @@ if year >= 1000 then string_of_int year else sprintf "%04u" year) 0 s 0 4
@@ -35,7 +35,7 @@ let replace_year_2021 s t =
 
 let fast_to_string =
   (* "%04u-%02u-%02uT%02u:%02u:%02u%s" *)
-  let template = "2021-__-__T__:__:__" in
+  let template = "2023-__-__T__:__:__" in
   let template_z = template ^ "Z" in
   let last_time = ref 0 in
   let last_gmt = ref true in
@@ -47,7 +47,7 @@ let fast_to_string =
     let open Unix in
     let t = (if gmt then gmtime else localtime) f in
     let s = Bytes.of_string (if gmt then template_z else template) in
-    replace_year_2021 s t;
+    replace_year_2023 s t;
     put_2d s 5 (t.tm_mon+1);
     put_2d s 8 t.tm_mday;
     put_2d s 11 t.tm_hour;
@@ -74,33 +74,33 @@ let gmt_string_ms = to_string ~gmt:true ~ms:true
 
 (** YYYY-MM-DD *)
 let format_date_w3 =
-  let template = "2021-__-__" in
+  let template = "2023-__-__" in
   fun t ->
     let open Unix in
     let s = Bytes.of_string template in
-    replace_year_2021 s t;
+    replace_year_2023 s t;
     put_2d s 5 (t.tm_mon+1);
     put_2d s 8 t.tm_mday;
     Bytes.unsafe_to_string s
 
 (** YYYYMMDD *)
 let format_date8 =
-  let template = "2021____" in
+  let template = "2023____" in
   fun t ->
     let open Unix in
     let s = Bytes.of_string template in
-    replace_year_2021 s t;
+    replace_year_2023 s t;
     put_2d s 4 (t.tm_mon+1);
     put_2d s 6 t.tm_mday;
     Bytes.unsafe_to_string s
 
 (** YYYYMMDDhh *)
 let format_date8h =
-  let template = "2021______" in
+  let template = "2023______" in
   fun t ->
     let open Unix in
     let s = Bytes.of_string template in
-    replace_year_2021 s t;
+    replace_year_2023 s t;
     put_2d s 4 (t.tm_mon+1);
     put_2d s 6 t.tm_mday;
     put_2d s 8 t.tm_hour;
@@ -108,11 +108,11 @@ let format_date8h =
 
 (** YYYYMMDDhhmm *)
 let format_date8hm =
-  let template = "2021________" in
+  let template = "2023________" in
   fun t ->
     let open Unix in
     let s = Bytes.of_string template in
-    replace_year_2021 s t;
+    replace_year_2023 s t;
     put_2d s 4 (t.tm_mon+1);
     put_2d s 6 t.tm_mday;
     put_2d s 8 t.tm_hour;
@@ -121,11 +121,11 @@ let format_date8hm =
 
 (** YYYYMMDDhhmmss *)
 let format_date8hms =
-  let template = "2021__________" in
+  let template = "2023__________" in
   fun t ->
     let open Unix in
     let s = Bytes.of_string template in
-    replace_year_2021 s t;
+    replace_year_2023 s t;
     put_2d s 4 (t.tm_mon+1);
     put_2d s 6 t.tm_mday;
     put_2d s 8 t.tm_hour;
@@ -135,11 +135,11 @@ let format_date8hms =
 
 (** YYYY-MM-DD hh:mm:ss *)
 let format_basic =
-  let template = "2021-__-__ __:__:__" in
+  let template = "2023-__-__ __:__:__" in
   fun t ->
     let open Unix in
     let s = Bytes.of_string template in
-    replace_year_2021 s t;
+    replace_year_2023 s t;
     put_2d s 5 (t.tm_mon+1);
     put_2d s 8 t.tm_mday;
     put_2d s 11 t.tm_hour;
@@ -157,10 +157,10 @@ let format_date4 t =
 
 (** YYYYMM *)
 let format_date_yyyymm =
-  let template = "2021__" in
+  let template = "2023__" in
   fun t ->
     let s = Bytes.of_string template in
-    replace_year_2021 s t;
+    replace_year_2023 s t;
     put_2d s 4 (t.tm_mon+1);
     Bytes.unsafe_to_string s
 
