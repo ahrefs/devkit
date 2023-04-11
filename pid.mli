@@ -37,6 +37,9 @@ val self_name : unit -> string
 val self_as : string -> t
 val show_self : unit -> string
 
+(** call this to update Pid.self after fork *)
+val update : unit -> unit
+
 (**/**)
 
 val set_fake : t -> unit

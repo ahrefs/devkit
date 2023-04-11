@@ -858,8 +858,8 @@ let answer_forked ?debug srv req answer k =
     match check_req req with
     | `Error n -> Exn.fail "pre fork %s : socket error %d" (show_request req) n
     | `Ok ->
-    begin match Lwt_unix.fork () with
-    | 0 ->
+    begin match Nix.fork () with
+    | `Child ->
       Exn.suppress Unix.close srv.listen_socket;
       begin try
           answer_blocking ?debug srv req answer k;
@@ -867,8 +867,7 @@ let answer_forked ?debug srv req answer k =
           log #error ~exn "unhandled exception in continuation callback"
       end;
       U.sys_exit 0
-    | -1 -> Exn.fail "fork failed : %s" (show_request req)
-    | pid ->
+    | `Forked pid ->
       log #info "forked %d : %s" pid (show_request req);
       k (`No_reply,[],""); (* close socket in parent immediately *)
       Hashtbl.add srv.h_childs pid ()

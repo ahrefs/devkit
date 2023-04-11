@@ -12,9 +12,9 @@ open ExtLib
 let log = Log.from "nix"
 
 let fork () =
-  match Lwt_unix.fork() with
+  match Lwt_unix.fork () with
   | -1 -> Exn.fail "failed to fork"
-  | 0 -> Random.self_init (); `Child
+  | 0 -> Random.self_init (); Pid.update (); `Child
   | pid -> `Forked pid
 
 (** fork off and die *)

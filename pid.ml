@@ -68,7 +68,7 @@ let set_fake t =
   assign_self t;
   fake_id := true
 
-let self () = update (); !self
+let self () = !self
 let self_name () = name @@ self ()
-let show_self () = update (); !self_s
+let show_self () = !self_s
 let self_as name = set_name name; self ()
