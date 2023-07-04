@@ -178,9 +178,11 @@ let () = test "Network.ipv4_matches" begin fun () ->
 end
 
 let () = test "Time.show_duration" begin fun () ->
-  let t n s = assert_equal ~printer:id s (Time.show_duration n) in
-  t (Time.days 365) "1 year 0 days 0 hours 0 mins 0 secs";
-  t (Time.days 10) "10 days 0 hours 0 mins 0 secs";
+  let t ?cut n s = assert_equal ~printer:id s (Time.show_duration ?cut n) in
+  t (Time.days 365) "1 year";
+  t (Time.days 10) "10 days";
+  t 3601. "1 hour 1 sec";
+  t ~cut:2 3601. "1 hour";
   t 93784. "1 day 2 hours 3 mins 4 secs";
 end
 

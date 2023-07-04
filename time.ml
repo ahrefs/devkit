@@ -213,6 +213,7 @@ let show_duration ?cut t =
   loop (int_of_float t) [] factors |> List.combine names |> List.rev |>
   List.dropwhile (fun (_,x) -> x = 0) |>
   (match cut with Some n -> List.take n | None -> id) |>
+  List.filter (fun (_,x) -> x <> 0) |>
   List.map (fun (n,x) -> sprintf "%u %s%s" x n (if x <> 1 then "s" else "")) |> String.concat " "
 
 let duration_str = show_duration
@@ -230,11 +231,10 @@ let show_compact_duration ?(full=false) ?cut t =
   else if t < 1. then sprintf "%.0fms" (t *. 1_000.)
   else if t < 10. then sprintf "%.2gs" t
   else
-  loop (int_of_float t) [] factors |> List.combine names |>
-  (if full then id else List.dropwhile (fun (_,x) -> x = 0)) |>
-  List.rev |>
+  loop (int_of_float t) [] factors |> List.combine names |> List.rev |>
   List.dropwhile (fun (_,x) -> x = 0) |>
   (match cut with Some n -> List.take n | None -> id) |>
+  (if full then id else List.filter (fun (_,x) -> x <> 0)) |>
   List.mapi (fun i (n,x) -> sprintf (if i = 0 then "%u%s" else "%02u%s") x n) |> String.concat ""
 
 let compact_duration = show_compact_duration
