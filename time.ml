@@ -202,7 +202,7 @@ let to_rfc2822 secs =
 (** @param cut - only show this number of most significant components *)
 let show_duration ?cut t =
   let factors = [60; 60; 24; 365 ] in
-  let names = ["sec"; "min"; "hour"; "day"; "year";] in
+  let names = ["second"; "minute"; "hour"; "day"; "year";] in
   let rec loop t acc = function
   | [] -> List.rev (t :: acc)
   | n::tl -> loop (t/n) (t mod n :: acc) tl

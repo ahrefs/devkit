@@ -181,9 +181,9 @@ let () = test "Time.show_duration" begin fun () ->
   let t ?cut n s = assert_equal ~printer:id s (Time.show_duration ?cut n) in
   t (Time.days 365) "1 year";
   t (Time.days 10) "10 days";
-  t 3601. "1 hour 1 sec";
+  t 3601. "1 hour 1 second";
   t ~cut:2 3601. "1 hour";
-  t 93784. "1 day 2 hours 3 mins 4 secs";
+  t 93784. "1 day 2 hours 3 minutes 4 seconds";
 end
 
 let () = test "Time.basic_string" begin fun () ->
