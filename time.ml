@@ -207,8 +207,8 @@ let show_duration ?cut t =
   | [] -> List.rev (t :: acc)
   | n::tl -> loop (t/n) (t mod n :: acc) tl
   in
-  if t < 1. then sprintf "%.4f secs" t
-  else if t < 10. then sprintf "%.2f secs" t
+  if t < 1. then sprintf "%.4f seconds" t
+  else if t < 10. then sprintf "%.2f seconds" t
   else
   loop (int_of_float t) [] factors |> List.combine names |> List.rev |>
   List.dropwhile (fun (_,x) -> x = 0) |>
