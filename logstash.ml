@@ -199,7 +199,7 @@ let log ?autoflush ?(verbose=false) ?(add_timestamp_only=false) ?name () =
   | None -> null
   | Some stat_basename ->
     match open_logstash_exn stat_basename with
-    | exception exn -> log #warn ~exn "disabling output"; null
+    | exception exn -> log #warn ~exn "disabling output of %s" stat_basename; null
     | out ->
       let out = ref out in
       let nr = ref 0 in
@@ -223,7 +223,7 @@ let log ?autoflush ?(verbose=false) ?(add_timestamp_only=false) ?name () =
 
         method reload () =
           try
-            if verbose then log #info "rotate log";
+            if verbose then log #info "rotate log %s" stat_basename;
             let new_out = open_logstash_exn stat_basename in
             let prev = !out in
             out := new_out;
@@ -231,7 +231,7 @@ let log ?autoflush ?(verbose=false) ?(add_timestamp_only=false) ?name () =
             timestamp <- round_to_midnight @@ Time.now ();
             flush prev;
             close_out_noerr prev
-          with exn -> log #warn ~exn "failed to rotate log"
+          with exn -> log #warn ~exn "failed to rotate log %s" stat_basename
 
         method private try_rotate () =
           match timestamp with
