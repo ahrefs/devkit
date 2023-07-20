@@ -11,7 +11,7 @@ let test name f = let open OUnit in tests := (name >:: f) :: !tests
 
 let strl = Stre.list
 
-let () = test "HtmlStream" begin fun () ->
+let () = test "HtmlStream.parse" begin fun () ->
   Printexc.record_backtrace true;
   let module HS = HtmlStream in
   let (==>) s s' =
@@ -40,6 +40,28 @@ let () = test "HtmlStream" begin fun () ->
 *)
   "<a b='&amp;'>&amp;</a>" ==> "<a b='&amp;'>&amp;</a>";
   "<a b='&'>&</a>" ==> "<a b='&'>&</a>";
+end
+
+let ()= test "HtmlStream.parse_with_range" begin fun () -> 
+  Printexc.record_backtrace true;
+  let module HS = HtmlStream in
+  let t s = 
+    let results = ref [] in
+    HS.parse_with_range (fun (e, r) -> tuck results (HS.show_raw' e, r)) s;
+
+    !results 
+    |> List.iter (fun (s', (a,b)) -> 
+       OUnit.assert_equal ~msg:s ~printer:id s' (String.sub s a (b-a)));
+  in
+  t "<q>dsds<qq>";
+  t "<>";
+  t "<q>";
+  t "dsad<v";
+  t "dsa";
+  t "";
+  t "<";
+  t "<a b='&amp;'>&amp;</a>";
+  t "<a b='&'>&</a>";
 end
 
 let () = test "iequal" begin fun () ->

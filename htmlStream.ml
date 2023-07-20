@@ -46,3 +46,8 @@ let make_text ?br l =
   in
   List.enum l |> Enum.filter_map (to_text ?br ~strip:true) |>
   Enum.map Raw.project |> fold |> Raw.inject
+
+let parse ?ctx call s =
+  let call_with_range = fun (e, _r) -> call e in
+  parse_with_range ?ctx call_with_range s
+

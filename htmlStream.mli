@@ -9,6 +9,8 @@ type elem =
 | Text of Raw.t
 | Close of string
 
+type range = (int * int)
+
 type ctx
 
 val init : unit -> ctx
@@ -21,6 +23,7 @@ val get_lnum : ctx -> int
   2. unfinished tags at the end of input are ignored
 *)
 val parse : ?ctx:ctx -> (elem -> unit) -> string -> unit
+val parse_with_range : ?ctx:ctx -> ((elem * range) -> unit) -> string -> unit
 
 (** @return html string for [elem] *)
 val show_raw : elem -> string
