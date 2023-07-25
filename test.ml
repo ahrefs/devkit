@@ -42,26 +42,34 @@ let () = test "HtmlStream.parse" begin fun () ->
   "<a b='&'>&</a>" ==> "<a b='&'>&</a>";
 end
 
-let ()= test "HtmlStream.parse_with_range" begin fun () -> 
+let () = test "HtmlStream.parse_with_range" begin fun () -> 
   Printexc.record_backtrace true;
   let module HS = HtmlStream in
   let t s = 
     let results = ref [] in
     HS.parse_with_range (fun (e, r) -> tuck results (HS.show_raw' e, r)) s;
 
+    OUnit.assert_bool (sprintf "result is empty for testcase %S" s) (!results <> []);
     !results 
     |> List.iter (fun (s', (a,b)) -> 
-       OUnit.assert_equal ~msg:s ~printer:id s' (String.sub s a (b-a)));
+       OUnit.assert_equal ~msg:s ~printer:id (String.sub s a (b-a)) s');
   in
   t "<q>dsds<qq>";
-  t "<>";
   t "<q>";
   t "dsad<v";
   t "dsa";
-  t "";
-  t "<";
   t "<a b='&amp;'>&amp;</a>";
   t "<a b='&'>&</a>";
+  t "<script src='https://apis.google.com/_/scs/abc-static/_/js/k=0/m=gapi_iframes,googleapis_client/rt=j/sv=1/d=1/ed=1/rs=AHpOoo-abcderef/cb=gapi.loaded_0' nonce='abcderef' async=''></script>";
+  t {|<style type='text/css'>.turbo-progress-bar {
+    height: 3px;
+    background: #0076ff;
+    transition:
+      width 300ms ease-out,
+      opacity 150ms 150ms ease-in;
+    transform: translate3d(0, 0, 0);
+  }
+  </style>|};
 end
 
 let () = test "iequal" begin fun () ->
