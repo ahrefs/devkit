@@ -35,8 +35,8 @@ let init () = { lnum = 1 }
  action store_attr { attrs := (!key, Raw.inject (if !mark < 0 then "" else let s, _r = sub() in s)) :: !attrs }
  action tag_done {
     match !tag with
-    | "script" -> fhold; fgoto in_script;
-    | "style" -> fhold; fgoto in_style;
+    | "script" -> fgoto in_script;
+    | "style" -> fgoto in_style;
     | "" -> ()
     | _ -> call @@ (Tag (!tag, List.rev !attrs), tag_range ())
  }
@@ -61,8 +61,8 @@ let init () = { lnum = 1 }
 
  literal = ( "'" ^"'"* >mark %mark_end "'" | '"' ^'"'* >mark %mark_end '"' | ^(wsp|'"'|"'"|'>')+ >mark %mark_end);
  tag_attrs = (wsp+ | ident+ >mark %key wsp* ('=' wsp* literal)? %store_attr )**;
- close_tag = '/' wsp* ident* >mark %mark_end <: ^'>'* '>' %close_tag;
- open_tag = ident+ >mark %tag <: wsp* tag_attrs ('/' wsp* '>' %tag_done_2 | '>' %tag_done);
+ close_tag = '/' wsp* ident* >mark %mark_end <: ^'>'* '>' >close_tag;
+ open_tag = ident+ >mark %tag <: wsp* tag_attrs ('/' wsp* '>' >tag_done_2 | '>' >tag_done);
  directive = ('!'|'?') (alnum ident+) >mark %directive <: wsp* tag_attrs '?'? '>' %directive_done;
  comment = "!--" any* :>> "-->";
  # reset tag so that garbage_tag will not generate duplicate tag with tag_done
@@ -96,7 +96,8 @@ let parse_with_range ?(ctx=init ()) call data =
   in
   let tag_range () = 
     assert (!tag_start >= 0);
-    let range = (!tag_start, !p) in
+    assert (Char.equal (String.get data !p) '>');
+    let range = (!tag_start, !p + 1) in
     tag_start := -1;
     range
   in
