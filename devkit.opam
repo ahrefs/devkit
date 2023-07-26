@@ -20,6 +20,9 @@ depends: [
   "ocurl" {>= "0.7.2"}
   "ocamlnet"
   "pcre"
+  "trace"
+  "opentelemetry"
+  "opentelemetry-lwt"
   "extunix" {>= "0.1.4"}
   "lwt" {>= "2.5.2"}
   "lwt_ppx"

@@ -6,6 +6,8 @@ open Printf
 open Prelude
 open Control
 
+module Otel = Opentelemetry
+
 let log = Log.self
 
 (** percent-encode (convert space into %20) *)
@@ -119,6 +121,21 @@ module type CURL = sig
   val perform : Curl.t -> Curl.curlCode t
 end
 
+module type TRACING = sig
+  type 'a io
+  type span_id
+
+  val get_traceparent : unit -> string option
+
+  val enabled : unit -> bool
+
+  val with_span :
+    __FILE__ : string ->
+    __LINE__ : int ->
+    string ->
+    (span_id -> 'a io) -> 'a io
+end
+
 type ('body,'ret) http_request_ =
   ?ua:string ->
   ?timeout:int ->
@@ -168,7 +185,12 @@ let simple_result ?(is_ok=(fun code -> code / 100 = 2)) ?verbose = function
 
 let nr_http = ref 0
 
-module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with type 'a IO.t = 'a IO.t = struct
+module Http
+  (IO : IO_TYPE)
+  (Curl_IO : CURL with type 'a t = 'a IO.t)
+  (Tracing : TRACING with type 'a io = 'a IO.t)
+: HTTP with type 'a IO.t = 'a IO.t =
+struct
 
   module IO = IO
 
@@ -249,6 +271,14 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
   (* Don't use curl_setheaders when using ?headers option *)
   let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?timer ?max_size ?(http_1_0=false) ?headers ?body (action:http_action) url =
     let open Curl in
+    let action_name = string_of_http_action action in
+    let headers = match Tracing.get_traceparent () with
+    | None -> headers
+    | Some tp ->
+      let tp_header = Otel.Trace_context.Traceparent.name ^ ": " ^ tp in
+      Some (tp_header :: (Option.default [] headers))
+    in
+
     let set_body_and_headers h ct body =
       set_httpheader h (("Content-Type: "^ct) :: Option.default [] headers);
       set_postfields h body;
@@ -273,7 +303,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       | `GET | `DELETE | `CUSTOM _ -> ()
       | `POST | `PUT | `PATCH -> set_post h true
       end;
-      set_customrequest h (string_of_http_action action);
+      set_customrequest h action_name;
       if http_1_0 then set_httpversion h HTTP_VERSION_1_0;
       Option.may (set_timeout h) timeout;
       Option.may (set_useragent h) ua;
@@ -282,18 +312,18 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     in
     let nr_http = incr nr_http; !nr_http in (* XXX atomic wrt ocaml threads *)
     if verbose then begin
-      let action = string_of_http_action action in
       let body = match body with
       | None -> ""
       | Some (`Form args) -> String.concat " " @@ List.map (fun (k,v) -> sprintf "%s=\"%s\"" k (Stre.shorten ~escape:true 64 v)) args
       | Some (`Raw (ct,body)) -> sprintf "%s \"%s\"" ct (Stre.shorten ~escape:true 64 body)
       | Some (`Chunked (ct,_f)) -> sprintf "%s chunked" ct
       in
-      log #info "%s #%d %s %s" action nr_http url body
+      log #info "%s #%d %s %s" action_name nr_http url body
     end;
     let t = new Action.timer in
     let result = if verbose then Some (verbose_curl_result nr_http action t) else None in
-    http_gets ~setup ?timer ?result ?max_size url
+    Tracing.with_span ~__FILE__ ~__LINE__ action_name @@ fun _span_id ->
+     http_gets ~setup ?timer ?result ?max_size url
 
   let http_request ?ua ?timeout ?verbose ?setup ?timer ?max_size ?http_1_0 ?headers ?body (action:http_action) url =
     http_request' ?ua ?timeout ?verbose ?setup ?timer ?max_size ?http_1_0 ?headers ?body action url >>= fun res ->
@@ -349,8 +379,56 @@ module Curl_lwt_for_http = struct
   include Curl_lwt
 end
 
-module Http_blocking = Http(IO_blocking)(Curl_blocking)
-module Http_lwt = Http(IO_lwt)(Curl_lwt_for_http)
+
+module Tracing_stack = struct
+  module TLS = Otel.Thread_local
+
+  type 'a io = 'a
+
+  type span_id = Trace.span
+
+  let _traceparent_key : string TLS.t = TLS.create ()
+
+  let get_traceparent () =
+    TLS.get _traceparent_key
+
+  let with_traceparent s cb =
+    TLS.with_ _traceparent_key s cb
+
+  let enabled = Trace.enabled
+
+  let with_span ~__FILE__ ~__LINE__ name cb =
+    let span_id = Trace.enter_span ~__FILE__ ~__LINE__ name in
+    let rv = cb span_id in
+    Trace.exit_span span_id;
+    rv
+end
+
+module Tracing_lwt = struct
+  type 'a io = 'a Lwt.t
+
+  type span_id = Otel.Span_id.t
+
+  let _traceparent_key : string Lwt.key = Lwt.new_key ()
+
+  let get_traceparent () =
+    Lwt.get _traceparent_key
+
+  let with_traceparent s cb =
+    Lwt.with_value _traceparent_key s cb
+
+  let enabled = Otel.Collector.has_backend
+
+  let with_span ~__FILE__ ~__LINE__ name cb =
+    log#warn "Attempt to trace at %s:%i; Http_lwt currently doesn't support async scopes during tracing; pending imandra-ai/ocaml-opentelemetry#32. Replace Tracing_lwt with your own scope-tracking implementation." __FILE__ __LINE__;
+    let attrs = [ "file", `String __FILE__; "line", `Int __LINE__ ] in
+    Opentelemetry_lwt.Trace.with_
+      ~attrs ~kind:Otel.Proto.Trace.Span_kind_client name
+      (fun scope -> cb scope.Otel.Scope.span_id)
+end
+
+module Http_blocking = Http(IO_blocking)(Curl_blocking)(Tracing_stack)
+module Http_lwt = Http(IO_lwt)(Curl_lwt_for_http)(Tracing_lwt)
 
 let with_curl = Http_blocking.with_curl
 let with_curl_cache = Http_blocking.with_curl_cache

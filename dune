@@ -19,6 +19,9 @@
     netstring
     pcre
     stdlib-shims
+    trace
+    opentelemetry
+    opentelemetry-lwt
     yojson
     zip)
   (modules :standard \
