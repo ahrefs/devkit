@@ -272,6 +272,8 @@ struct
   let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?timer ?max_size ?(http_1_0=false) ?headers ?body (action:http_action) url =
     let open Curl in
     let action_name = string_of_http_action action in
+    Tracing.with_span ~__FILE__ ~__LINE__ action_name @@ fun _span_id ->
+
     let headers = match Tracing.get_traceparent () with
     | None -> headers
     | Some tp ->
@@ -322,8 +324,7 @@ struct
     end;
     let t = new Action.timer in
     let result = if verbose then Some (verbose_curl_result nr_http action t) else None in
-    Tracing.with_span ~__FILE__ ~__LINE__ action_name @@ fun _span_id ->
-     http_gets ~setup ?timer ?result ?max_size url
+    http_gets ~setup ?timer ?result ?max_size url
 
   let http_request ?ua ?timeout ?verbose ?setup ?timer ?max_size ?http_1_0 ?headers ?body (action:http_action) url =
     http_request' ?ua ?timeout ?verbose ?setup ?timer ?max_size ?http_1_0 ?headers ?body action url >>= fun res ->
