@@ -308,7 +308,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       [
         "otrace.spankind", `String "CLIENT";
         "http.request.method", `String action_name;
-        "url.ful", `String url;
+        "url.full", `String url;
       ]
     in
     Trace.with_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name @@ fun _span_id ->
