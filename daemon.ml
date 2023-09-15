@@ -71,8 +71,8 @@ let install_signal_handlers () =
       () (* do not fail, can be ENOSPC *)
   in
   Signal.set [Sys.sigpipe] ignore;
-  Signal.set [Sys.sigusr1] (fun _ -> Log.reopen !logfile);
-  Signal.set [Sys.sigusr2] begin fun _ ->
+  Signal.set_verbose [Sys.sigusr1] "reopen log" (fun () -> Log.reopen !logfile);
+  Signal.set_verbose [Sys.sigusr2] "memory reclaim and stats" begin fun () ->
     match Signal.is_safe_output () with
     | true -> Memory.log_stats (); Memory.reclaim ()
     | false ->

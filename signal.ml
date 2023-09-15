@@ -94,8 +94,9 @@ let wrap name f =
     if !verbose then log #info "Signal handler done.";
   end
 
-let set_exit f = set [Sys.sigterm; Sys.sigint] (wrap "exit" f)
-let set_reload f = set [Sys.sighup] (wrap "reload" f)
+let set_verbose sigs name f = set sigs (wrap name f)
+let set_exit = set_verbose [Sys.sigterm; Sys.sigint] "exit"
+let set_reload = set_verbose [Sys.sighup] "reload"
 
 let setup_sys () =
   verbose := false; (* potential deadlock *)
