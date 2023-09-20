@@ -20,9 +20,8 @@ depends: [
   "ocurl" {>= "0.7.2"}
   "ocamlnet"
   "pcre"
-  "ambient-context"
-  "trace"
-  "opentelemetry"
+  "trace" {>= "0.4" & < "0.5"}
+  "opentelemetry" {>= "0.5"}
   "extunix" {>= "0.1.4"}
   "lwt" {>= "2.5.2"}
   "lwt_ppx"
