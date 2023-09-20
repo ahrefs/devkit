@@ -242,8 +242,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     | _ ->
       bprintf b "error (%d) %s (errno %d)" (errno code) (strerror code) (Curl.get_oserrno h)
     end;
-    log #info_s (Buffer.contents b);
-    return ()
+    log #info_s (Buffer.contents b)
 
   (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
   (* Don't use curl_setheaders when using ?headers option *)
@@ -251,8 +250,9 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     let module Otel = Opentelemetry in
     let open Curl in
     let action_name = string_of_http_action action in
+    let tracing_scope = Otel.Scope.get_ambient_scope () in
 
-    let headers = match Otel.Scope.get_ambient_scope () with
+    let headers = match tracing_scope with
     | None -> headers
     | Some Opentelemetry.Scope.{ trace_id; span_id; _ } ->
       let tp_value = Otel.Trace_context.Traceparent.to_value ~trace_id ~parent_id:span_id () in
@@ -301,8 +301,6 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       in
       log #info "%s #%d %s %s" action_name nr_http url body
     end;
-    let t = new Action.timer in
-    let result = if verbose then Some (verbose_curl_result nr_http action t) else None in
 
     let describe () =
       [
@@ -311,7 +309,24 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
         "url.full", `String url;
       ]
     in
-    Trace.with_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name @@ fun _span_id ->
+    let sid = match tracing_scope with
+    | None ->
+      Trace.enter_manual_toplevel_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name
+    | Some Opentelemetry.Scope.{ span_id; _ } ->
+      let otrace_espan = Trace.{
+        span = Opentelemetry_trace.Internal.otrace_of_otel span_id;
+        meta = Trace.Meta_map.empty
+      } in
+      Trace.enter_manual_sub_span ~parent:otrace_espan ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name
+    in
+
+    let t = new Action.timer in
+    let result = Some (fun h code ->
+      if verbose then verbose_curl_result nr_http action t h code;
+      Trace.exit_manual_span sid;
+      return ()
+    ) in
+
     http_gets ~setup ?timer ?result ?max_size url
 
   let http_request ?ua ?timeout ?verbose ?setup ?timer ?max_size ?http_1_0 ?headers ?body (action:http_action) url =

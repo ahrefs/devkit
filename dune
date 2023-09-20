@@ -19,9 +19,9 @@
     netstring
     pcre
     stdlib-shims
-    ambient-context
     trace
     opentelemetry
+    opentelemetry.trace
     yojson
     zip)
   (modules :standard \
