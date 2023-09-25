@@ -21,7 +21,7 @@ depends: [
   "ocamlnet"
   "pcre"
   "trace" {>= "0.4"}
-  "opentelemetry" {>= "0.5"}
+  "opentelemetry" {>= "0.6"}
   "extunix" {>= "0.1.4"}
   "lwt" {>= "2.5.2"}
   "lwt_ppx"
