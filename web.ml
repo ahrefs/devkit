@@ -254,7 +254,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
 
     let headers = match tracing_scope with
     | None -> headers
-    | Some Opentelemetry.Scope.{ trace_id; span_id; _ } ->
+    | Some Otel.Scope.{ trace_id; span_id; _ } ->
       let tp_value = Otel.Trace_context.Traceparent.to_value ~trace_id ~parent_id:span_id () in
       let tp_header = Otel.Trace_context.Traceparent.name ^ ": " ^ tp_value in
       Some (tp_header :: (Option.default [] headers))
@@ -312,7 +312,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     let sid = match tracing_scope with
     | None ->
       Trace.enter_manual_toplevel_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name
-    | Some Opentelemetry.Scope.{ span_id; _ } ->
+    | Some Otel.Scope.{ span_id; _ } ->
       let otrace_espan = Trace.{
         span = Opentelemetry_trace.Internal.otrace_of_otel span_id;
         meta = Trace.Meta_map.empty
