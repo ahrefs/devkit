@@ -19,7 +19,7 @@
     netstring
     pcre
     stdlib-shims
-    trace
+    trace.core
     opentelemetry
     opentelemetry.trace
     yojson

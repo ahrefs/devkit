@@ -311,19 +311,19 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     in
     let sid = match tracing_scope with
     | None ->
-      Trace.enter_manual_toplevel_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name
+      Trace_core.enter_manual_toplevel_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name
     | Some Otel.Scope.{ span_id; _ } ->
-      let otrace_espan = Trace.{
+      let otrace_espan = Trace_core.{
         span = Opentelemetry_trace.Internal.otrace_of_otel span_id;
-        meta = Trace.Meta_map.empty
+        meta = Trace_core.Meta_map.empty
       } in
-      Trace.enter_manual_sub_span ~parent:otrace_espan ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name
+      Trace_core.enter_manual_sub_span ~parent:otrace_espan ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name
     in
 
     let t = new Action.timer in
     let result = Some (fun h code ->
       if verbose then verbose_curl_result nr_http action t h code;
-      Trace.exit_manual_span sid;
+      Trace_core.exit_manual_span sid;
       return ()
     ) in
 
