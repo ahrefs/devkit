@@ -247,16 +247,12 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
   (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
   (* Don't use curl_setheaders when using ?headers option *)
   let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?timer ?max_size ?(http_1_0=false) ?headers ?body (action:http_action) url =
-    let module Otel = Opentelemetry in
     let open Curl in
     let action_name = string_of_http_action action in
-    let tracing_scope = Otel.Scope.get_ambient_scope () in
 
-    let headers = match tracing_scope with
+    let headers = match Possibly_otel.get_traceparent () with
     | None -> headers
-    | Some Otel.Scope.{ trace_id; span_id; _ } ->
-      let tp_value = Otel.Trace_context.Traceparent.to_value ~trace_id ~parent_id:span_id () in
-      let tp_header = Otel.Trace_context.Traceparent.name ^ ": " ^ tp_value in
+    | Some tp_header ->
       Some (tp_header :: (Option.default [] headers))
     in
 
@@ -309,16 +305,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
         "url.full", `String url;
       ]
     in
-    let sid = match tracing_scope with
-    | None ->
-      Trace_core.enter_manual_toplevel_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name
-    | Some Otel.Scope.{ span_id; _ } ->
-      let otrace_espan = Trace_core.{
-        span = Opentelemetry_trace.Internal.otrace_of_otel span_id;
-        meta = Trace_core.Meta_map.empty
-      } in
-      Trace_core.enter_manual_sub_span ~parent:otrace_espan ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name
-    in
+    let sid = Possibly_otel.enter_manual_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name in
 
     let t = new Action.timer in
     let result = Some (fun h code ->

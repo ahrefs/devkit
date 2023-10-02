@@ -20,9 +20,12 @@
     pcre
     stdlib-shims
     trace.core
-    opentelemetry
-    opentelemetry.trace
     yojson
+    (select
+     possibly_otel.ml
+     from
+     (opentelemetry opentelemetry.trace -> possibly_otel.real.ml)
+     (                                  -> possibly_otel.stub.ml))
     zip)
   (modules :standard \
            devkit

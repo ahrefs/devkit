@@ -21,7 +21,6 @@ depends: [
   "ocamlnet"
   "pcre"
   "trace" {>= "0.4"}
-  "opentelemetry" {>= "0.6"}
   "extunix" {>= "0.1.4"}
   "lwt" {>= "2.5.2"}
   "lwt_ppx"
@@ -38,5 +37,6 @@ depopts: [
 ]
 conflicts: [
   "jemalloc" {< "0.2"}
+  "opentelemetry" {< "0.6"}
 ]
 available: arch != "arm32" & arch != "x86_32"
