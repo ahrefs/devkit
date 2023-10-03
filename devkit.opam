@@ -34,6 +34,7 @@ depends: [
 depopts: [
   "gperftools"
   "jemalloc"
+  "opentelemetry"
 ]
 conflicts: [
   "jemalloc" {< "0.2"}
