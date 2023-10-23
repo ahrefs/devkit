@@ -26,4 +26,11 @@ module Daemon : sig
 
   (** Same as {!listen_fds} but return lwt file descriptors. *)
   val listen_fds_lwt : unit -> Lwt_unix.file_descr list
+
+  (** Similar to {!Daemon.get_args} but without the foregound and pidfile
+      option. *)
+  val get_args : unit -> (string * Arg.spec * string) list
+
+  (** Similar to {!Daemon.manage} but sets to run in the foreground. *)
+  val manage : unit -> unit
 end
