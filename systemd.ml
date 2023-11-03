@@ -57,13 +57,12 @@ module Daemon = struct
     [
       ("-loglevel", Arg.String Log.set_loglevels, " ([<facil|prefix*>=]debug|info|warn|error[,])+");
       ExtArg.may_str "logfile" Daemon.logfile "<file> Log file";
-      "-runas",
-        Arg.String (fun name -> try Daemon.runas := Some (Unix.getpwnam name) with exn -> Exn.fail ~exn "runas: unknown user %s" name),
-        "<user> run as specified user";
     ]
 
   let manage () =
     Daemon.foreground := true;
     Daemon.pidfile := None;
+    Daemon.runas := None;
+
     Daemon.manage ()
 end
