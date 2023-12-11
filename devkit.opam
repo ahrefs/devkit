@@ -18,7 +18,6 @@ depends: [
   "camlzip"
   "libevent" {>= "0.8.0"}
   "ocurl" {>= "0.7.2"}
-  "ocamlnet"
   "pcre"
   "extunix" {>= "0.1.4"}
   "lwt" {>= "2.5.2"}
