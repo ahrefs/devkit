@@ -11,6 +11,19 @@ type result
 val regexp : string -> regexp
 (** Parses a regexp *)
 
+val search_forward : regexp -> string -> int -> int * result
+(** Searches a match of the string with the regexp, starting at
+   * the position and in forward direction.
+   * Raises [Not_found] if no match could be found.
+   * Returns [(p,r)] when a match at position [p] is found,
+   * described by [r].
+   *)
+
+val quote_set : string -> string
+(** Returns a regexp (as string) that matches any of the characters in
+      the argument. The argument must be non-empty
+   *)
+
 val matched_string : result -> string -> string
 (** Extracts the matched part from the string. The string argument
   * must be the same string passed to [string_match] or the search
@@ -20,6 +33,17 @@ val matched_string : result -> string -> string
 
 val match_beginning : result -> int
 (** Returns the position where the matched part begins *)
+
+val match_end : result -> int
+(** Returns the position where the matched part ends *)
+
+val matched_group : result -> int -> string -> string
+(** Extracts the substring the nth group matches from the whole
+   * string. The string argument
+   * must be the same string passed to [string_match] or the search
+   * functions, and the result argument must be the corresponding
+   * result.
+   *)
 
 val full_split : regexp -> string -> split_result list
 (** Like [split_delim], but returns the delimiters in the result *)

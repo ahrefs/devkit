@@ -184,7 +184,7 @@ let get_content_length headers =
   | Some s -> try Some (int_of_string s) with _ -> failed Header (sprintf "content-length %S" s)
 
 let decode_args s =
-  try Web.Url.dest_url_encoded_parameters s with exn -> Exn.fail ~exn "decode_args : %S" s
+  try Ocamlnet_lite.Netencoding.Url.dest_url_encoded_parameters s with exn -> Exn.fail ~exn "decode_args : %S" s
 
 let acceptable_encoding headers =
   let split s c = List.map (String.strip ~chars:" \t\r\n") @@ Stre.nsplitc s c in
