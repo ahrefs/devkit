@@ -16,6 +16,7 @@
     libevent
     lwt
     lwt.unix
+    ocamlnet_lite
     pcre
     stdlib-shims
     str
