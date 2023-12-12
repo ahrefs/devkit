@@ -1,5 +1,37 @@
 open ExtLib
 
+let explode s =
+  let l = String.length s in
+  let rec loop k = if k < l then s.[k] :: loop (k + 1) else [] in
+  loop 0
+
+let implode l =
+  let n = List.length l in
+  let s = Bytes.create n in
+  let k = ref 0 in
+  List.iter
+    (fun c ->
+      Bytes.set s !k c;
+      incr k)
+    l;
+  Bytes.to_string s
+
+let quote_set s =
+  let l = explode s in
+  let have_circum = List.mem '^' l in
+  let have_minus = List.mem '-' l in
+  let have_rbracket = List.mem ']' l in
+  let l1 = List.filter (fun c -> c <> '^' && c <> '-' && c <> ']') l in
+  let l2 = if have_rbracket then ']' :: l1 else l1 in
+  let l3 = if have_circum then l2 @ [ '^' ] else l2 in
+  let l4 = if have_minus then l3 @ [ '-' ] else l3 in
+  let s4 = implode l4 in
+  match s4 with
+  | "" -> failwith "Netstring_str.quote_set: empty"
+  | "^" -> "^"
+  | "^-" -> "[-^]"
+  | _ -> "[" ^ s4 ^ "]"
+
 type setatom = Schar of char | Srange of (char * char)
 and set = setatom list
 
@@ -189,8 +221,7 @@ let scan_str_regexp re_string =
             (* the character after [ or [^ ? *)
             while !continue && !k < l do
               match () with
-              | () when !c = '[' && !k + 1 < l && re_string.[!k + 1] = ':'
-                ->
+              | () when !c = '[' && !k + 1 < l && re_string.[!k + 1] = ':' ->
                   failwith
                     "regexp: Character classes such as [[:digit:]] not \
                      implemented"
@@ -286,6 +317,10 @@ let regexp s =
   let s' = print_pcre_regexp ret in
   Pcre.regexp ~flags:[ `MULTILINE ] s'
 
+let search_forward pat s pos =
+  let result = Pcre.exec ~rex:pat ~pos s in
+  (fst (Pcre.get_substring_ofs result 0), result)
+
 let matched_string result _ =
   (* Unfortunately, Pcre.get_substring will not raise Not_found if there is
    * no matched string. Instead, it returns "", but this value cannot be
@@ -299,6 +334,13 @@ let matched_string result _ =
   Pcre.get_substring result 0
 
 let match_beginning result = fst (Pcre.get_substring_ofs result 0)
+let match_end result = snd (Pcre.get_substring_ofs result 0)
+
+let matched_group result n _ =
+  (* See also the comment for [matched_string] *)
+  if n < 0 || n >= Pcre.num_of_subs result then raise Not_found;
+  ignore (Pcre.get_substring_ofs result n);
+  Pcre.get_substring result n
 
 let global_substitute pat subst s =
   Pcre.substitute_substrings ~rex:pat ~subst:(fun r -> subst r s) s
@@ -311,6 +353,4 @@ let tr_split_result r =
        (function Pcre.Group (_, _) | Pcre.NoGroup -> false | _ -> true)
        r)
 
-let full_split sep s =
-  tr_split_result (Pcre.full_split ~rex:sep ~max:(-1) s)
-
+let full_split sep s = tr_split_result (Pcre.full_split ~rex:sep ~max:(-1) s)

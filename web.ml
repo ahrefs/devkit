@@ -9,16 +9,16 @@ open Ocamlnet_lite
 let log = Log.self
 
 (** percent-encode (convert space into %20) *)
-let rawurlencode = Url.encode ~plus:false
+let rawurlencode = Netencoding.Url.encode ~plus:false
 
 (** percent-encode, but convert space into plus, not %20 *)
-let urlencode = Url.encode ~plus:true
+let urlencode = Netencoding.Url.encode ~plus:true
 
 (** percent-decode (leave plus as is) *)
-let rawurldecode s = try Url.decode ~plus:false s with _ -> s
+let rawurldecode s = try Netencoding.Url.decode ~plus:false s with _ -> s
 
 (** percent-decode and convert plus into space *)
-let urldecode s = try Url.decode ~plus:true s with _ -> s
+let urldecode s = try Netencoding.Url.decode ~plus:true s with _ -> s
 
 let htmlencode = Netencoding.Html.encode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
 let htmldecode_exn = Netencoding.Html.decode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
