@@ -242,13 +242,20 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     | _ ->
       bprintf b "error (%d) %s (errno %d)" (errno code) (strerror code) (Curl.get_oserrno h)
     end;
-    log #info_s (Buffer.contents b);
-    return ()
+    log #info_s (Buffer.contents b)
 
   (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
   (* Don't use curl_setheaders when using ?headers option *)
   let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?timer ?max_size ?(http_1_0=false) ?headers ?body (action:http_action) url =
     let open Curl in
+    let action_name = string_of_http_action action in
+
+    let headers = match Possibly_otel.get_traceparent () with
+    | None -> headers
+    | Some tp_header ->
+      Some (tp_header :: (Option.default [] headers))
+    in
+
     let set_body_and_headers h ct body =
       set_httpheader h (("Content-Type: "^ct) :: Option.default [] headers);
       set_postfields h body;
@@ -273,7 +280,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       | `GET | `DELETE | `CUSTOM _ -> ()
       | `POST | `PUT | `PATCH -> set_post h true
       end;
-      set_customrequest h (string_of_http_action action);
+      set_customrequest h action_name;
       if http_1_0 then set_httpversion h HTTP_VERSION_1_0;
       Option.may (set_timeout h) timeout;
       Option.may (set_useragent h) ua;
@@ -282,17 +289,31 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     in
     let nr_http = incr nr_http; !nr_http in (* XXX atomic wrt ocaml threads *)
     if verbose then begin
-      let action = string_of_http_action action in
       let body = match body with
       | None -> ""
       | Some (`Form args) -> String.concat " " @@ List.map (fun (k,v) -> sprintf "%s=\"%s\"" k (Stre.shorten ~escape:true 64 v)) args
       | Some (`Raw (ct,body)) -> sprintf "%s \"%s\"" ct (Stre.shorten ~escape:true 64 body)
       | Some (`Chunked (ct,_f)) -> sprintf "%s chunked" ct
       in
-      log #info "%s #%d %s %s" action nr_http url body
+      log #info "%s #%d %s %s" action_name nr_http url body
     end;
+
+    let describe () =
+      [
+        "otrace.spankind", `String "CLIENT";
+        "http.request.method", `String action_name;
+        "url.full", `String url;
+      ]
+    in
+    let sid = Possibly_otel.enter_manual_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name in
+
     let t = new Action.timer in
-    let result = if verbose then Some (verbose_curl_result nr_http action t) else None in
+    let result = Some (fun h code ->
+      if verbose then verbose_curl_result nr_http action t h code;
+      Trace_core.exit_manual_span sid;
+      return ()
+    ) in
+
     http_gets ~setup ?timer ?result ?max_size url
 
   let http_request ?ua ?timeout ?verbose ?setup ?timer ?max_size ?http_1_0 ?headers ?body (action:http_action) url =
