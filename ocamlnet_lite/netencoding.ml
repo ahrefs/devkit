@@ -399,132 +399,38 @@ module Html = struct
   let unsafe_chars_html4 =
     "<>\"&\000\001\002\003\004\005\006\007\008\011\012\014\015\016\017\018\019\020\021\022\023\024\025\026\027\028\029\030\031\127"
 
-  let regexp_ht = Hashtbl.create 7
-
-  let regexp_set s =
-    try Hashtbl.find regexp_ht s
-    with Not_found ->
-      let re = Netstring_str.regexp (Netstring_str.quote_set s) in
-      if Hashtbl.length regexp_ht < 100 then
-        (* avoid leak *)
-        Hashtbl.replace regexp_ht s re;
-      re
-
-  (* The functions [encode_quickly] and [encode_ascii] are special cases of 
-   * [encode] that can be implemented by regular expressions.
-   *)
-
-  let encode_quickly ~prefer_name ~unsafe_chars () =
-    (* Preconditions: in_enc = out_enc, and the encoding must be a single-byte,
-     * ASCII-compatible encoding.
-     *)
-    if unsafe_chars = "" then fun s -> s
-    else
-      let unsafe_re = regexp_set unsafe_chars in
-      Netstring_str.global_substitute unsafe_re (fun r s ->
-          let t = Netstring_str.matched_string r s in
-          let p = Char.code t.[0] in
-          (* p is an ASCII code point *)
-          let name = rev_etable.(p) in
-          if prefer_name && name <> "" then name
-          else "&#" ^ string_of_int p ^ ";")
-
-  let encode_quickly_poly ~prefer_name ~unsafe_chars ~ops ~out_kind () =
-    Netstring_tstring.polymorph_string_transformation
-      (encode_quickly ~prefer_name ~unsafe_chars ())
-      ops out_kind
-
-  let msb_set =
-    let s = Bytes.create 128 in
-    for k = 0 to 127 do
-      Bytes.set s k (Char.chr (128 + k))
-    done;
-    Bytes.unsafe_to_string s
-
-  let encode_ascii ~in_enc ~prefer_name ~unsafe_chars () =
-    (* Preconditions: out_enc = `Enc_usascii, and in_enc must be a single-byte,
-     * ASCII-compatible encoding.
-     *)
-    let unsafe_chars1 = unsafe_chars ^ msb_set in
-    let unsafe_re = regexp_set unsafe_chars1 in
-    (* unicode_of.[q] = p: the code point q+128 of in_enc is the same as the
-     * Unicode code point p
-     *)
-    let unicode_of = Array.make 128 (-1) in
-    for i = 0 to 127 do
-      try
-        let s = String.make 1 (Char.chr (i + 128)) in
-        let u = Netconversion.uarray_of_ustring in_enc s in
-        match u with [| u0 |] -> unicode_of.(i) <- u0 | _ -> assert false
-      with Netconversion.Malformed_code -> unicode_of.(i) <- -1
-    done;
-    Netstring_str.global_substitute unsafe_re (fun r s ->
-        let t = Netstring_str.matched_string r s in
-        (* p is the code point in the encoding ~in_enc; p' is the Unicode
-           * code point:
-        *)
-        let p = Char.code t.[0] in
-        let p' = if p < 128 then p else unicode_of.(p - 128) in
-        if p' < 0 then raise Netconversion.Malformed_code;
-        let name =
-          if prefer_name then
-            if p' <= 255 then rev_etable.(p')
-            else try Hashtbl.find rev_etable_rest p' with Not_found -> ""
-          else ""
-        in
-        if name = "" then "&#" ^ string_of_int p' ^ ";" else name)
-
-  let encode_ascii_poly ~in_enc ~prefer_name ~unsafe_chars ~ops ~out_kind () =
-    Netstring_tstring.polymorph_string_transformation
-      (encode_ascii ~in_enc ~prefer_name ~unsafe_chars ())
-      ops out_kind
-
-  let encode_poly ~in_enc ~in_ops ~out_kind ?(out_enc = `Enc_usascii)
+  let encode_poly ~in_enc ~in_ops ~out_kind ?(out_enc = `Enc_utf8)
       ?(prefer_name = true) ?(unsafe_chars = unsafe_chars_html4) () =
     (* This function implements the general case *)
-    (* Check arguments: *)
-    if not (Netconversion.is_ascii_compatible out_enc) then
-      invalid_arg "Netencoding.Html.encode: out_enc not ASCII-compatible";
     for i = 0 to String.length unsafe_chars - 1 do
       if Char.code unsafe_chars.[i] >= 128 then
         invalid_arg
           "Netencoding.Html.encode: non-ASCII character in unsafe_chars"
     done;
     (* Are there better implementations than the general one? *)
-    let in_single = Netconversion.is_single_byte in_enc in
-    let in_subset =
-      match in_enc with `Enc_subset (_, _) -> true | _ -> false
-    in
-    if (not in_subset) && in_enc = out_enc && in_single then
-      encode_quickly_poly ~prefer_name ~unsafe_chars ~ops:in_ops ~out_kind ()
-    else if (not in_subset) && out_enc = `Enc_usascii && in_single then
-      encode_ascii_poly ~in_enc ~prefer_name ~unsafe_chars ~ops:in_ops ~out_kind
-        ()
-    else
-      (* ... only the general implementation is applicable. *)
-      (* Create the domain function: *)
-      let dom_array = Array.make 128 true in
-      let dom p = p >= 128 || dom_array.(p) in
-      (* Set dom_array from unsafe_chars: *)
-      for i = 0 to String.length unsafe_chars - 1 do
-        let c = Char.code unsafe_chars.[i] in
-        dom_array.(c) <- false
-      done;
-      (* Create the substitution function: *)
-      let subst p =
-        let name =
-          if prefer_name then
-            if p <= 255 then rev_etable.(p)
-            else try Hashtbl.find rev_etable_rest p with Not_found -> ""
-          else ""
-        in
-        if name = "" then "&#" ^ string_of_int p ^ ";" else name
+    (* Create the domain function: *)
+    let dom_array = Array.make 128 true in
+    let dom p = p >= 128 || dom_array.(p) in
+    (* Set dom_array from unsafe_chars: *)
+    for i = 0 to String.length unsafe_chars - 1 do
+      let c = Char.code unsafe_chars.[i] in
+      dom_array.(c) <- false
+    done;
+    (* Create the substitution function: *)
+    let subst p =
+      let name =
+        if prefer_name then
+          if p <= 255 then rev_etable.(p)
+          else try Hashtbl.find rev_etable_rest p with Not_found -> ""
+        else ""
       in
-      (* Recode: *)
-      fun s ->
-        Netconversion.convert_poly ~in_ops ~out_kind ~subst ~in_enc
-          ~out_enc:(`Enc_subset (out_enc, dom))
-          s
+      if name = "" then "&#" ^ string_of_int p ^ ";" else name
+    in
+    (* Recode: *)
+    fun s ->
+      Netconversion.convert_poly ~in_ops ~out_kind ~subst ~in_enc
+        ~out_enc:(`Enc_subset (out_enc, dom))
+        s
 
   let encode ~in_enc ?out_enc ?prefer_name ?unsafe_chars () =
     let in_ops = Netstring_tstring.string_ops in
@@ -542,10 +448,6 @@ module Html = struct
      * encoding must be "byte-total"
      *)
     function
-    | `Enc_iso88591 | `Enc_iso88592 | `Enc_iso88593 | `Enc_iso88594
-    | `Enc_iso88595 | `Enc_iso88599 | `Enc_iso885910 | `Enc_iso885913
-    | `Enc_iso885914 | `Enc_iso885915 | `Enc_iso885916 ->
-        true
     | _ -> false
 
   let hex_digit_of_char c =
@@ -582,9 +484,6 @@ module Html = struct
           failwith
             ("Netencoding.Html.decode: Character cannot be represented: "
            ^ string_of_int p)) ?(entity_base = (`Html : entity_set)) () =
-    (* Argument checks: *)
-    if not (Netconversion.is_ascii_compatible in_enc) then
-      invalid_arg "Netencoding.Html.decode: in_enc not ASCII-compatible";
     (* makechar: *)
     let raw_makechar = Netconversion.makechar out_enc in
     let makechar p = try raw_makechar p with Not_found -> subst p in
@@ -657,5 +556,4 @@ module Html = struct
   let decode ~in_enc ~out_enc ?lookup ?subst ?entity_base () =
     let out_kind = Netstring_tstring.String_kind in
     decode_half_poly ~in_enc ~out_kind ~out_enc ?lookup ?subst ?entity_base ()
-
 end
