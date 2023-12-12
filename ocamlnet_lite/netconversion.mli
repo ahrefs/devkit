@@ -263,6 +263,14 @@
  * - A [uarray] is an [array of int] representing a string
  *)
 
+exception Malformed_code
+(** Raised when an illegal byte sequence is found *)
+
+exception Cannot_represent of int
+(** Raised when a certain Unicode code point cannot be represented in
+   * the selected output encoding
+   *)
+
 type encoding =
   [ `Enc_utf8 (* UTF-8 *)
   | (* Encoding subset: *)
