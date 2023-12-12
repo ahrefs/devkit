@@ -61,7 +61,7 @@
 
 (executable
   (name test)
-  (libraries devkit extlib extunix libevent ounit2 yojson)
+  (libraries devkit extlib extunix libevent ocamlnet_lite ounit2 unix yojson)
   (modules test test_httpev))
 
 (rule

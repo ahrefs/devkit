@@ -1,6 +1,7 @@
 open OUnit
 open Printf
 open ExtLib
+open Ocamlnet_lite
 
 module U = ExtUnix.Specific
 
