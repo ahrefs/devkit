@@ -273,119 +273,12 @@ exception Cannot_represent of int
 
 type encoding =
   [ `Enc_utf8 (* UTF-8 *)
-  | `Enc_utf8_opt_bom
-  | `Enc_java (* The variant of UTF-8 used by Java *)
-  | `Enc_utf16 (* UTF-16 with unspecified endianess (restricted usage) *)
-  | `Enc_utf16_le (* UTF-16 little endian *)
-  | `Enc_utf16_be (* UTF-16 big endian *)
-  | `Enc_utf32 (* UTF-32 with unspecified endianess (restricted usage) *)
-  | `Enc_utf32_le (* UTF-32 little endian *)
-  | `Enc_utf32_be (* UTF-32 big endian *)
-  | `Enc_usascii (* US-ASCII (only 7 bit) *)
-  | `Enc_iso88591 (* ISO-8859-1 *)
-  | `Enc_iso88592 (* ISO-8859-2 *)
-  | `Enc_iso88593 (* ISO-8859-3 *)
-  | `Enc_iso88594 (* ISO-8859-4 *)
-  | `Enc_iso88595 (* ISO-8859-5 *)
-  | `Enc_iso88596 (* ISO-8859-6 *)
-  | `Enc_iso88597 (* ISO-8859-7 *)
-  | `Enc_iso88598 (* ISO-8859-8 *)
-  | `Enc_iso88599 (* ISO-8859-9 *)
-  | `Enc_iso885910 (* ISO-8859-10 *)
-  | `Enc_iso885911 (* ISO-8859-11 *)
-  | `Enc_iso885913 (* ISO-8859-13 *)
-  | `Enc_iso885914 (* ISO-8859-14 *)
-  | `Enc_iso885915 (* ISO-8859-15 *)
-  | `Enc_iso885916 (* ISO-8859-16 *)
-  | `Enc_koi8r (* KOI8-R *)
-  | `Enc_jis0201 (* JIS-X-0201 (Roman in lower half; Katakana upper half *)
-  | `Enc_eucjp (* EUC-JP (includes US-ASCII, JIS-X-0201, -0208, -0212) *)
-  | (* Japanese, TODO: *)
-    (*|  `Enc_iso2022jp of jis_state = [ `Enc_usascii | `Enc_jis0201 |
-                                         `Enc_jis0208_1978 | `Enc_jis0208_1893 ]
-          It is very likely that ISO-2022 will be handled in a different module.
-          This encoding is too weird.
-      |  `Enc_sjis
-    *)
-    `Enc_euckr
-    (* EUC-KR (includes US-ASCII, KS-X-1001) *)
-  | (* Older standards: *)
-    `Enc_asn1_iso646
-    (* only the language-neutral subset - "IA5String" *)
-  | `Enc_asn1_T61 (* ITU T.61 ("Teletex") *)
-  | `Enc_asn1_printable (* ASN.1 Printable *)
-  | (* Microsoft: *)
-    `Enc_windows1250 (* WINDOWS-1250 *)
-  | `Enc_windows1251 (* WINDOWS-1251 *)
-  | `Enc_windows1252 (* WINDOWS-1252 *)
-  | `Enc_windows1253 (* WINDOWS-1253 *)
-  | `Enc_windows1254 (* WINDOWS-1254 *)
-  | `Enc_windows1255 (* WINDOWS-1255 *)
-  | `Enc_windows1256 (* WINDOWS-1256 *)
-  | `Enc_windows1257 (* WINDOWS-1257 *)
-  | `Enc_windows1258 (* WINDOWS-1258 *)
-  | (* IBM, ASCII-based: *)
-    `Enc_cp437
-  | `Enc_cp737
-  | `Enc_cp775
-  | `Enc_cp850
-  | `Enc_cp852
-  | `Enc_cp855
-  | `Enc_cp856
-  | `Enc_cp857
-  | `Enc_cp860
-  | `Enc_cp861
-  | `Enc_cp862
-  | `Enc_cp863
-  | `Enc_cp864
-  | `Enc_cp865
-  | `Enc_cp866
-  | `Enc_cp869
-  | `Enc_cp874
-  | `Enc_cp1006
-  | (* IBM, EBCDIC-based: *)
-    `Enc_cp037
-  | `Enc_cp424
-  | `Enc_cp500
-  | `Enc_cp875
-  | `Enc_cp1026
-  | `Enc_cp1047
-  | (* Adobe: *)
-    `Enc_adobe_standard_encoding
-  | `Enc_adobe_symbol_encoding
-  | `Enc_adobe_zapf_dingbats_encoding
-  | (* Apple: *)
-    `Enc_macroman
   | (* Encoding subset: *)
-    `Enc_subset of encoding * (int -> bool)
-  | `Enc_empty (* does not encode any character *) ]
+    `Enc_subset of encoding * (int -> bool) ]
 (** The polymorphic variant enumerating the supported encodings. We have:
  * - [`Enc_utf8]: UTF-8
- * - [`Enc_utf8_opt_bom]: UTF-8 with an optional byte order mark at the
- *   beginning of the text
- * - [`Enc_java]: The UTF-8 variant used by Java (the only difference is
- *   the representation of NUL)
- * - [`Enc_utf16]: UTF-16 with unspecified endianess (restricted)
- * - [`Enc_utf16_le]: UTF-16 little endian
- * - [`Enc_utf16_be]: UTF-16 big endian
- * - [`Enc_utf32]: UTF-32 with unspecified endianess (restricted)
- * - [`Enc_utf32_le]: UTF-32 little endian
- * - [`Enc_utf32_be]: UTF-32 big endian
- * - [`Enc_usascii]: US-ASCII (7 bits)
- * - [`Enc_iso8859]{i n}: ISO-8859-{i n}
- * - [`Enc_koi8r]: KOI8-R
- * - [`Enc_jis0201]: JIS-X-0201 (Roman and Katakana)
- * - [`Enc_eucjp]: EUC-JP (code points from US-ASCII, JIS-X-0202, -0208, and
- *   -0212)
- * - [`Enc_euckr]: EUC-KR (code points from US-ASCII, KS-X-1001)
- * - [`Enc_windows]{i n}: WINDOWS-{i n}
- * - [`Enc_cp]{i n}: IBM code page {i n}. Note that there are both ASCII-
- *   and EBCDIC-based code pages
- * - [`Enc_adobe_*]: Adobe-specific encodings, e.g. used in Adobe fonts
- * - [`Enc_mac*]: Macintosh-specific encodings
  * - [`Enc_subset(e,def)]: The subset of [e] by applying the definition 
  *   function [def]
- * - [`Enc_empty]: The empty encoding (does not represent any character)
  *)
 
 (**********************************************************************)
@@ -465,28 +358,6 @@ val convert :
 *   is the length of the substring in bytes (Default: Length
 *   of the input string minus [range_pos])
 *)
-
-val is_ascii_compatible : encoding -> bool
-(** "ASCII compatible" means: The bytes 1 to 127 represent the ASCII
-  * codes 1 to 127, and no other representation of a character contains
-  * the bytes 1 to 127.
-  * 
-  * For example, ISO-8859-1 is ASCII-compatible because the byte 1 to
-  * 127 mean the same as in ASCII, and all other characters use bytes
-  * greater than 127. UTF-8 is ASCII-compatible for the same reasons,
-  * it does not matter that there are multi-byte characters.
-  * EBCDIC is not ASCII-compatible because the bytes 1 to 127 do not mean
-  * the same as in ASCII. UTF-16 is not ASCII-compatible because the bytes
-  * 1 to 127 can occur in multi-byte representations of non-ASCII
-  * characters.
-  *
-  * The byte 0 has been excluded from this definition because the C
-  * language uses it with a special meaning that has nothing to do with
-  * characters, so it is questionable to interpret the byte 0 anyway.
-  *)
-
-val is_single_byte : encoding -> bool
-(** Returns whether the encoding is a single-byte encoding *)
 
 val makechar : encoding -> int -> string
 (** [makechar enc i:]
