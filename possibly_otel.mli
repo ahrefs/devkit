@@ -1,6 +1,9 @@
 module Otrace := Trace_core
 
-val get_traceparent : unit -> string option
+module Traceparent : sig
+  val name : string
+  val get_ambient : unit -> string option
+end
 
 val enter_manual_span :
   __FUNCTION__:string ->

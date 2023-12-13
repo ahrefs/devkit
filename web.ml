@@ -244,16 +244,22 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     end;
     log #info_s (Buffer.contents b)
 
+  (* Given a list of strings, check pre-existing entry starting with `~name`; and adds the concatenation of `~name` and `~value` if not. *)
+  let add_if_absent ~name ~value strs =
+    match strs with
+    | Some strs when List.exists (StringLabels.starts_with ~prefix:(name^":")) strs -> strs
+    | Some strs -> (String.concat ": " [name; value]) :: strs
+    | None -> [String.concat ": " [name; value]]
+
   (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
   (* Don't use curl_setheaders when using ?headers option *)
   let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?timer ?max_size ?(http_1_0=false) ?headers ?body (action:http_action) url =
     let open Curl in
     let action_name = string_of_http_action action in
 
-    let headers = match Possibly_otel.get_traceparent () with
+    let headers = match Possibly_otel.Traceparent.get_ambient () with
     | None -> headers
-    | Some tp_header ->
-      Some (tp_header :: (Option.default [] headers))
+    | Some value -> Some Possibly_otel.Traceparent.(add_if_absent ~name ~value headers)
     in
 
     let set_body_and_headers h ct body =
