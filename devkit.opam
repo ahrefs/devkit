@@ -19,6 +19,7 @@ depends: [
   "libevent" {>= "0.8.0"}
   "ocurl" {>= "0.7.2"}
   "pcre"
+  "trace" {>= "0.4"}
   "extunix" {>= "0.1.4"}
   "lwt" {>= "2.5.2"}
   "lwt_ppx"
@@ -32,8 +33,10 @@ depends: [
 depopts: [
   "gperftools"
   "jemalloc"
+  "opentelemetry"
 ]
 conflicts: [
   "jemalloc" {< "0.2"}
+  "opentelemetry" {< "0.6"}
 ]
 available: arch != "arm32" & arch != "x86_32"
