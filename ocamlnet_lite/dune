@@ -1,0 +1,7 @@
+(library
+ (name ocamlnet_lite)
+ (public_name devkit.ocamlnet_lite)
+ (libraries
+  extlib ; just for Array.create
+  pcre
+  str))

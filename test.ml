@@ -1,6 +1,7 @@
 open OUnit
 open Printf
 open ExtLib
+open Ocamlnet_lite
 
 module U = ExtUnix.Specific
 
@@ -512,6 +513,22 @@ let () = test "bit_struct_list" @@ fun () ->
   t [ 1; 1; 1; 1 ];
   t [ 2; 3; 2; 0; 5 ];
   t [ 0; 1; 2; 3; 4; 5; 6; 7 ];
+  ()
+
+let () = test "Web.htmldecode" @@ fun () ->
+  assert_equal (Web.htmldecode "A &lt;p&gt; tag &amp; a &lt;div&gt; tag.") "A <p> tag & a <div> tag.";
+  ()
+
+let () = test "Web.htmlencode" @@ fun () ->
+  assert_equal (Web.htmlencode "A <p> tag & a <div> tag.") "A &lt;p&gt; tag &amp; a &lt;div&gt; tag.";
+  ()
+
+let () = test "Web.urldecode" @@ fun () ->
+  assert_equal (Web.urldecode "Hello+G%C3%BCnter") "Hello Günter";
+  ()
+
+let () = test "Web.urlencode" @@ fun () ->
+  assert_equal (Web.urlencode "Hello Günter") "Hello+G%C3%BCnter";
   ()
 
 let tests () =

@@ -16,10 +16,12 @@
     libevent
     lwt
     lwt.unix
-    netstring
+    ocamlnet_lite
     pcre
     stdlib-shims
+    str
     trace.core
+    unix
     yojson
     (select
      possibly_otel.ml
@@ -65,7 +67,7 @@
 
 (executable
   (name test)
-  (libraries devkit extlib extunix libevent netstring ounit2 yojson)
+  (libraries devkit extlib extunix libevent ocamlnet_lite ounit2 unix yojson)
   (modules test test_httpev))
 
 (rule
