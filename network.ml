@@ -74,6 +74,10 @@ let cidr_of_string_exn s =
 
 let cidr_of_string_exn s = try ipv4_of_string_exn s, -1l with Parse_ipv4 _ -> cidr_of_string_exn s
 
+let string_of_cidr (ip,mask) =
+  let rec subnet_bits acc n = if Int32.equal n (-1l) then (32 - acc) else bits (acc + 1) (Int32.shift_right n 1) in
+  Printf.sprintf "%s/%s" (string_of_ipv4 ip) (string_of_int @@ subnet_bits 0 (int32_of_ipv4 mask))
+
 let range_of_cidr (ip0,mask) = ip0, make_broadcast ip0 mask
 
 let ipv4_matches ip (prefix, mask) = Int32.logand ip mask = prefix
