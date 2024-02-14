@@ -250,10 +250,15 @@ let of_compact_duration s =
   in
   Devkit_ragel.parse_compact_duration s
 
-let minutes x = float @@ 60 * x
-let hours x = minutes @@ 60 * x
-let days x = hours @@ 24 * x
-let seconds x = float x
+let seconds_1m = 60
+let seconds_1h = seconds_1m * 60
+let seconds_1d = seconds_1h * 24
+
+let time_x factor = (fun x -> float @@ factor * x), (fun x -> int_of_float x / factor), (fun x -> float (int_of_float x / factor * factor))
+let (seconds,to_seconds,round_seconds) = time_x 1
+let (minutes,to_minutes,round_minutes) = time_x seconds_1m
+let (hours,to_hours,round_hours) = time_x seconds_1h
+let (days,to_days,round_days) = time_x seconds_1d
 
 (** convert integer number of milliseconds to Time.t *)
 let msec x = float x /. 1000.
@@ -261,9 +266,11 @@ let msec x = float x /. 1000.
 (** convert integer number of nanoseconds to Time.t *)
 let nsec x = float x /. 1_000_000_000.
 
-let int x = int_of_float x
-let to_sec = int
 let to_ms x = int_of_float @@ 1000. *. x
 
 let ago t = now () -. t
 let ago_str = show_duration $ ago
+
+(* compat *)
+let int = to_seconds
+let to_sec = to_seconds
