@@ -49,7 +49,7 @@ let get_vm_info ?(swap=false) () =
     | false -> 0
     | true ->
       Action.file_lines ("/proc/self/smaps") |>
-      List.fold_left (fun acc s -> if String.starts_with s "Swap:" then acc + get_num s else acc) 0
+      List.fold_left (fun acc s -> if Stre.starts_with s "Swap:" then acc + get_num s else acc) 0
   in
   { rss; vsize; nr_maps; swap_used = swap_used * 1024; }
 

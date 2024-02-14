@@ -261,7 +261,7 @@ let is_body_ready { line1; content_length; parsed_headers=_; buf; } final =
     match body_len - length with
     | 0 -> true
     (* workaround MSIE 6 *)
-    | 2 when String.starts_with line1 "POST" && body.[body_len - 2] = '\r' && body.[body_len - 1] = '\n' ->
+    | 2 when Stre.starts_with line1 "POST" && body.[body_len - 2] = '\r' && body.[body_len - 1] = '\n' ->
       Buffer.clear buf;
       Buffer.add_string buf (Stre.slice ~last:(-2) body);
       true

@@ -144,7 +144,7 @@ let inet_addr_of_string s =
 
 let unix_addr_of_string s =
   let open Unix in
-  if String.starts_with s "unix:" then
+  if Stre.starts_with s "unix:" then
     ADDR_UNIX (String.slice ~first:5 s)
   else
     Exn.fail "invalid UNIX addr %S" s
@@ -236,14 +236,14 @@ let mounts () =
 (** @param path must be normalized *)
 let find_mount path =
   assert (not @@ Filename.is_relative path);
-  assert (not @@ String.exists path "//");
-  assert (not @@ String.exists path "/./");
-  assert (not @@ String.exists path "/../");
+  assert (not @@ Stre.exists path "//");
+  assert (not @@ Stre.exists path "/./");
+  assert (not @@ Stre.exists path "/../");
   let mount = ref ("","",[]) in
   let bound x = let (_,b,_) = x in b in
   mounts () |>
   List.iter (fun (_,bind,_ as part) ->
-    if String.starts_with path bind && String.length bind > String.length (bound !mount) then
+    if Stre.starts_with path bind && String.length bind > String.length (bound !mount) then
       mount := part);
   assert (bound !mount <> "");
   !mount

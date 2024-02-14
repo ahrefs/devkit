@@ -115,7 +115,7 @@ let () = test "Stre.before" begin fun () ->
   let invariant s sub =
     let a = Stre.before s sub in
     let b = Stre.after s sub in
-    t ~msg:(sprintf "invariant1 %S %S" s sub) s (a ^ (if String.exists s sub then sub else "")  ^ b);
+    t ~msg:(sprintf "invariant1 %S %S" s sub) s (a ^ (if Stre.exists s sub then sub else "")  ^ b);
     t ~msg:(sprintf "invariant2a %S %S" s sub) a (Stre.before (a ^ sub ^ b) sub);
     t ~msg:(sprintf "invariant2b %S %S" s sub) b (Stre.after (a ^ sub ^ b) sub);
     assert_equal ~msg:(sprintf "divide %S %S" s sub) (a,b) (Stre.divide s sub);

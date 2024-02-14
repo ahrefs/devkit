@@ -58,9 +58,9 @@ module State = struct
   let set_filter ?name level =
     match name with
     | None -> default_level := level; Hashtbl.iter (fun _ x -> Logger.set_filter x level) all
-    | Some name when String.ends_with name "*" ->
+    | Some name when Stre.ends_with name "*" ->
       let prefix = String.slice ~last:(-1) name in
-      Hashtbl.iter (fun k x -> if String.starts_with k prefix then Logger.set_filter x level) all
+      Hashtbl.iter (fun k x -> if Stre.starts_with k prefix then Logger.set_filter x level) all
     | Some name -> Logger.set_filter (facility name) level
 
   let set_loglevels s =

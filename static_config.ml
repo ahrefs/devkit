@@ -151,7 +151,7 @@ let show ?(all=false) root =
   iter begin fun name v ->
     match String.fold_left (fun n c -> if c = '\n' then n + 1 else n) 0 v with
     | 0 ->
-      if String.starts_with v " " || String.ends_with v " " then
+      if Stre.starts_with v " " || Stre.ends_with v " " then
         begin match choose_quote v with
         | None -> bprintf b "%s :%d\n%s\n" name 0 v
         | Some c -> bprintf b "%s := %c%s%c\n" name c v c

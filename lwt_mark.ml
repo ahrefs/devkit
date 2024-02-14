@@ -102,7 +102,7 @@ let orphan_mark = special "<orphan>"
 let log_add_line mark msg =
   let msg = lazy begin
       let msg = !!msg in
-      if String.ends_with msg "\n" then msg else msg ^ "\n"
+      if Stre.ends_with msg "\n" then msg else msg ^ "\n"
     end
   in
   LastN.add msg mark.logs

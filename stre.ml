@@ -99,10 +99,6 @@ let after s sep = try String.(let i = find s sep + length sep in sub s i (length
 let divide s sep = try String.split s sep with Invalid_string -> s, ""
 let dividec s sep = try splitc s sep with Not_found -> s, ""
 
-(** remove prefix from string if present *)
-let drop_prefix s pre = if String.starts_with s pre then slice s ~first:(String.length pre) else s
-let drop_suffix s suf = if String.ends_with s suf then slice ~last:(- String.length suf) s else s
-
 let qreplace str sub by =
   Pcre.qreplace ~rex:(Pcre.regexp @@ Pcre.quote sub) ~templ:by str
 
@@ -126,6 +122,13 @@ let starts_with s ?(pos=0) prefix =
     true
   with Not_found ->
     false
+
+let ends_with s suffix = String.ends_with s suffix[@warning "-6"]
+let exists s sub = String.exists s sub[@warning "-6"]
+
+(** remove prefix from string if present *)
+let drop_prefix s pre = if starts_with s pre then slice s ~first:(String.length pre) else s
+let drop_suffix s suf = if ends_with s suf then slice ~last:(- String.length suf) s else s
 
 let istarts_with s ?(pos=0) prefix =
   if pos < 0 || pos > String.length s then invalid_arg "Stre.istarts_with";
