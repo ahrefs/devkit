@@ -20,8 +20,20 @@ let show_raw' = show_raw_quote '\''
 let show_raw = show_raw_quote '"'
 
 let attrs_include attrs a =
-  let attrs = lazy (List.map (fun (k,v) -> (k,String.nsplit (Raw.project v) " ")) attrs) in
-  begin try List.for_all (fun (k,v) -> assert (not @@ String.contains v ' '); List.mem v (List.assoc k (Lazy.force attrs))) a with Not_found -> false end
+  let a =
+    if a |> List.exists (fun (_,v) -> String.contains v ' ') then
+      a |> List.map (fun (k,v) -> Stre.nsplitc v ' ' |> List.map (fun s -> k,s)) |> List.flatten
+    else
+      a
+  in
+  match a with
+  | [] -> true
+  | _ ->
+    let attrs = List.map (fun (k,v) -> (k, Stre.nsplitc (Raw.project v) ' ')) attrs in
+    try
+      List.for_all (fun (k,v) -> List.mem v (List.assoc k attrs)) a
+    with
+      Not_found -> false
 
 let tag name ?(a=[]) = function
   | Tag (name',attrs) when name = name' -> attrs_include attrs a
