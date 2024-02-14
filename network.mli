@@ -43,6 +43,7 @@ end
 
 (** accepts addr/n notation or single ip *)
 val cidr_of_string_exn : string -> ipv4_cidr
+val string_of_cidr : ipv4_cidr -> string
 val range_of_cidr : ipv4_cidr -> ipv4 * ipv4
 val prefix_of_cidr : ipv4_cidr -> ipv4
 val ipv4_matches : ipv4 -> ipv4_cidr -> bool
