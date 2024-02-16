@@ -32,6 +32,7 @@ type request = { addr : Unix.sockaddr;
 type reply_status =
   [ `Ok
   | `Created
+  | `Accepted
   | `No_content
   | `Found
   | `Moved
@@ -108,6 +109,7 @@ let show_request req =
 let status_code : reply_status -> int = function
   | `Ok -> 200
   | `Created -> 201
+  | `Accepted -> 202
   | `No_content -> 204
 
   | `Moved -> 301
@@ -137,6 +139,7 @@ let status_code : reply_status -> int = function
 let show_http_reply : reply_status -> string = function
   | `Ok -> "HTTP/1.0 200 OK"
   | `Created -> "HTTP/1.0 201 Created"
+  | `Accepted -> "HTTP/1.0 202 Accepted"
   | `No_content -> "HTTP/1.0 204 No Content"
 
   | `Moved -> "HTTP/1.0 301 Moved Permanently"
