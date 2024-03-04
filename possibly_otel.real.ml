@@ -20,3 +20,5 @@ let enter_manual_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ?data name =
         meta = Trace_core.Meta_map.empty
       } in
       Trace_core.enter_manual_sub_span ~parent:otrace_espan ~__FUNCTION__ ~__FILE__ ~__LINE__ ?data name
+
+let add_data_to_manual_span span data = Trace_core.add_data_to_manual_span span data

@@ -12,3 +12,6 @@ val enter_manual_span :
   ?data:(unit -> (string * Otrace.user_data) list) ->
   string ->
   Trace_core.explicit_span
+
+val add_data_to_manual_span :
+  Trace_core.explicit_span -> (string * Otrace.user_data) list -> unit
