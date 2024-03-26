@@ -316,6 +316,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     let t = new Action.timer in
     let result = Some (fun h code ->
       if verbose then verbose_curl_result nr_http action t h code;
+      Trace_core.add_data_to_manual_span sid ["http.response.status_code", `Int (Curl.get_httpcode h)];
       Trace_core.exit_manual_span sid;
       return ()
     ) in
