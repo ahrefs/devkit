@@ -10,26 +10,37 @@ on:
 jobs:
   build:
 
+    strategy:
+      matrix:
+        ocaml-version:
+          - 4.14
+          - 5.1
+
     runs-on: ubuntu-latest
 
     steps:
     - name: Checkout code
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
 
     - name: Update apt
       run: sudo apt-get update
 
-    - name: Set up OCaml
+    - name: Set up OCaml ${{ matrix.ocaml-version }}
       uses: ocaml/setup-ocaml@v2
       with:
-        ocaml-compiler: 4.13.1
+        ocaml-compiler: ${{ matrix.ocaml-version }}
         dune-cache: true
+        opam-depext-flags: "--with-test"
+        allow-prerelease-opam: true
 
     - name: Install OCaml deps
       run: opam install . --deps-only --with-test
+
+    - name: Pin libevent
+      run: opam pin add libevent --dev
       
     - name: Build
-      run: opam exec -- dune build
+      run: opam exec -- dune build --profile=release
 
     - name: Test
-      run: opam exec -- dune runtest
+      run: opam exec -- dune runtest --profile=release
