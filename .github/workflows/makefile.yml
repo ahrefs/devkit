@@ -35,6 +35,9 @@ jobs:
 
     - name: Install OCaml deps
       run: opam install . --deps-only --with-test
+
+    - name: Pin libevent
+      run: opam pin add libevent --dev
       
     - name: Build
       run: opam exec -- dune build --profile=release
