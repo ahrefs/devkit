@@ -930,11 +930,12 @@ let send_reply c cout reply =
   (* possibly apply encoding *)
   let%lwt (hdrs,body) =
     (* TODO do not apply encoding to application/gzip *)
-    (* TODO gzip + chunked? *)
     match body, code, c.req with
     | `Body s, `Ok, Ready { encoding=Gzip; _ } when String.length s > 128 ->
       let%lwt body = Gzip_io.string_lwt s in
       Lwt.return (("Content-Encoding", "gzip")::hdrs, `Body body)
+    | `Chunks _ as body, `Ok, Ready { encoding=Gzip; _ } -> 
+      Lwt.return (("Content-Encoding", "gzip")::hdrs, body)
     | _ -> Lwt.return (hdrs, body)
   in
   let hdrs = match body with
@@ -957,6 +958,10 @@ let send_reply c cout reply =
       let push = function
       | "" -> Lwt.return_unit
       | s ->
+        let%lwt s = match c.req with
+        | Ready { encoding=Gzip; _ } -> Gzip_io.string_lwt s
+        | _ -> Lwt.return s
+        in
         let%lwt () = Lwt_io.write cout (sprintf "%x\r\n" (String.length s)) in
         let%lwt () = Lwt_io.write cout s in
         Lwt_io.write cout "\r\n"
