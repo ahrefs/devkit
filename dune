@@ -39,6 +39,7 @@
   (preprocess
     (per_module
       ((pps lwt_ppx)
+       gzip_io
        httpev
        logstash
        lwt_flag
