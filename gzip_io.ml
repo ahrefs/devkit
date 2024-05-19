@@ -38,25 +38,17 @@ let string s =
 
 let string_lwt ?(chunk_size = 3000) ?(yield = Lwt.pause) s =
   let out = output (IO.output_string ()) in
-  let buff = Buffer.create chunk_size in
-  let len = String.length s in
-  let rec loop i =
-    if i >= len then (
-      (* Final flush of the buffer if there's any residue *)
-      if Buffer.length buff > 0 then IO.nwrite out (Buffer.to_bytes buff);
-      Lwt.return_unit)
-    else begin
-      let c = s.[i] in
-      Buffer.add_char buff c;
-      if Buffer.length buff < chunk_size then loop (i + 1)
-      else (
-        (* Buffer is full, write and clear it *)
-        IO.nwrite out (Buffer.to_bytes buff);
-        Buffer.clear buff;
-        (* Yield after processing a chunk *)
-        let%lwt () = yield () in
-        loop (i + 1))
-    end
+  let b = Bytes.unsafe_of_string s in
+  let len = Bytes.length b in
+  let rec loop offset =
+    let written = 
+      let len_to_write = Int.min chunk_size (len - offset) in
+      IO.output out b offset len_to_write in
+    if offset + written >= len then Lwt.return_unit
+    else (
+      (* Yield after processing a chunk *)
+      let%lwt () = yield () in
+      loop (offset + written))
   in
   let%lwt () = loop 0 in
   Lwt.return @@ IO.close_out out
