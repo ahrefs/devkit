@@ -18,15 +18,29 @@ val perform : t -> ?autoexit:bool -> task Enum.t -> (result -> unit) -> unit
 val stop : ?wait:int -> t -> unit
 end
 
-(** @return list of reaped and live pids *)
+(** @return list of reaped PIDs with status, list of live PIDs *)
 let reap l =
   let open Unix in
-  List.partition (fun pid ->
-  try
-    pid = fst (waitpid [WNOHANG] pid)
-  with
-  | Unix_error (ECHILD,_,_) -> true (* exited *)
-  | exn -> log #warn ~exn "Worker PID %d lost (wait)" pid; true) l
+  List.fold_left begin fun (acc_dead, acc_alive) pid ->
+    let dead result = (pid, result) :: acc_dead, acc_alive in
+    let alive () = acc_dead, pid :: acc_alive in
+    match waitpid [WNOHANG] pid with
+    | 0, _ ->
+      (* due to NOHANG *)
+      alive ()
+    | v, _ when v != pid ->
+      log #warn "Unexpected waitpid value %d for PID %d" v pid;
+      alive ()
+    | v, result ->
+      assert (v = pid);
+      dead (Some result)
+    | exception Unix_error (ECHILD,_,_) ->
+      dead None
+      (* exited *)
+    | exception exn ->
+      log #warn ~exn "Worker PID %d lost (wait)" pid;
+      dead None
+  end ([], []) l
 
 let hard_kill1 pid =
   let open Unix in
@@ -260,19 +274,26 @@ let run_forks_simple ?(revive=false) ?wait_stop f args =
     | [] -> loop (max 1. (pause /. 2.))
     | dead when revive ->
       let pause = min 10. (pause *. 1.5) in
-      dead |> List.iter begin fun pid ->
+      dead |> List.iter begin fun (pid, result) ->
         match Hashtbl.find workers pid with
         | exception Not_found -> log #warn "WUT? Not my worker %d" pid
         | x ->
         Hashtbl.remove workers pid;
-        match launch f x with
-        | exception exn -> log #error ~exn "restart"
-        | pid' -> log #info "worker %d exited, replaced with %d" pid pid';
+        begin
+          match result with
+          | Some (Unix.WEXITED 0) ->
+            (* do not relaunch *)
+            ()
+          | _ ->
+          match launch f x with
+          | exception exn -> log #error ~exn "restart"
+          | pid' -> log #info "worker %d exited, replaced with %d" pid pid';
+        end
       end;
       loop pause
     | dead ->
-      log #info "%d child workers exited (PIDs: %s)" (List.length dead) (Stre.list string_of_int dead);
-      List.iter (Hashtbl.remove workers) dead;
+      log #info "%d child workers exited (PIDs: %s)" (List.length dead) (Stre.list (string_of_int $ fst) dead);
+      List.iter (Hashtbl.remove workers $ fst) dead;
       loop pause
   in
   loop 1.
