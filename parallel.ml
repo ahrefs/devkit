@@ -263,7 +263,7 @@ let run_forks_simple ?(revive=false) ?wait_stop f args =
   let rec loop pause =
     Nix.sleep pause;
     let total = Hashtbl.length workers in
-    if total = 0 && not revive then
+    if total = 0 then
       log #info "All workers dead, stopping"
     else
     match Daemon.should_exit () with
