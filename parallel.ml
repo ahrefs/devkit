@@ -249,8 +249,13 @@ let run_forks_simple ?(revive=false) ?wait_stop f args =
   let launch f x =
     match Nix.fork () with
     | `Child ->
-      let () = try f x with exn -> log #error ~exn ~backtrace:true "worker failed" in
-      exit 0
+      begin try
+        f x;
+        exit 0
+      with exn ->
+        log #error ~exn ~backtrace:true "worker failed";
+        exit 1
+      end
     | `Forked pid -> Hashtbl.add workers pid x; pid
   in
   args |> List.iter (fun x -> let (_:int) = launch f x in ());
