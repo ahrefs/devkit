@@ -283,11 +283,11 @@ let run_forks_simple ?(revive=false) ?wait_stop f args =
           match result with
           | Some (Unix.WEXITED 0) ->
             (* do not relaunch *)
-            ()
+            log #info "worker %d exited" pid;
           | _ ->
           match launch f x with
           | exception exn -> log #error ~exn "restart"
-          | pid' -> log #info "worker %d exited, replaced with %d" pid pid';
+          | pid' -> log #info "worker %d exited with non-zero status, replaced with %d" pid pid';
         end
       end;
       loop pause
