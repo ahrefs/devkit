@@ -188,8 +188,10 @@ let open_out ?(level = 6) oc =
     out_crc = Int32.zero;
     char_buffer = Bytes.create 1 }
 
-let rec output oz buf pos len =
-  if pos < 0 || len < 0 || pos + len > Bytes.length buf then
+let workaround_camlzip_zlib_uint32_limit = 2 * 1024 * 1024 * 1024
+
+let rec output oz buf pos full_len =
+  if pos < 0 || full_len < 0 || pos + full_len > Bytes.length buf then
     invalid_arg "Gzip_stream.output";
   (* If output buffer is full, flush it *)
   if oz.out_avail = 0 then begin
@@ -197,6 +199,7 @@ let rec output oz buf pos len =
     oz.out_pos <- 0;
     oz.out_avail <- Bytes.length oz.out_buffer
   end;
+  let len = min full_len workaround_camlzip_zlib_uint32_limit in
   let (_, used_in, used_out) =
     try
       Zlib.deflate oz.out_stream buf pos len
@@ -208,7 +211,7 @@ let rec output oz buf pos len =
   oz.out_avail <- oz.out_avail - used_out;
   oz.out_size <- Int32.add oz.out_size (Int32.of_int used_in);
   oz.out_crc <- Zlib.update_crc oz.out_crc buf pos used_in;
-  if used_in < len then output oz buf (pos + used_in) (len - used_in)
+  if used_in < full_len then output oz buf (pos + used_in) (full_len - used_in)
 
 let output_char oz c =
   Bytes.set oz.char_buffer 0 c;
