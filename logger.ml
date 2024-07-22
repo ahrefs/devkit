@@ -2,19 +2,21 @@
 open Printf
 
 type level = [`Debug | `Info | `Warn | `Error]
-type facil = { name : string; mutable show : int; }
+type facil = { name : string; mutable show : int; mutable mute : bool; }
 let int_level = function
   | `Debug -> 0
   | `Info -> 1
   | `Warn -> 2
   | `Error -> 3
 let set_filter facil level = facil.show <- int_level level
+let mute facil = facil.mute <- true
+let unmute facil = facil.mute <- false
 let get_level facil = match facil.show with
   | 0 -> `Debug
   | 1 -> `Info
   | 2 -> `Warn
   | _ -> `Error (* ! *)
-let allowed facil level = int_level level >= facil.show
+let allowed facil level = int_level level >= facil.show && not facil.mute
 
 let string_level = function
   | `Debug -> "debug"
@@ -90,4 +92,3 @@ module Make(T : Put) = struct
   let error f fmt = ksprintf (error_s f) fmt
 
 end
-

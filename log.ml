@@ -51,7 +51,7 @@ module State = struct
       Hashtbl.find all name
     with
       Not_found ->
-        let x = { Logger.name = name; show = Logger.int_level !default_level } in
+        let x = { Logger.name = name; show = Logger.int_level !default_level; mute = false } in
         Hashtbl.add all name x;
         x
 
@@ -62,6 +62,19 @@ module State = struct
       let prefix = String.slice ~last:(-1) name in
       Hashtbl.iter (fun k x -> if Stre.starts_with k prefix then Logger.set_filter x level) all
     | Some name -> Logger.set_filter (facility name) level
+
+  let mute' name mute =
+    let mute = if mute then Logger.mute else Logger.unmute in
+    match name with
+    | name when Stre.ends_with name "*" ->
+      let prefix = String.slice ~last:(-1) name in
+      Hashtbl.iter (fun k x -> if Stre.starts_with k prefix then mute x) all
+    | name -> mute (facility name)
+
+  let mute name = mute' name true
+  let unmute name = mute' name false
+  let mute_all () = Hashtbl.iter (fun _ x -> Logger.mute x) all
+  let unmute_all () = Hashtbl.iter (fun _ x -> Logger.unmute x) all
 
   let set_loglevels s =
     Stre.nsplitc s ',' |> List.iter begin fun spec ->
@@ -127,6 +140,11 @@ let facility = State.facility
 let set_filter = State.set_filter
 let set_loglevels = State.set_loglevels
 let set_utc () = State.utc_timezone := true
+
+let mute = State.mute
+let unmute = State.unmute
+let mute_all = State.mute_all
+let unmute_all = State.unmute_all
 
 (** Update facilities configuration from the environment.
 
