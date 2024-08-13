@@ -33,7 +33,14 @@ let to_string exn =
 let str = to_string
 
 let fail ?exn fmt =
-  let fails s = match exn with None -> failwith s | Some exn -> failwith (s ^ " : " ^ to_string exn) in
+  let fails s =
+    match exn with
+    | None -> failwith s
+    | Some original_exn ->
+      let orig_bt = Printexc.get_raw_backtrace () in
+      let exn = Failure (s ^ " : " ^ to_string original_exn) in
+      Printexc.raise_with_backtrace exn orig_bt
+  in
   ksprintf fails fmt
 
 let invalid_arg fmt = ksprintf invalid_arg fmt
