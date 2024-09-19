@@ -32,6 +32,11 @@ let to_string exn =
 
 let str = to_string
 
+(**
+  The original backtrace is captured via `Printexc.get_raw_backtrace ()`.
+  However, note that this backtrace might not correspond to the provided `exn`
+  if another exception was raised before `fail` is called.
+*)
 let fail ?exn fmt =
   let fails s =
     match exn with
