@@ -43,3 +43,4 @@ val update : unit -> unit
 (**/**)
 
 val set_fake : t -> unit
+val fake_id : unit -> bool

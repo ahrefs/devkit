@@ -72,3 +72,4 @@ let self () = !self
 let self_name () = name @@ self ()
 let show_self () = !self_s
 let self_as name = set_name name; self ()
+let fake_id () = !fake_id
