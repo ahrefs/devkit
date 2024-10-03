@@ -8,12 +8,18 @@ module Raw = struct
   let is_empty x = "" = project x
 end
 
-type elem =
-| Tag of (string * (string * Raw.t) list)
-| Script of ((string * Raw.t) list * string) (* attributes and contents. TODO investigate script contents encoding *)
-| Style of ((string * Raw.t) list * string)
+type tag = {
+  name: string;
+  attrs: (string * Raw.t) list;
+  self_closing: bool;
+}
+
+type token_tag =
+| Start of tag
+| Close of tag
 | Text of Raw.t
-| Close of string
+| Script of ((string * Raw.t) list * string)
+| Style of ((string * Raw.t) list * string)
 
 type ctx = { mutable lnum : int }
 
@@ -22,7 +28,7 @@ let get_lnum ctx = ctx.lnum
 let init () = { lnum = 1 }
 
 
-# 26 "htmlStream_ragel.ml"
+# 30 "htmlStream_ragel.ml"
 let _htmlstream_trans_keys : int array = Array.concat [ [|
 	10; 60; 10; 60; 0; 122; 10; 10; 10; 122; 10; 45; 10; 45; 10; 45; 
 	10; 62; 10; 122; 0; 122; 0; 122; 0; 122; 0; 122; 0; 62; 0; 62; 
@@ -723,11 +729,11 @@ exception Goto_match_htmlstream
 exception Goto_again_htmlstream
 exception Goto_eof_trans_htmlstream
 
-# 66 "htmlStream_ragel.ml.rl"
+# 75 "htmlStream_ragel.ml.rl"
 
 
 (** scan [data] for html tags and invoke [call] for every element  *)
-let parse ?(ctx=init ()) call data =
+let parse_new ?(ctx=init ()) call data =
   let cs = ref 0 in
   let mark = ref (-1) in
   let mark_end = ref (-1) in
@@ -735,12 +741,12 @@ let parse ?(ctx=init ()) call data =
 (*  let substr data ofs len = try String.sub data ofs len with exn -> Prelude.printfn "%S %d %d %d" data (String.length data) ofs len; raise exn in *)
   let substr = String.sub in
   
-# 739 "htmlStream_ragel.ml"
+# 741 "htmlStream_ragel.ml"
 	begin
 	cs.contents <- htmlstream_start;
 	end;
 
-# 77 "htmlStream_ragel.ml.rl"
+# 86 "htmlStream_ragel.ml.rl"
   let eof = ref (String.length data) in
   let p = ref 0 in
   let pe = ref (String.length data) in
@@ -782,238 +788,247 @@ and do_eof_trans () =
 
 	match _htmlstream_trans_actions.(state.trans) with
 	| 1 ->
-# 25 "htmlStream_ragel.ml.rl"
+# 31 "htmlStream_ragel.ml.rl"
 		begin  mark := !p  end;
 	()
 	| 22 ->
-# 26 "htmlStream_ragel.ml.rl"
+# 32 "htmlStream_ragel.ml.rl"
 		begin  mark_end := !p  end;
 	()
 	| 24 ->
-# 27 "htmlStream_ragel.ml.rl"
+# 33 "htmlStream_ragel.ml.rl"
 		begin  tag := String.lowercase_ascii @@ sub (); attrs := [];  end;
 	()
 	| 33 ->
-# 28 "htmlStream_ragel.ml.rl"
-		begin  call @@ Close (String.lowercase_ascii @@ sub ())  end;
+# 34 "htmlStream_ragel.ml.rl"
+		begin  call @@ Close {name = String.lowercase_ascii @@ sub (); attrs = []; self_closing = false}  end;
 	()
 	| 9 ->
-# 29 "htmlStream_ragel.ml.rl"
+# 35 "htmlStream_ragel.ml.rl"
 		begin  directive := String.lowercase_ascii @@ sub (); attrs := [];  end;
 	()
 	| 3 ->
-# 30 "htmlStream_ragel.ml.rl"
+# 36 "htmlStream_ragel.ml.rl"
 		begin  call @@ Text (Raw.inject @@ sub ())  end;
 	()
 	| 11 ->
-# 31 "htmlStream_ragel.ml.rl"
+# 37 "htmlStream_ragel.ml.rl"
 		begin  key := String.lowercase_ascii @@ sub ()  end;
 	()
 	| 15 ->
-# 32 "htmlStream_ragel.ml.rl"
+# 38 "htmlStream_ragel.ml.rl"
 		begin  attrs := (!key, Raw.inject (if !mark < 0 then "" else sub())) :: !attrs  end;
 	()
 	| 29 ->
-# 33 "htmlStream_ragel.ml.rl"
+# 39 "htmlStream_ragel.ml.rl"
 		begin 
     match !tag with
     | "script" -> p.contents <- p.contents - 1;  begin cs.contents <- 41; if true then raise_notrace Goto_again_htmlstream end
     | "style" -> p.contents <- p.contents - 1;  begin cs.contents <- 52; if true then raise_notrace Goto_again_htmlstream end
     | "" -> ()
-    | _ -> call @@ Tag (!tag, List.rev !attrs)
+    | _ -> call @@ Start { name = !tag; attrs = List.rev !attrs; self_closing = false}
   end;
 	()
 	| 26 ->
-# 40 "htmlStream_ragel.ml.rl"
-		begin  call @@ Tag (!tag, List.rev !attrs); if !tag <> "a" then call (Close !tag)  end;
+# 46 "htmlStream_ragel.ml.rl"
+		begin 
+    call @@ Start { name = !tag; attrs = List.rev !attrs; self_closing = true };
+    if !tag <> "a" then call @@ Close {name = !tag; attrs = []; self_closing = true};
+   end;
 	()
 	| 18 ->
-# 41 "htmlStream_ragel.ml.rl"
+# 50 "htmlStream_ragel.ml.rl"
 		begin  (* printfn "directive %s" !directive; *)  end;
 	()
 	| 5 ->
-# 43 "htmlStream_ragel.ml.rl"
+# 52 "htmlStream_ragel.ml.rl"
 		begin  (*printfn "GARBAGE %S" (current ()); *) p.contents <- p.contents - 1;  begin cs.contents <- 62; if true then raise_notrace Goto_again_htmlstream end end;
 	()
 	| 4 ->
-# 45 "htmlStream_ragel.ml.rl"
+# 54 "htmlStream_ragel.ml.rl"
 		begin  ctx.lnum <- ctx.lnum + 1  end;
 	()
 	| 6 ->
-# 62 "htmlStream_ragel.ml.rl"
+# 71 "htmlStream_ragel.ml.rl"
 		begin  tag := ""  end;
 	()
 	| 21 ->
-# 25 "htmlStream_ragel.ml.rl"
+# 31 "htmlStream_ragel.ml.rl"
 		begin  mark := !p  end;
-# 26 "htmlStream_ragel.ml.rl"
+# 32 "htmlStream_ragel.ml.rl"
 		begin  mark_end := !p  end;
 	()
 	| 32 ->
-# 25 "htmlStream_ragel.ml.rl"
+# 31 "htmlStream_ragel.ml.rl"
 		begin  mark := !p  end;
-# 28 "htmlStream_ragel.ml.rl"
-		begin  call @@ Close (String.lowercase_ascii @@ sub ())  end;
+# 34 "htmlStream_ragel.ml.rl"
+		begin  call @@ Close {name = String.lowercase_ascii @@ sub (); attrs = []; self_closing = false}  end;
 	()
 	| 2 ->
-# 25 "htmlStream_ragel.ml.rl"
+# 31 "htmlStream_ragel.ml.rl"
 		begin  mark := !p  end;
-# 45 "htmlStream_ragel.ml.rl"
+# 54 "htmlStream_ragel.ml.rl"
 		begin  ctx.lnum <- ctx.lnum + 1  end;
 	()
 	| 16 ->
-# 26 "htmlStream_ragel.ml.rl"
-		begin  mark_end := !p  end;
 # 32 "htmlStream_ragel.ml.rl"
+		begin  mark_end := !p  end;
+# 38 "htmlStream_ragel.ml.rl"
 		begin  attrs := (!key, Raw.inject (if !mark < 0 then "" else sub())) :: !attrs  end;
 	()
 	| 25 ->
-# 27 "htmlStream_ragel.ml.rl"
+# 33 "htmlStream_ragel.ml.rl"
 		begin  tag := String.lowercase_ascii @@ sub (); attrs := [];  end;
-# 45 "htmlStream_ragel.ml.rl"
+# 54 "htmlStream_ragel.ml.rl"
 		begin  ctx.lnum <- ctx.lnum + 1  end;
 	()
 	| 34 ->
-# 28 "htmlStream_ragel.ml.rl"
-		begin  call @@ Close (String.lowercase_ascii @@ sub ())  end;
-# 45 "htmlStream_ragel.ml.rl"
+# 34 "htmlStream_ragel.ml.rl"
+		begin  call @@ Close {name = String.lowercase_ascii @@ sub (); attrs = []; self_closing = false}  end;
+# 54 "htmlStream_ragel.ml.rl"
 		begin  ctx.lnum <- ctx.lnum + 1  end;
 	()
 	| 10 ->
-# 29 "htmlStream_ragel.ml.rl"
+# 35 "htmlStream_ragel.ml.rl"
 		begin  directive := String.lowercase_ascii @@ sub (); attrs := [];  end;
-# 45 "htmlStream_ragel.ml.rl"
+# 54 "htmlStream_ragel.ml.rl"
 		begin  ctx.lnum <- ctx.lnum + 1  end;
 	()
 	| 13 ->
-# 31 "htmlStream_ragel.ml.rl"
+# 37 "htmlStream_ragel.ml.rl"
 		begin  key := String.lowercase_ascii @@ sub ()  end;
-# 32 "htmlStream_ragel.ml.rl"
+# 38 "htmlStream_ragel.ml.rl"
 		begin  attrs := (!key, Raw.inject (if !mark < 0 then "" else sub())) :: !attrs  end;
 	()
 	| 12 ->
-# 31 "htmlStream_ragel.ml.rl"
+# 37 "htmlStream_ragel.ml.rl"
 		begin  key := String.lowercase_ascii @@ sub ()  end;
-# 45 "htmlStream_ragel.ml.rl"
+# 54 "htmlStream_ragel.ml.rl"
 		begin  ctx.lnum <- ctx.lnum + 1  end;
 	()
 	| 14 ->
-# 32 "htmlStream_ragel.ml.rl"
+# 38 "htmlStream_ragel.ml.rl"
 		begin  attrs := (!key, Raw.inject (if !mark < 0 then "" else sub())) :: !attrs  end;
-# 25 "htmlStream_ragel.ml.rl"
+# 31 "htmlStream_ragel.ml.rl"
 		begin  mark := !p  end;
 	()
 	| 23 ->
-# 32 "htmlStream_ragel.ml.rl"
+# 38 "htmlStream_ragel.ml.rl"
 		begin  attrs := (!key, Raw.inject (if !mark < 0 then "" else sub())) :: !attrs  end;
-# 45 "htmlStream_ragel.ml.rl"
+# 54 "htmlStream_ragel.ml.rl"
 		begin  ctx.lnum <- ctx.lnum + 1  end;
 	()
 	| 30 ->
-# 33 "htmlStream_ragel.ml.rl"
+# 39 "htmlStream_ragel.ml.rl"
 		begin 
     match !tag with
     | "script" -> p.contents <- p.contents - 1;  begin cs.contents <- 41; if true then raise_notrace Goto_again_htmlstream end
     | "style" -> p.contents <- p.contents - 1;  begin cs.contents <- 52; if true then raise_notrace Goto_again_htmlstream end
     | "" -> ()
-    | _ -> call @@ Tag (!tag, List.rev !attrs)
+    | _ -> call @@ Start { name = !tag; attrs = List.rev !attrs; self_closing = false}
   end;
-# 25 "htmlStream_ragel.ml.rl"
+# 31 "htmlStream_ragel.ml.rl"
 		begin  mark := !p  end;
 	()
 	| 38 ->
-# 33 "htmlStream_ragel.ml.rl"
+# 39 "htmlStream_ragel.ml.rl"
 		begin 
     match !tag with
     | "script" -> p.contents <- p.contents - 1;  begin cs.contents <- 41; if true then raise_notrace Goto_again_htmlstream end
     | "style" -> p.contents <- p.contents - 1;  begin cs.contents <- 52; if true then raise_notrace Goto_again_htmlstream end
     | "" -> ()
-    | _ -> call @@ Tag (!tag, List.rev !attrs)
+    | _ -> call @@ Start { name = !tag; attrs = List.rev !attrs; self_closing = false}
   end;
-# 53 "htmlStream_ragel.ml.rl"
+# 62 "htmlStream_ragel.ml.rl"
 		begin  begin cs.contents <- 0; if true then raise_notrace Goto_again_htmlstream end  end;
 	()
 	| 27 ->
-# 40 "htmlStream_ragel.ml.rl"
-		begin  call @@ Tag (!tag, List.rev !attrs); if !tag <> "a" then call (Close !tag)  end;
-# 25 "htmlStream_ragel.ml.rl"
+# 46 "htmlStream_ragel.ml.rl"
+		begin 
+    call @@ Start { name = !tag; attrs = List.rev !attrs; self_closing = true };
+    if !tag <> "a" then call @@ Close {name = !tag; attrs = []; self_closing = true};
+   end;
+# 31 "htmlStream_ragel.ml.rl"
 		begin  mark := !p  end;
 	()
 	| 19 ->
-# 41 "htmlStream_ragel.ml.rl"
+# 50 "htmlStream_ragel.ml.rl"
 		begin  (* printfn "directive %s" !directive; *)  end;
-# 25 "htmlStream_ragel.ml.rl"
+# 31 "htmlStream_ragel.ml.rl"
 		begin  mark := !p  end;
 	()
 	| 8 ->
-# 43 "htmlStream_ragel.ml.rl"
+# 52 "htmlStream_ragel.ml.rl"
 		begin  (*printfn "GARBAGE %S" (current ()); *) p.contents <- p.contents - 1;  begin cs.contents <- 62; if true then raise_notrace Goto_again_htmlstream end end;
-# 45 "htmlStream_ragel.ml.rl"
+# 54 "htmlStream_ragel.ml.rl"
 		begin  ctx.lnum <- ctx.lnum + 1  end;
 	()
 	| 35 ->
-# 45 "htmlStream_ragel.ml.rl"
+# 54 "htmlStream_ragel.ml.rl"
 		begin  ctx.lnum <- ctx.lnum + 1  end;
-# 25 "htmlStream_ragel.ml.rl"
+# 31 "htmlStream_ragel.ml.rl"
 		begin  mark := !p  end;
 	()
 	| 36 ->
-# 50 "htmlStream_ragel.ml.rl"
+# 59 "htmlStream_ragel.ml.rl"
 		begin call @@ Script (List.rev !attrs, sub ()) end;
-# 50 "htmlStream_ragel.ml.rl"
+# 59 "htmlStream_ragel.ml.rl"
 		begin begin cs.contents <- 0; if true then raise_notrace Goto_again_htmlstream end end;
 	()
 	| 37 ->
-# 51 "htmlStream_ragel.ml.rl"
+# 60 "htmlStream_ragel.ml.rl"
 		begin call @@ Style (List.rev !attrs, sub ()) end;
-# 51 "htmlStream_ragel.ml.rl"
+# 60 "htmlStream_ragel.ml.rl"
 		begin begin cs.contents <- 0; if true then raise_notrace Goto_again_htmlstream end end;
 	()
 	| 7 ->
-# 62 "htmlStream_ragel.ml.rl"
+# 71 "htmlStream_ragel.ml.rl"
 		begin  tag := ""  end;
-# 25 "htmlStream_ragel.ml.rl"
+# 31 "htmlStream_ragel.ml.rl"
 		begin  mark := !p  end;
 	()
 	| 17 ->
-# 26 "htmlStream_ragel.ml.rl"
-		begin  mark_end := !p  end;
 # 32 "htmlStream_ragel.ml.rl"
+		begin  mark_end := !p  end;
+# 38 "htmlStream_ragel.ml.rl"
 		begin  attrs := (!key, Raw.inject (if !mark < 0 then "" else sub())) :: !attrs  end;
-# 45 "htmlStream_ragel.ml.rl"
+# 54 "htmlStream_ragel.ml.rl"
 		begin  ctx.lnum <- ctx.lnum + 1  end;
 	()
 	| 31 ->
-# 33 "htmlStream_ragel.ml.rl"
+# 39 "htmlStream_ragel.ml.rl"
 		begin 
     match !tag with
     | "script" -> p.contents <- p.contents - 1;  begin cs.contents <- 41; if true then raise_notrace Goto_again_htmlstream end
     | "style" -> p.contents <- p.contents - 1;  begin cs.contents <- 52; if true then raise_notrace Goto_again_htmlstream end
     | "" -> ()
-    | _ -> call @@ Tag (!tag, List.rev !attrs)
+    | _ -> call @@ Start { name = !tag; attrs = List.rev !attrs; self_closing = false}
   end;
-# 25 "htmlStream_ragel.ml.rl"
+# 31 "htmlStream_ragel.ml.rl"
 		begin  mark := !p  end;
-# 45 "htmlStream_ragel.ml.rl"
+# 54 "htmlStream_ragel.ml.rl"
 		begin  ctx.lnum <- ctx.lnum + 1  end;
 	()
 	| 28 ->
-# 40 "htmlStream_ragel.ml.rl"
-		begin  call @@ Tag (!tag, List.rev !attrs); if !tag <> "a" then call (Close !tag)  end;
-# 25 "htmlStream_ragel.ml.rl"
+# 46 "htmlStream_ragel.ml.rl"
+		begin 
+    call @@ Start { name = !tag; attrs = List.rev !attrs; self_closing = true };
+    if !tag <> "a" then call @@ Close {name = !tag; attrs = []; self_closing = true};
+   end;
+# 31 "htmlStream_ragel.ml.rl"
 		begin  mark := !p  end;
-# 45 "htmlStream_ragel.ml.rl"
+# 54 "htmlStream_ragel.ml.rl"
 		begin  ctx.lnum <- ctx.lnum + 1  end;
 	()
 	| 20 ->
-# 41 "htmlStream_ragel.ml.rl"
+# 50 "htmlStream_ragel.ml.rl"
 		begin  (* printfn "directive %s" !directive; *)  end;
-# 25 "htmlStream_ragel.ml.rl"
+# 31 "htmlStream_ragel.ml.rl"
 		begin  mark := !p  end;
-# 45 "htmlStream_ragel.ml.rl"
+# 54 "htmlStream_ragel.ml.rl"
 		begin  ctx.lnum <- ctx.lnum + 1  end;
 	()
-# 1017 "htmlStream_ragel.ml"
+# 1026 "htmlStream_ragel.ml"
 		| _ -> ()
 	with Goto_again_htmlstream -> () end;
 
@@ -1028,32 +1043,35 @@ and do_test_eof () =
 	begin try
 	begin match _htmlstream_eof_actions.(cs.contents) with
 	| 3 ->
-# 30 "htmlStream_ragel.ml.rl"
+# 36 "htmlStream_ragel.ml.rl"
 		begin  call @@ Text (Raw.inject @@ sub ())  end;
 	()
 	| 29 ->
-# 33 "htmlStream_ragel.ml.rl"
+# 39 "htmlStream_ragel.ml.rl"
 		begin 
     match !tag with
     | "script" -> p.contents <- p.contents - 1;  begin cs.contents <- 41; if true then raise_notrace Goto_again_htmlstream end
     | "style" -> p.contents <- p.contents - 1;  begin cs.contents <- 52; if true then raise_notrace Goto_again_htmlstream end
     | "" -> ()
-    | _ -> call @@ Tag (!tag, List.rev !attrs)
+    | _ -> call @@ Start { name = !tag; attrs = List.rev !attrs; self_closing = false}
   end;
 	()
 	| 26 ->
-# 40 "htmlStream_ragel.ml.rl"
-		begin  call @@ Tag (!tag, List.rev !attrs); if !tag <> "a" then call (Close !tag)  end;
+# 46 "htmlStream_ragel.ml.rl"
+		begin 
+    call @@ Start { name = !tag; attrs = List.rev !attrs; self_closing = true };
+    if !tag <> "a" then call @@ Close {name = !tag; attrs = []; self_closing = true};
+   end;
 	()
 	| 18 ->
-# 41 "htmlStream_ragel.ml.rl"
+# 50 "htmlStream_ragel.ml.rl"
 		begin  (* printfn "directive %s" !directive; *)  end;
 	()
 	| 5 ->
-# 43 "htmlStream_ragel.ml.rl"
+# 52 "htmlStream_ragel.ml.rl"
 		begin  (*printfn "GARBAGE %S" (current ()); *) p.contents <- p.contents - 1;  begin cs.contents <- 62; if true then raise_notrace Goto_again_htmlstream end end;
 	()
-# 1057 "htmlStream_ragel.ml"
+# 1069 "htmlStream_ragel.ml"
 		| _ -> ()
 	end
 	with Goto_again_htmlstream -> do_again ()
@@ -1062,7 +1080,7 @@ and do_test_eof () =
 	in do_start ()
 	end;
 
-# 89 "htmlStream_ragel.ml.rl"
+# 98 "htmlStream_ragel.ml.rl"
 (* FIXME ? *)
 (*     if !eof <> -1 && !cs < htmlstream_first_final then Exn.fail "not parsed"; *)
   ()

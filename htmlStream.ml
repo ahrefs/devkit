@@ -5,6 +5,24 @@ open ExtLib
 
 include HtmlStream_ragel
 
+(* legacy *)
+type elem =
+| Tag of (string * (string * Raw.t) list)
+| Script of ((string * Raw.t) list * string) (* attributes and contents. TODO investigate script contents encoding *)
+| Style of ((string * Raw.t) list * string)
+| Text of Raw.t
+| Close of string
+
+let parse ?ctx call data =
+  let adapted_call = function
+  | Start {name; attrs; _} -> call (Tag (name, attrs))
+  | Close {name; _} -> call (Close name)
+  | Text t -> call (Text t)
+  | Script s -> call (Script s)
+  | Style s -> call (Style s)
+  in
+  parse_new ?ctx adapted_call data
+
 let show_attrs_quote c a =
   List.map (fun (k,v) -> sprintf " %s=%c%s%c" k c (Raw.project v) c) a |> String.concat ""
 
@@ -16,8 +34,18 @@ let show_raw_quote c elem =
   | Script (attrs, s) -> sprintf "<script%s>%s</script>" (show_attrs_quote c attrs) s
   | Style (attrs, s) -> sprintf "<style%s>%s</style>" (show_attrs_quote c attrs) s
 
+
+let show_raw_quote_new c = function
+  | Start {name;attrs;_}-> sprintf "<%s%s>" name (show_attrs_quote c attrs)
+  | Text t -> Raw.project t
+  | Close {name; _} -> Printf.sprintf "</%s>" name
+  | Script (attrs, s) -> sprintf "<script%s>%s</script>" (show_attrs_quote c attrs) s
+  | Style (attrs, s) -> sprintf "<style%s>%s</style>" (show_attrs_quote c attrs) s
+
 let show_raw' = show_raw_quote '\''
 let show_raw = show_raw_quote '"'
+
+let show_raw_new = show_raw_quote_new '"'
 
 let attrs_include attrs a =
   let a =

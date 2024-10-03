@@ -6,12 +6,18 @@ module Raw = struct
   let is_empty x = "" = project x
 end
 
-type elem =
-| Tag of (string * (string * Raw.t) list)
-| Script of ((string * Raw.t) list * string) (* attributes and contents. TODO investigate script contents encoding *)
-| Style of ((string * Raw.t) list * string)
+type tag = {
+  name: string;
+  attrs: (string * Raw.t) list;
+  self_closing: bool;
+}
+
+type token_tag =
+| Start of tag
+| Close of tag
 | Text of Raw.t
-| Close of string
+| Script of ((string * Raw.t) list * string)
+| Style of ((string * Raw.t) list * string)
 
 type ctx = { mutable lnum : int }
 
@@ -25,7 +31,7 @@ let init () = { lnum = 1 }
  action mark { mark := !p }
  action mark_end { mark_end := !p }
  action tag { tag := String.lowercase_ascii @@ sub (); attrs := []; }
- action close_tag { call @@ Close (String.lowercase_ascii @@ sub ()) }
+ action close_tag { call @@ Close {name = String.lowercase_ascii @@ sub (); attrs = []; self_closing = false} }
  action directive { directive := String.lowercase_ascii @@ sub (); attrs := []; }
  action text { call @@ Text (Raw.inject @@ sub ()) }
  action key { key := String.lowercase_ascii @@ sub () }
@@ -35,9 +41,12 @@ let init () = { lnum = 1 }
     | "script" -> fhold; fgoto in_script;
     | "style" -> fhold; fgoto in_style;
     | "" -> ()
-    | _ -> call @@ Tag (!tag, List.rev !attrs)
+    | _ -> call @@ Start { name = !tag; attrs = List.rev !attrs; self_closing = false}
  }
- action tag_done_2 { call @@ Tag (!tag, List.rev !attrs); if !tag <> "a" then call (Close !tag) }
+ action tag_done_2 {
+    call @@ Start { name = !tag; attrs = List.rev !attrs; self_closing = true };
+    if !tag <> "a" then call @@ Close {name = !tag; attrs = []; self_closing = true};
+  }
  action directive_done { (* printfn "directive %s" !directive; *) }
 
  action garbage_tag { (*printfn "GARBAGE %S" (current ()); *) fhold; fgoto garbage_tag;}
@@ -66,7 +75,7 @@ let init () = { lnum = 1 }
 }%%
 
 (** scan [data] for html tags and invoke [call] for every element  *)
-let parse ?(ctx=init ()) call data =
+let parse_new ?(ctx=init ()) call data =
   let cs = ref 0 in
   let mark = ref (-1) in
   let mark_end = ref (-1) in
