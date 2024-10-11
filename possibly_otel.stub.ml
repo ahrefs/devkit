@@ -1,7 +1,7 @@
 module Traceparent = struct
   let name = "traceparent"
 
-  let get_ambient () = None
+  let get_ambient ?explicit_span:_ () = None
 end
 
 
