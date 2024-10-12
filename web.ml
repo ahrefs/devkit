@@ -311,7 +311,10 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
         "url.full", `String url;
       ]
     in
-    let sid = Possibly_otel.enter_manual_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name in
+    let sid = 
+      let span_name = Printf.sprintf "%s %s" action_name url in
+      Possibly_otel.enter_manual_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe span_name
+    in
 
     let t = new Action.timer in
     let result = Some (fun h code ->
