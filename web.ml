@@ -257,17 +257,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     let open Curl in
     let action_name = string_of_http_action action in
 
-    let headers = match Possibly_otel.Traceparent.get_ambient () with
-    | None -> headers
-    | Some value -> Some Possibly_otel.Traceparent.(add_if_absent ~name ~value headers)
-    in
-
-    let set_body_and_headers h ct body =
-      set_httpheader h (("Content-Type: "^ct) :: Option.default [] headers);
-      set_postfields h body;
-      set_postfieldsize h (String.length body)
-    in
-    let setup h =
+    let setup ~headers set_body_and_headers h =
       begin match body with
       | Some (`Form args) -> set_body_and_headers h "application/x-www-form-urlencoded" (make_url_args args)
       | Some (`Raw (ct,body)) -> set_body_and_headers h ct body
@@ -311,17 +301,28 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
         "url.full", `String url;
       ]
     in
-    let sid = Possibly_otel.enter_manual_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name in
+    let explicit_span = Possibly_otel.enter_manual_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name in
+
+    let headers = match Possibly_otel.Traceparent.get_ambient ~explicit_span () with
+    | None -> headers
+    | Some value -> Some (add_if_absent ~name:(Possibly_otel.Traceparent.name) ~value headers)
+    in
+
+    let set_body_and_headers h ct body =
+      set_httpheader h (("Content-Type: "^ct) :: Option.default [] headers);
+      set_postfields h body;
+      set_postfieldsize h (String.length body)
+    in
 
     let t = new Action.timer in
     let result = Some (fun h code ->
       if verbose then verbose_curl_result nr_http action t h code;
-      Trace_core.add_data_to_manual_span sid ["http.response.status_code", `Int (Curl.get_httpcode h)];
-      Trace_core.exit_manual_span sid;
+      Trace_core.add_data_to_manual_span explicit_span ["http.response.status_code", `Int (Curl.get_httpcode h)];
+      Trace_core.exit_manual_span explicit_span;
       return ()
     ) in
 
-    http_gets ~setup ?timer ?result ?max_size url
+    http_gets ~setup:(setup ~headers set_body_and_headers) ?timer ?result ?max_size url
 
   let http_request ?ua ?timeout ?verbose ?setup ?timer ?max_size ?http_1_0 ?headers ?body (action:http_action) url =
     http_request' ?ua ?timeout ?verbose ?setup ?timer ?max_size ?http_1_0 ?headers ?body action url >>= fun res ->

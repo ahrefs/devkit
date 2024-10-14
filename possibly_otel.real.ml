@@ -5,8 +5,12 @@ let (let*) o f = Option.map f o
 module Traceparent = struct
   let name = Trace_context.Traceparent.name
 
-  let get_ambient () =
+  let get_ambient ?explicit_span () =
     let* Scope.{ trace_id; span_id; _ } = Scope.get_ambient_scope () in
+    let span_id = match explicit_span with
+      | Some {Trace_core.span; _} -> Opentelemetry_trace.Internal.otel_of_otrace span
+      | None -> span_id 
+    in
     Trace_context.Traceparent.to_value ~trace_id ~parent_id:span_id ()
 end
 

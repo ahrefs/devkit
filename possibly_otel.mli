@@ -2,7 +2,7 @@ module Otrace := Trace_core
 
 module Traceparent : sig
   val name : string
-  val get_ambient : unit -> string option
+  val get_ambient : ?explicit_span:Trace_core.explicit_span -> unit -> string option
 end
 
 val enter_manual_span :
