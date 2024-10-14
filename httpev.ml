@@ -143,9 +143,9 @@ let make_server_state fd config =
 
 let show_socket_error fd =
   try
-    match Unix.getsockopt_int fd Unix.SO_ERROR with
-    | 0 -> ""
-    | n -> sprintf ", socket error %d" n
+    match Unix.getsockopt_error fd with
+    | None -> ""
+    | Some err -> sprintf ", %s" (Unix.error_message err)
   with _ -> ""
 
 let show_peer c =
@@ -816,8 +816,8 @@ let run_unix path answer =
 
 (** {2 Forked workers} *)
 
-let check_req req = match Unix.getsockopt_int req.socket Unix.SO_ERROR with 0 -> `Ok | n -> `Error n
-let check_req_exn req = match check_req req with `Ok -> () | `Error n -> Exn.fail "socket error %d" n
+let check_req req = match Unix.getsockopt_error req.socket with None -> `Ok | Some err -> `Error err
+let check_req_exn req = match check_req req with `Ok -> () | `Error err -> Exn.fail "%s" (Unix.error_message err)
 
 exception Continue of (unit -> unit)
 
@@ -856,7 +856,7 @@ let nr_rejected = stats#count "rejected"
 let answer_forked ?debug srv req answer k =
   let do_fork () =
     match check_req req with
-    | `Error n -> Exn.fail "pre fork %s : socket error %d" (show_request req) n
+    | `Error err -> Exn.fail "pre fork %s : %s" (show_request req) (Unix.error_message err)
     | `Ok ->
     begin match Nix.fork () with
     | `Child ->
