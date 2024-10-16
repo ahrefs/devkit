@@ -54,7 +54,7 @@ let suppress_exn name cleanup t =
 let action name f x =
   log #info "action %s started" name;
   match%lwt f x with
-  | exception exn -> log #error ~exn "action %s aborted" name; Lwt.fail exn
+  | exception exn -> log #error ~exn "action %s aborted" name; Lwt.reraise exn
   | x -> log #info "action %s done" name; Lwt.return x
 
 let action_do name f = action name f ()

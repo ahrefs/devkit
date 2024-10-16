@@ -40,7 +40,7 @@ let wait_exit =
     Bind to should_exit_lwt only once, because every bind will create an immutable waiter on
     should_exit_lwt's sleeper, that is only removed after should_exit_lwt thread terminates.
   *)
-  let thread = lazy (Lwt.bind should_exit_lwt (fun () -> Lwt.fail ShouldExit)) in
+  let thread = lazy (Lwt.bind should_exit_lwt (fun () -> raise ShouldExit)) in
   fun () -> Lazy.force thread
 
 (** [break_lwt = Lwt.wrap break] *)

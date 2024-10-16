@@ -119,7 +119,7 @@ let with_mark v f =
 let run_thread on_success on_failure func =
   match func () with
   | thr -> Lwt.on_any thr on_success on_failure; thr
-  | exception exn -> on_failure exn; Lwt.fail exn
+  | exception exn -> on_failure exn; Lwt.reraise exn
 
 let mark_or_orphan id =
   try Hashtbl.find marks id with Not_found -> orphan_mark
