@@ -9,4 +9,4 @@ let map f x = Lwt.try_bind (fun () -> f x) (fun r -> Lwt.return (`Ok r)) (fun ex
 
 let fail = Exn.fail
 
-let invalid_arg fmt = ksprintf Lwt.fail_invalid_arg fmt
+let invalid_arg fmt = ksprintf Stdlib.invalid_arg fmt
