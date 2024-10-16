@@ -308,7 +308,7 @@ let connect_lwt fd sockaddr =
   let open Lwt_unix in
   Lwt.catch
     (fun () -> connect fd sockaddr)
-    (function Unix_error (e, f, "") -> Lwt.fail (Unix_error (e, f, show_addr sockaddr)) | exn -> Lwt.fail exn)
+    (function Unix_error (e, f, "") -> raise (Unix_error (e, f, show_addr sockaddr)) | exn -> Lwt.reraise exn)
 
 let get_xdg_dir ~env dir =
   try Sys.getenv env with Not_found ->

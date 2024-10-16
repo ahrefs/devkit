@@ -359,8 +359,8 @@ module IO_lwt = struct
   let bracket mresource destroy k =
     let%lwt resource = mresource in
     (k resource) [%finally destroy resource]
-  let fail = Exn_lwt.fail
-  let raise = Lwt.fail
+  let fail = Exn.fail
+  let raise = raise
   let sleep = Lwt_unix.sleep
   let map_s = Lwt_list.map_s
   let catch = Lwt.catch
