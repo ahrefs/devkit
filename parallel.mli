@@ -1,5 +1,10 @@
 (** Parallel *)
 
+type revive_mode =
+  | Never (** never revive worker *)
+  | On_failure (** revive when worker exits with non-zero code *)
+  | Always (** revive worker regardless of exit code *)
+
 (** Invoke function in a forked process and return result *)
 val invoke : ('a -> 'b) -> 'a -> unit -> 'b
 
@@ -9,9 +14,9 @@ val launch_forks : ('a -> unit) -> 'a list -> unit
 
 (** Launch forks for each element of the list and wait for all workers to finish.
   Pass exit signals to the workers, see {!Forks.stop} for the description of [wait_stop] parameter.
-  @param revive to keep workers running (restarting with same param if exited) [default: false]
+  @param revive to keep workers running (restarting with same param if exited) [default: Never]
 *)
-val run_forks : ?wait_stop:int -> ?revive:bool -> ?wait:int -> ?workers:int -> ('a -> unit) -> 'a list -> unit
+val run_forks : ?wait_stop:int -> ?revive:revive_mode -> ?wait:int -> ?workers:int -> ('a -> unit) -> 'a list -> unit
 
 (** Same as [run_forks] but do not fork for one worker *)
 val run_forks' : ('a -> unit) -> 'a list -> unit
