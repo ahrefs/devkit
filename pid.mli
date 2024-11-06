@@ -31,6 +31,7 @@ val parse_exn : string -> t
 
 (** {1 Current process identifier} *)
 
+val sanitize_name : string -> string
 val set_name : string -> unit
 val self : unit -> t
 val self_name : unit -> string
