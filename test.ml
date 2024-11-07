@@ -15,15 +15,15 @@ let strl = Stre.list
 let () = test "HtmlStream" begin fun () ->
   Printexc.record_backtrace true;
   let module HS = HtmlStream in
-  let (==>) s s' =
+  let test_parse_and_show ?(use_show =  HS.show_raw') s s' =
   try
-    let s'' = Control.wrapped_output (IO.output_string ()) (fun io -> HS.parse (IO.nwrite_string io $ HS.show_raw') s) in
-    if s' = s'' then () else
+    let s'' = Control.wrapped_output (IO.output_string ()) (fun io -> HS.parse (IO.nwrite_string io $use_show) s) in if s' = s'' then () else
       failwith (sprintf "%s ==> %s (got %s)" s s' s'')
   with
   | Failure s -> assert_failure s
   | exn -> assert_failure (sprintf "%s ==> %s (exn %s)\n%s" s s' (Exn.str exn) (Printexc.get_backtrace ()))
   in
+  let (==>) = test_parse_and_show in
   "<q>dsds<qq>" ==> "<q>dsds<qq>";
   "<>" ==> "";
   "< q>" ==> "<q>";
@@ -41,6 +41,18 @@ let () = test "HtmlStream" begin fun () ->
 *)
   "<a b='&amp;'>&amp;</a>" ==> "<a b='&amp;'>&amp;</a>";
   "<a b='&'>&</a>" ==> "<a b='&'>&</a>";
+  let show_event = 
+    let open HS in 
+    function
+    | Tag (name, _) -> sprintf "(OPEN-TAG:%S)" name
+    | Text t -> sprintf "(TEXT:%d)" (String.length (Raw.project t))
+    | Close name -> sprintf "(CLOSE-TAG:%S)" name
+    | Script (_, s) -> sprintf "(SCRIPT:%d)" (String.length s)
+    | Style (_, s) -> sprintf "(STYLE:%d)" (String.length s)
+  in
+  test_parse_and_show ~use_show:show_event
+    "<span><span>12345</span></span>12345<title>Some weird title <a b='&'>&</a> <span class=unmatched></title>"
+    {|(OPEN-TAG:"span")(OPEN-TAG:"span")(TEXT:5)(CLOSE-TAG:"span")(CLOSE-TAG:"span")(TEXT:5)(OPEN-TAG:"title")(TEXT:17)(OPEN-TAG:"a")(TEXT:1)(CLOSE-TAG:"a")(TEXT:1)(OPEN-TAG:"span")(CLOSE-TAG:"title")|};
 end
 
 let () = test "iequal" begin fun () ->
