@@ -34,6 +34,7 @@ let init () = { lnum = 1 }
     match !tag with
     | "script" -> fhold; fgoto in_script;
     | "style" -> fhold; fgoto in_style;
+    | "title" -> fhold; fgoto in_title;
     | "" -> ()
     | _ -> call @@ Tag (!tag, List.rev !attrs)
  }
@@ -49,6 +50,11 @@ let init () = { lnum = 1 }
 
  in_script := (count_newlines | any* >mark %mark_end :>> ('<' wsp* '/' wsp* 'script'i wsp* '>' >{call @@ Script (List.rev !attrs, sub ())} @{fgoto main;}));
  in_style := (count_newlines | any* >mark %mark_end :>> ('<' wsp* '/' wsp* 'style'i wsp* '>' >{call @@ Style (List.rev !attrs, sub ())} @{fgoto main;}));
+ in_title := (count_newlines | any* >mark %mark_end :>> ('<' wsp* '/' wsp* 'title'i wsp* '>' >{
+   call @@ Tag ("title", List.rev !attrs);
+   call @@ Text (Raw.inject (sub ()));
+   call @@ Close ("title");
+ } @{fgoto main;}));
 
  garbage_tag := (count_newlines | ^'>'* '>' @tag_done @{ fgoto main; });
 

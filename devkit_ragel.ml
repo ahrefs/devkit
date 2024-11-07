@@ -2,7 +2,7 @@
 # 1 "devkit_ragel.ml.rl"
 
 
-# 6 "devkit_ragel.ml"
+# 4 "devkit_ragel.ml"
 let _ipv4_trans_keys : int array = Array.concat [ [|
 	0; 0; 48; 57; 46; 57; 48; 57; 46; 57; 48; 57; 46; 57; 48; 57; 
 	46; 57; 46; 46; 46; 57; 46; 46; 46; 57; 46; 46; 48; 57; 48; 57; 
@@ -85,14 +85,14 @@ let parse_ipv4 data =
     ip := Int32.logor (Int32.shift_left !ip 8) (Int32.of_int !n)
   in
   
-# 89 "devkit_ragel.ml"
+# 85 "devkit_ragel.ml"
 	begin
 	cs.contents <- ipv4_start;
 	end;
 
 # 20 "devkit_ragel.ml.rl"
   
-# 96 "devkit_ragel.ml"
+# 90 "devkit_ragel.ml"
 	begin
 	let state = { keys = 0; trans = 0; } in
 	let rec do_start () =
@@ -145,7 +145,7 @@ and do_eof_trans () =
 # 4 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
-# 149 "devkit_ragel.ml"
+# 143 "devkit_ragel.ml"
 		| _ -> ()
 	with Goto_again_ipv4 -> () end;
 
@@ -166,7 +166,7 @@ and do_test_eof () =
 # 5 "devkit_ragel.ml.rl"
 		begin  set ()  end;
 	()
-# 170 "devkit_ragel.ml"
+# 164 "devkit_ragel.ml"
 		| _ -> ()
 	end
 	with Goto_again_ipv4 -> do_again ()
@@ -184,7 +184,7 @@ let is_ipv4_slow data =
   let n = ref 0 in
   let set () = if !n > 255 then raise Not_found in
   
-# 188 "devkit_ragel.ml"
+# 180 "devkit_ragel.ml"
 	begin
 	cs.contents <- ipv4_start;
 	end;
@@ -192,7 +192,7 @@ let is_ipv4_slow data =
 # 28 "devkit_ragel.ml.rl"
   try
   
-# 196 "devkit_ragel.ml"
+# 186 "devkit_ragel.ml"
 	begin
 	let state = { keys = 0; trans = 0; } in
 	let rec do_start () =
@@ -245,7 +245,7 @@ and do_eof_trans () =
 # 4 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
-# 249 "devkit_ragel.ml"
+# 239 "devkit_ragel.ml"
 		| _ -> ()
 	with Goto_again_ipv4 -> () end;
 
@@ -266,7 +266,7 @@ and do_test_eof () =
 # 5 "devkit_ragel.ml.rl"
 		begin  set ()  end;
 	()
-# 270 "devkit_ragel.ml"
+# 260 "devkit_ragel.ml"
 		| _ -> ()
 	end
 	with Goto_again_ipv4 -> do_again ()
@@ -281,7 +281,7 @@ and do_test_eof () =
   with Not_found -> false
 
 
-# 285 "devkit_ragel.ml"
+# 273 "devkit_ragel.ml"
 let _is_ipv4_trans_keys : int array = Array.concat [ [|
 	0; 0; 48; 57; 46; 57; 48; 57; 46; 57; 48; 57; 46; 57; 48; 57; 
 	46; 57; 46; 46; 46; 57; 46; 53; 46; 57; 46; 46; 46; 57; 46; 53; 
@@ -359,14 +359,14 @@ exception Goto_eof_trans_is_ipv4
 let is_ipv4 data =
   let cs = ref 0 and p = ref 0 and pe = ref (String.length data) in
   
-# 363 "devkit_ragel.ml"
+# 349 "devkit_ragel.ml"
 	begin
 	cs.contents <- is_ipv4_start;
 	end;
 
 # 43 "devkit_ragel.ml.rl"
   
-# 370 "devkit_ragel.ml"
+# 354 "devkit_ragel.ml"
 	begin
 	let state = { keys = 0; trans = 0; } in
 	let rec do_start () =
@@ -412,7 +412,7 @@ and do_test_eof () =
   !cs >= is_ipv4_first_final
 
 
-# 416 "devkit_ragel.ml"
+# 398 "devkit_ragel.ml"
 let _compact_duration_trans_keys : int array = Array.concat [ [|
 	0; 0; 115; 115; 48; 110; 115; 115; 46; 110; 48; 109; 48; 109; 48; 109; 
 	109; 109; 48; 57; 46; 115; 48; 115; 48; 115; 48; 115; 109; 115; 48; 57; 
@@ -596,14 +596,14 @@ let parse_compact_duration data =
   let n = ref 0 and f = ref 0. and fna = ref 0 and fn = ref 0 in
   let t = ref 0 in
   
-# 600 "devkit_ragel.ml"
+# 580 "devkit_ragel.ml"
 	begin
 	cs.contents <- compact_duration_start;
 	end;
 
 # 69 "devkit_ragel.ml.rl"
   
-# 607 "devkit_ragel.ml"
+# 585 "devkit_ragel.ml"
 	begin
 	let state = { keys = 0; trans = 0; } in
 	let rec do_start () =
@@ -698,7 +698,7 @@ and do_eof_trans () =
 # 51 "devkit_ragel.ml.rl"
 		begin  n := 10 * !n + (Char.code data.[p.contents] - Char.code '0')  end;
 	()
-# 702 "devkit_ragel.ml"
+# 680 "devkit_ragel.ml"
 		| _ -> ()
 	with Goto_again_compact_duration -> () end;
 
@@ -745,7 +745,7 @@ and do_test_eof () =
 # 48 "devkit_ragel.ml.rl"
 		begin  f := !f +. (float(!fn) /. (10. ** float(!fna))); t := !t + !n; fn := 0; fna := 0;  end;
 	()
-# 749 "devkit_ragel.ml"
+# 727 "devkit_ragel.ml"
 		| _ -> ()
 	end
 	with Goto_again_compact_duration -> do_again ()
