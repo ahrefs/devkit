@@ -50,9 +50,10 @@ let () = test "HtmlStream" begin fun () ->
     | Script (_, s) -> sprintf "(SCRIPT:%d)" (String.length s)
     | Style (_, s) -> sprintf "(STYLE:%d)" (String.length s)
   in
+  (* `<title>` elements are parsed in Raw mode: *)
   test_parse_and_show ~use_show:show_event
     "<span><span>12345</span></span>12345<title>Some weird title <a b='&'>&</a> <span class=unmatched></title>"
-    {|(OPEN-TAG:"span")(OPEN-TAG:"span")(TEXT:5)(CLOSE-TAG:"span")(CLOSE-TAG:"span")(TEXT:5)(OPEN-TAG:"title")(TEXT:17)(OPEN-TAG:"a")(TEXT:1)(CLOSE-TAG:"a")(TEXT:1)(OPEN-TAG:"span")(CLOSE-TAG:"title")|};
+    {|(OPEN-TAG:"span")(OPEN-TAG:"span")(TEXT:5)(CLOSE-TAG:"span")(CLOSE-TAG:"span")(TEXT:5)(OPEN-TAG:"title")(TEXT:54)(CLOSE-TAG:"title")|};
 end
 
 let () = test "iequal" begin fun () ->
