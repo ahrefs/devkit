@@ -247,7 +247,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
   (* Given a list of strings, check pre-existing entry starting with `~name`; and adds the concatenation of `~name` and `~value` if not. *)
   let add_if_absent ~name ~value strs =
     match strs with
-    | Some strs when List.exists (StringLabels.starts_with ~prefix:(name^":")) strs -> strs
+    | Some strs when List.exists (fun s -> Stre.starts_with s (name^":")) strs -> strs
     | Some strs -> (String.concat ": " [name; value]) :: strs
     | None -> [String.concat ": " [name; value]]
 
@@ -301,7 +301,10 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
         "url.full", `String url;
       ]
     in
-    let explicit_span = Possibly_otel.enter_manual_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ~data:describe action_name in
+    let explicit_span =
+      (* We set the value of `__FUNCTION__` to preserve the build with OCaml < 4.12. *)
+      Possibly_otel.enter_manual_span
+        ~__FUNCTION__:"Devkit.Web.Http.http_request'" ~__FILE__ ~__LINE__ ~data:describe action_name in
 
     let headers = match Possibly_otel.Traceparent.get_ambient ~explicit_span () with
     | None -> headers
