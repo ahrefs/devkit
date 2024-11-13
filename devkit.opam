@@ -18,10 +18,10 @@ depends: [
   "camlzip"
   "libevent" {>= "0.8.0"}
   "ocurl" {>= "0.7.2"}
-  "pcre"
+  "pcre" {>= "7.4.6"}
   "trace" {>= "0.4"}
   "extunix" {>= "0.1.4"}
-  "lwt" {>= "2.5.2"}
+  "lwt" {>= "5.7.0"}
   "lwt_ppx"
   "base-bytes"
   "base-unix"
