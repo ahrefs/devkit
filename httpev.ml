@@ -928,12 +928,14 @@ let send_reply c cout reply =
   end
   in
   (* possibly apply encoding *)
-  let (hdrs,body) =
+  let%lwt (hdrs,body) =
     (* TODO do not apply encoding to application/gzip *)
     (* TODO gzip + chunked? *)
     match body, code, c.req with
-    | `Body s, `Ok, Ready { encoding=Gzip; _ } when String.length s > 128 -> ("Content-Encoding", "gzip")::hdrs, `Body (Gzip_io.string s)
-    | _ -> hdrs, body
+    | `Body s, `Ok, Ready { encoding=Gzip; _ } when String.length s > 128 ->
+      let%lwt body = Gzip_io.string_lwt s in
+      Lwt.return (("Content-Encoding", "gzip")::hdrs, `Body body)
+    | _ -> Lwt.return (hdrs, body)
   in
   let hdrs = match body with
   | `Body s -> ("Content-Length", string_of_int (String.length s)) :: hdrs
