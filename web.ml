@@ -302,9 +302,10 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       ]
     in
     let explicit_span =
+      let span_name = Printf.sprintf "%s %s" action_name url in
       (* We set the value of `__FUNCTION__` to preserve the build with OCaml < 4.12. *)
       Possibly_otel.enter_manual_span
-        ~__FUNCTION__:"Devkit.Web.Http.http_request'" ~__FILE__ ~__LINE__ ~data:describe action_name in
+        ~__FUNCTION__:"Devkit.Web.Http.http_request'" ~__FILE__ ~__LINE__ ~data:describe span_name in
 
     let headers = match Possibly_otel.Traceparent.get_ambient ~explicit_span () with
     | None -> headers
