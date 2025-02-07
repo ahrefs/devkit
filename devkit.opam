@@ -13,6 +13,7 @@ build: [
 depends: [
   "ocaml" {>= "4.05.0"}
   "dune" {>= "2.0"}
+  "angstrom"
   ("extlib" {>= "1.7.1"} | "extlib-compat" {>= "1.7.1"})
   "ounit2"
   "camlzip"
