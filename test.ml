@@ -544,6 +544,35 @@ let () = test "Web.urlencode" @@ fun () ->
   assert_equal (Web.urlencode "Hello Günter") "Hello+G%C3%BCnter";
   ()
 
+let () =
+  let open Lwt.Syntax in
+  let rec pings f = function
+    | [] -> Lwt.return_unit
+    | t :: ts ->
+        let* () = Lwt_unix.sleep t in
+        f ();
+        pings f ts
+  in
+  test "Lwt_util.idle_check" @@ fun () ->
+  let accumulator = ref 0 in
+  let (s, w) = Lwt_util.idle_check ~interval:0.01 in
+  Lwt_main.run (
+    Lwt.pick [
+      pings (fun () -> incr accumulator; s ()) [0.001; 0.001; 0.001; 1.];
+      w
+    ]
+  );
+  assert_equal !accumulator 3;
+  let (s, w) = Lwt_util.idle_check ~interval:0.01 in
+  Lwt_main.run (
+    Lwt.pick [
+      pings (fun () -> incr accumulator; s ()) [0.001; 1.];
+      w
+    ]
+  );
+  assert_equal !accumulator 4;
+  ()
+
 let tests () =
   let (_:test_results) = run_test_tt_main ("devkit" >::: List.rev !tests) in
   ()

@@ -22,3 +22,13 @@ val action_do : string -> (unit -> 'a Lwt.t) -> 'a Lwt.t
 
 (** same as [Lwt.async] but also cancels task on {!Daemon.ShouldExit} *)
 val async : (unit -> unit Lwt.t) -> unit
+
+(** [idle_check ~interval] is a pair [(stamp,wait)] where you use
+    [stamp: unit -> unit] to indicate activity, and [wait : unit Lwt.t] is a
+    promise that resolves if there's been no calls to [stamp] during an
+    [interval].
+
+    This is typically used to manage a background task (e.g., periodically
+    fetching data from a remote source) based on whether there is ongoing
+    activity (e.g., whether the data is being used in the UI). *)
+val idle_check : interval:Time.duration -> ((unit -> unit) * unit Lwt.t)

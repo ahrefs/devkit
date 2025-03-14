@@ -60,3 +60,17 @@ let action name f x =
 let action_do name f = action name f ()
 
 let async f = Lwt.async Daemon.(fun () -> try%lwt unless_exit (f ()) with ShouldExit -> Lwt.return_unit)
+
+let idle_check ~interval =
+  let timestamp = ref (Time.now ()) in
+  let stamp () = timestamp := Time.now () in
+  let rec wait () =
+    let idle = Time.ago !timestamp in
+    if idle > interval then
+      Lwt.return_unit
+    else begin
+      let%lwt () = Lwt_unix.sleep (interval -. idle) in
+      wait ()
+    end
+  in
+  (stamp, wait ())
