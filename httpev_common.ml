@@ -137,7 +137,7 @@ let status_code : reply_status -> int = function
   | `Custom _ -> 999
 
 let show_http_reply : reply_status -> string = function
-  | `Ok -> "HTTP/1.0 200 OK"
+  | `Ok -> "HTTP/1.1 200 OK"
   | `Created -> "HTTP/1.0 201 Created"
   | `Accepted -> "HTTP/1.0 202 Accepted"
   | `No_content -> "HTTP/1.0 204 No Content"
