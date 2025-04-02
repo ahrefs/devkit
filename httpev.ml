@@ -382,10 +382,10 @@ let set_blocking req =
   req.blocking <- Some io;
   io
 
-let make_request_headers code hdrs =
+let make_request_headers ?version code hdrs =
   let b = Buffer.create 1024 in
   let put s = Buffer.add_string b s; Buffer.add_string b "\r\n" in
-  put (show_http_reply code);
+  put (show_http_reply ?version code);
   List.iter (fun (n,v) -> bprintf b "%s: %s\r\n" n v) hdrs;
   put "Connection: close";
   put "";
@@ -403,7 +403,8 @@ let send_reply_async c encoding (code,hdrs,body) =
     let hdrs = ("Content-Length", string_of_int (String.length body)) :: hdrs in
     (* do not transfer body for HEAD requests *)
     let body = match c.req with Ready { meth = `HEAD; _ } -> "" | _ -> body in
-    let headers = make_request_headers code hdrs in
+    let version = match c.req with Ready req -> Some req.version | _ -> None in
+    let headers = make_request_headers ?version code hdrs in
     if c.server.config.debug then
       log #info "will answer to %s with %d+%d bytes"
         (show_peer c)
@@ -415,7 +416,7 @@ let send_reply_async c encoding (code,hdrs,body) =
 
 let send_reply_blocking c (code,hdrs) =
   try
-    write_reply_blocking c @@ make_request_headers code hdrs
+    write_reply_blocking c @@ make_request_headers ?version:(match c.req with Ready req -> Some req.version | _ -> None) code hdrs
   with
     exn -> abort c exn "send_reply_blocking"; raise exn
 
@@ -941,7 +942,8 @@ let send_reply c cout reply =
   in
   (* do not transfer body for HEAD requests *)
   let body = match c.req with Ready { meth = `HEAD; _ } -> `Body "" | _ -> body in
-  let headers = make_request_headers code hdrs in
+  let version = match c.req with Ready req -> Some req.version | _ -> None in
+  let headers = make_request_headers ?version code hdrs in
   if c.server.config.debug then
     log #info "will answer to %s with %d+%s bytes"
       (show_peer c)

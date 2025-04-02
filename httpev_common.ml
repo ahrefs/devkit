@@ -136,35 +136,45 @@ let status_code : reply_status -> int = function
 
   | `Custom _ -> 999
 
-let show_http_reply : reply_status -> string = function
-  | `Ok -> "HTTP/1.1 200 OK"
-  | `Created -> "HTTP/1.0 201 Created"
-  | `Accepted -> "HTTP/1.0 202 Accepted"
-  | `No_content -> "HTTP/1.0 204 No Content"
+let show_status = function
+  | `Ok -> "200 OK"
+  | `Created -> "201 Created"
+  | `Accepted -> "202 Accepted"
+  | `No_content -> "204 No Content"
 
-  | `Moved -> "HTTP/1.0 301 Moved Permanently"
-  | `Found -> "HTTP/1.0 302 Found"
+  | `Moved -> "301 Moved Permanently"
+  | `Found -> "302 Found"
 
-  | `Bad_request -> "HTTP/1.0 400 Bad Request"
-  | `Unauthorized -> "HTTP/1.0 401 Unauthorized"
-  | `Payment_required -> "HTTP/1.0 402 Payment Required"
-  | `Forbidden -> "HTTP/1.0 403 Forbidden"
-  | `Not_found -> "HTTP/1.0 404 Not Found"
-  | `Method_not_allowed -> "HTTP/1.0 405 Method Not Allowed"
-  | `Not_acceptable -> "HTTP/1.0 406 Not Acceptable"
-  | `Conflict -> "HTTP/1.0 409 Conflict"
-  | `Length_required -> "HTTP/1.0 411 Length Required"
-  | `Request_too_large -> "HTTP/1.0 413 Request Entity Too Large"
-  | `I'm_a_teapot -> "HTTP/1.0 418 I'm a teapot"
-  | `Unprocessable_content -> "HTTP/1.0 422 Unprocessable Content"
-  | `Too_many_requests -> "HTTP/1.0 429 Too Many Requests"
+  | `Bad_request -> "400 Bad Request"
+  | `Unauthorized -> "401 Unauthorized"
+  | `Payment_required -> "402 Payment Required"
+  | `Forbidden -> "403 Forbidden"
+  | `Not_found -> "404 Not Found"
+  | `Method_not_allowed -> "405 Method Not Allowed"
+  | `Not_acceptable -> "406 Not Acceptable"
+  | `Conflict -> "409 Conflict"
+  | `Length_required -> "411 Length Required"
+  | `Request_too_large -> "413 Request Entity Too Large"
+  | `I'm_a_teapot -> "418 I'm a teapot"
+  | `Unprocessable_content -> "422 Unprocessable Content"
+  | `Too_many_requests -> "429 Too Many Requests"
 
-  | `Internal_server_error -> "HTTP/1.0 500 Internal Server Error"
-  | `Not_implemented -> "HTTP/1.0 501 Not Implemented"
-  | `Service_unavailable -> "HTTP/1.0 503 Service Unavailable"
-  | `Version_not_supported -> "HTTP/1.0 505 HTTP Version Not Supported"
+  | `Internal_server_error -> "500 Internal Server Error"
+  | `Not_implemented -> "501 Not Implemented"
+  | `Service_unavailable -> "503 Service Unavailable"
+  | `Version_not_supported -> "505 HTTP Version Not Supported"
 
   | `Custom s -> s
+
+let show_http_reply : ?version:int * int -> reply_status -> string =
+ fun ?(version = (1, 0)) reply_status ->
+  let http_version =
+    match version with
+    | 1, 0 -> "HTTP/1.0"
+    | 1, 1 -> "HTTP/1.1"
+    | _ -> "HTTP/1.0"
+  in
+  sprintf "%s %s" http_version (show_status reply_status)
 
 (* basically allow all *)
 let cors_preflight_allow_all = (`No_content, [
