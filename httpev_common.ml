@@ -136,36 +136,6 @@ let status_code : reply_status -> int = function
 
   | `Custom _ -> 999
 
-let show_status = function
-  | `Ok -> "200 OK"
-  | `Created -> "201 Created"
-  | `Accepted -> "202 Accepted"
-  | `No_content -> "204 No Content"
-
-  | `Moved -> "301 Moved Permanently"
-  | `Found -> "302 Found"
-
-  | `Bad_request -> "400 Bad Request"
-  | `Unauthorized -> "401 Unauthorized"
-  | `Payment_required -> "402 Payment Required"
-  | `Forbidden -> "403 Forbidden"
-  | `Not_found -> "404 Not Found"
-  | `Method_not_allowed -> "405 Method Not Allowed"
-  | `Not_acceptable -> "406 Not Acceptable"
-  | `Conflict -> "409 Conflict"
-  | `Length_required -> "411 Length Required"
-  | `Request_too_large -> "413 Request Entity Too Large"
-  | `I'm_a_teapot -> "418 I'm a teapot"
-  | `Unprocessable_content -> "422 Unprocessable Content"
-  | `Too_many_requests -> "429 Too Many Requests"
-
-  | `Internal_server_error -> "500 Internal Server Error"
-  | `Not_implemented -> "501 Not Implemented"
-  | `Service_unavailable -> "503 Service Unavailable"
-  | `Version_not_supported -> "505 HTTP Version Not Supported"
-
-  | `Custom s -> s
-
 let show_http_reply : ?version:int * int -> reply_status -> string =
  fun ?(version = (1, 0)) reply_status ->
   let http_version =
@@ -174,7 +144,35 @@ let show_http_reply : ?version:int * int -> reply_status -> string =
     | 1, 1 -> "HTTP/1.1"
     | _ -> "HTTP/1.0"
   in
-  sprintf "%s %s" http_version (show_status reply_status)
+  match reply_status with
+  | `Ok -> sprintf "%s 200 OK" http_version
+  | `Created -> sprintf "%s 201 Created" http_version
+  | `Accepted -> sprintf "%s 202 Accepted" http_version
+  | `No_content -> sprintf "%s 204 No Content" http_version
+
+  | `Moved -> sprintf "%s 301 Moved Permanently" http_version
+  | `Found -> sprintf "%s 302 Found" http_version
+
+  | `Bad_request -> sprintf "%s 400 Bad Request" http_version
+  | `Unauthorized -> sprintf "%s 401 Unauthorized" http_version
+  | `Payment_required -> sprintf "%s 402 Payment Required" http_version
+  | `Forbidden -> sprintf "%s 403 Forbidden" http_version
+  | `Not_found -> sprintf "%s 404 Not Found" http_version
+  | `Method_not_allowed -> sprintf "%s 405 Method Not Allowed" http_version
+  | `Not_acceptable -> sprintf "%s 406 Not Acceptable" http_version
+  | `Conflict -> sprintf "%s 409 Conflict" http_version
+  | `Length_required -> sprintf "%s 411 Length Required" http_version
+  | `Request_too_large -> sprintf "%s 413 Request Entity Too Large" http_version
+  | `I'm_a_teapot -> sprintf "%s 418 I'm a teapot" http_version
+  | `Unprocessable_content -> sprintf "%s 422 Unprocessable Content" http_version
+  | `Too_many_requests -> sprintf "%s 429 Too Many Requests" http_version
+
+  | `Internal_server_error -> sprintf "%s 500 Internal Server Error" http_version
+  | `Not_implemented -> sprintf "%s 501 Not Implemented" http_version
+  | `Service_unavailable -> sprintf "%s 503 Service Unavailable" http_version
+  | `Version_not_supported -> sprintf "%s 505 HTTP Version Not Supported" http_version
+
+  | `Custom s -> s
 
 (* basically allow all *)
 let cors_preflight_allow_all = (`No_content, [
