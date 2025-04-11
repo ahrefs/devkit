@@ -136,13 +136,12 @@ let status_code : reply_status -> int = function
 
   | `Custom _ -> 999
 
-let show_http_reply : ?version:int * int -> reply_status -> string =
- fun ?(version = (1, 0)) reply_status ->
+let show_http_reply : version:[ `Http_1_0 | `Http_1_1 ] -> reply_status -> string =
+ fun ~version reply_status ->
   let http_version =
     match version with
-    | 1, 0 -> "HTTP/1.0"
-    | 1, 1 -> "HTTP/1.1"
-    | _ -> "HTTP/1.0"
+    | `Http_1_0 -> "HTTP/1.0"
+    | `Http_1_1-> "HTTP/1.1"
   in
   match reply_status with
   | `Ok -> sprintf "%s 200 OK" http_version
