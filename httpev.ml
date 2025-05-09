@@ -561,7 +561,11 @@ let listen ~name ?(backlog=100) ?(reuseport=false) addr =
   let fd = socket ~cloexec:true domain SOCK_STREAM 0 in
   try
     setsockopt fd SO_REUSEADDR true;
-    if reuseport then U.setsockopt fd SO_REUSEPORT true;
+    begin match domain, reuseport with
+    | PF_UNIX, true -> log #warn "TCP.listen %s : reuseport doesn't make sense for unix socket, ignoring" (Nix.show_addr addr)
+    | PF_INET, true -> U.setsockopt fd SO_REUSEPORT true
+    | _ -> ()
+    end;
     bind fd addr;
     listen fd backlog;
     log #info "%s listen TCP %s" name (Nix.show_addr addr);
