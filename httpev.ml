@@ -38,7 +38,6 @@ type config =
     single : bool; (** only process one request at a time (intended for preforked workers) *)
     exit_thread : unit Lwt.t option;
       (** if set, stop accepting connections as soon as exit_thread terminates (defaults to [Daemon.should_exit_lwt]) *)
-    reuseport : bool;
     nodelay : bool;
     strict_args : bool;
       (** default false, if enabled - will in particular fail on "/path?arg1&arg2", why would anyone want that? *)
@@ -71,7 +70,6 @@ let default =
     yield = true;
     single = false;
     exit_thread = Some Daemon.should_exit_lwt;
-    reuseport = false;
     nodelay = false;
     strict_args = false;
     max_time = default_max_time;
@@ -556,14 +554,13 @@ module Tcp = struct
 
 open Unix
 
-let listen ~name ?(backlog=100) ?(reuseport=false) addr =
+let listen ~name ?(backlog=100) addr =
   let domain = domain_of_sockaddr addr in
   let fd = socket ~cloexec:true domain SOCK_STREAM 0 in
   try
     setsockopt fd SO_REUSEADDR true;
-    begin match domain, reuseport with
-    | PF_UNIX, true -> log #warn "TCP.listen %s : reuseport doesn't make sense for unix socket, ignoring" (Nix.show_addr addr)
-    | PF_INET, true -> U.setsockopt fd SO_REUSEPORT true
+    begin match domain with
+    | PF_INET -> U.setsockopt fd SO_REUSEPORT true
     | _ -> ()
     end;
     bind fd addr;
@@ -664,7 +661,7 @@ let reap_orphans srv =
   in loop ()
 
 let start_listen config =
-  Tcp.listen ~name:config.name ~backlog:config.backlog ~reuseport:config.reuseport config.connection
+  Tcp.listen ~name:config.name ~backlog:config.backlog config.connection
 
 let setup_server_fd fd config answer =
   let server = make_server_state fd config in
