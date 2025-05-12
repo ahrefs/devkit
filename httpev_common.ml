@@ -172,7 +172,7 @@ let show_http_reply : version:[ `Http_1_0 | `Http_1_1 ] -> reply_status -> strin
  fun ~version reply_status ->
   match reply_status with
   | `Custom s -> s
-  | #status_code as code -> sprintf "%s %s" (show_status_code code) (show_http_version version)
+  | #status_code as code -> sprintf "%s %s" (show_http_version version) (show_status_code code)
 
 (* basically allow all *)
 let cors_preflight_allow_all = (`No_content, [
