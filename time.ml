@@ -280,3 +280,12 @@ let ago_str = show_duration $ ago
 (* compat *)
 let int = to_seconds
 let to_sec = to_seconds
+
+let start_of_day t =
+  let t = Unix.gmtime t in
+  ExtUnix.Specific.timegm { t with tm_sec = 0; tm_min = 0; tm_hour = 0 }
+
+let end_of_day t =
+  let t = Unix.gmtime t in
+  ExtUnix.Specific.timegm { t with tm_sec = 59; tm_min = 59; tm_hour = 23 }
+
