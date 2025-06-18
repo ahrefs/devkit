@@ -257,12 +257,14 @@ let of_compact_duration s =
 let seconds_1m = 60
 let seconds_1h = seconds_1m * 60
 let seconds_1d = seconds_1h * 24
+let seconds_1y = seconds_1d * 365
 
 let time_x factor = (fun x -> float @@ factor * x), (fun x -> int_of_float x / factor), (fun x -> float (int_of_float x / factor * factor))
 let (seconds,to_seconds,round_seconds) = time_x 1
 let (minutes,to_minutes,round_minutes) = time_x seconds_1m
 let (hours,to_hours,round_hours) = time_x seconds_1h
 let (days,to_days,round_days) = time_x seconds_1d
+let (years,to_years,round_years) = time_x seconds_1y
 
 (** convert integer number of milliseconds to Time.t *)
 let msec x = float x /. 1000.
