@@ -27,8 +27,18 @@ let should_run () = not !should_exit_
 exception ShouldExit
 
 let signal_exit =
-  let do_lwt = lazy (Lwt.wakeup_later signal_exit_lwt ()) in
-  (* invariant: should_exit_ = (Lwt.state should_exit_lwt = Lwt.Return) *)
+  let do_lwt = lazy (
+    (* we can't use Lwt's wakeup_later because it doesn't always "later", it
+       soemtimes behaves the same as plain wakeup *)
+    Lwt.dont_wait
+      (fun () ->
+        Lwt.bind
+          (Lwt.pause ())
+          (fun () -> Lwt.wakeup signal_exit_lwt (); Lwt.return_unit))
+      (fun exc -> log#error "signal exit: error at wakeup: %s" (Printexc.to_string exc))
+    )
+  in
+  (* nearly-invariant: should_exit_ = (Lwt.state should_exit_lwt = Lwt.Return) *)
   fun () -> should_exit_ := true; Lazy.force do_lwt
 
 (** @raise ShouldExit if [should_exit] condition is set, otherwise do nothing *)
