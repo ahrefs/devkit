@@ -142,7 +142,7 @@ let read_env_config = State.read_env_config
 (**
   param [lines]: whether to split multiline message as separate log lines (default [true])
 
-  param [backtrace]: whether to show backtrace (default is [true] if [exn] is given and backtrace recording is enabled)
+  param [backtrace]: whether to show backtrace if [exn] is given (default is [false])
 
   param [saved_backtrace]: supply backtrace to show instead of using [Printexc.get_backtrace]
 *)
@@ -163,7 +163,7 @@ let make_s output_line =
     output lines facil (s ^ " : exn " ^ Exn.str exn ^ (if bt = [] then " (no backtrace)" else ""));
     List.iter (fun line -> output_line facil ("    " ^ line)) bt
   in
-  fun ?exn ?(lines=true) ?backtrace ?saved_backtrace s ->
+  fun ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace s ->
     try
       match exn with
       | None -> output lines facil s
@@ -171,7 +171,7 @@ let make_s output_line =
       match saved_backtrace with
       | Some bt -> print_bt lines exn bt s
       | None ->
-      match Option.default (Printexc.backtrace_status ()) backtrace with
+      match backtrace with
       | true -> print_bt lines exn (Exn.get_backtrace ()) s
       | false -> output lines facil (s ^ " : exn " ^ Exn.str exn)
     with exn ->
