@@ -9,6 +9,15 @@ val ( $ ) : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b
 (** 2-function composition : [f $$ g] is equivalent to [(fun x y -> f (g x) (g y))] *)
 val ( $$ ) : ('a -> 'a -> 'b) -> ('c -> 'a) -> 'c -> 'c -> 'b
 
+(** 1-argument function composition combinators that allow quickly switching to or from point-free chained function pipeline
+  e.g. [let inc s = string_of_int @@ (+) 1 @@ int_of_string s] vs [let inc = F1.(string_of_int @@ (+) 1 @@ int_of_string)]
+  and similarly [let inc = F1.(int_of_string |> (+) 1 |> string_of_int)]
+*)
+module F1 : sig
+  val ( @@ ) : ('a -> 'b) -> ('c -> 'a) -> 'c -> 'b
+  val ( |> ) : ('a -> 'b) -> ('b -> 'c) -> 'a -> 'c
+end
+
 (** identity *)
 val id : 'a -> 'a
 

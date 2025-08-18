@@ -7,6 +7,11 @@ let ($) f g = fun x -> f (g x)
 let ($$) f g = fun x y -> f (g x) (g y)
 let (!!) = Lazy.force
 
+module F1 = struct
+  let (@@) f g = fun x -> f @@ g @@ x
+  let (|>) f g = fun x -> x |> f |> g
+end
+
 external id : 'a -> 'a = "%identity"
 external identity : 'a -> 'a = "%identity"
 let flip f x y = f y x
