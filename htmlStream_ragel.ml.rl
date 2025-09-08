@@ -46,7 +46,7 @@ let init () = { lnum = 1 }
  count_newlines = ('\n' >{ ctx.lnum <- ctx.lnum + 1 } | ^'\n'+)**;
 
  wsp = 0..32;
- ident = alnum | '-' | [_:] ;
+ ident = alnum | '-' | [_:.] ;
 
  in_script := (count_newlines | any* >mark %mark_end :>> ('<' wsp* '/' wsp* 'script'i wsp* '>' >{call @@ Script (List.rev !attrs, sub ())} @{fgoto main;}));
  in_style := (count_newlines | any* >mark %mark_end :>> ('<' wsp* '/' wsp* 'style'i wsp* '>' >{call @@ Style (List.rev !attrs, sub ())} @{fgoto main;}));
