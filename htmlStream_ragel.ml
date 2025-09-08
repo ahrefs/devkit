@@ -23,7 +23,7 @@ let init () = { lnum = 1 }
 
 
 # 24 "htmlStream_ragel.ml"
-let _htmlstream_trans_keys : int array = Array.concat [ [|
+let _htmlstream_trans_keys : int array = [|
 	10; 60; 10; 60; 0; 122; 10; 10; 10; 122; 10; 45; 10; 45; 10; 45; 
 	10; 62; 10; 122; 0; 122; 0; 122; 0; 122; 0; 122; 0; 62; 0; 62; 
 	10; 60; 10; 34; 10; 34; 0; 122; 10; 62; 10; 39; 10; 39; 0; 122; 
@@ -34,9 +34,9 @@ let _htmlstream_trans_keys : int array = Array.concat [ [|
 	10; 116; 10; 121; 10; 108; 10; 101; 0; 62; 10; 10; 10; 60; 10; 60; 
 	0; 60; 0; 116; 10; 105; 10; 116; 10; 108; 10; 101; 0; 62; 10; 10; 
 	10; 62; 10; 10; 0
-|] ]
+|]
 
-let _htmlstream_key_spans : int array = Array.concat [ [|
+let _htmlstream_key_spans : int array = [|
 	51; 51; 123; 1; 113; 36; 36; 36; 
 	53; 113; 123; 123; 123; 123; 63; 63; 
 	51; 25; 25; 123; 53; 30; 30; 123; 
@@ -47,9 +47,9 @@ let _htmlstream_key_spans : int array = Array.concat [ [|
 	107; 112; 99; 92; 63; 1; 51; 51; 
 	61; 117; 96; 107; 99; 92; 63; 1; 
 	53; 1
-|] ]
+|]
 
-let _htmlstream_index_offsets : int array = Array.concat [ [|
+let _htmlstream_index_offsets : int array = [|
 	0; 52; 104; 228; 230; 344; 381; 418; 
 	455; 509; 623; 747; 871; 995; 1119; 1183; 
 	1247; 1299; 1325; 1351; 1475; 1529; 1560; 1591; 
@@ -60,9 +60,9 @@ let _htmlstream_index_offsets : int array = Array.concat [ [|
 	4165; 4273; 4386; 4486; 4579; 4643; 4645; 4697; 
 	4749; 4811; 4929; 5026; 5134; 5234; 5327; 5391; 
 	5393; 5447
-|] ]
+|]
 
-let _htmlstream_indicies : int array = Array.concat [ [|
+let _htmlstream_indicies : int array = [|
 	1; 0; 0; 0; 0; 0; 0; 0; 
 	0; 0; 0; 0; 0; 0; 0; 0; 
 	0; 0; 0; 0; 0; 0; 0; 0; 
@@ -81,7 +81,7 @@ let _htmlstream_indicies : int array = Array.concat [ [|
 	2; 2; 2; 2; 2; 2; 2; 2; 
 	2; 2; 2; 2; 2; 2; 2; 2; 
 	2; 8; 6; 6; 6; 6; 6; 6; 
-	6; 6; 6; 6; 6; 9; 6; 10; 
+	6; 6; 6; 6; 6; 9; 9; 10; 
 	9; 9; 9; 9; 9; 9; 9; 9; 
 	9; 9; 9; 6; 6; 6; 6; 11; 
 	6; 9; 9; 9; 9; 9; 9; 9; 
@@ -131,7 +131,7 @@ let _htmlstream_indicies : int array = Array.concat [ [|
 	6; 6; 6; 6; 6; 6; 6; 6; 
 	6; 6; 6; 6; 6; 6; 6; 6; 
 	6; 6; 6; 6; 6; 6; 6; 6; 
-	22; 6; 6; 22; 22; 22; 22; 22; 
+	22; 22; 6; 22; 22; 22; 22; 22; 
 	22; 22; 22; 22; 22; 22; 6; 6; 
 	6; 6; 6; 6; 22; 22; 22; 22; 
 	22; 22; 22; 22; 22; 22; 22; 22; 
@@ -146,7 +146,7 @@ let _htmlstream_indicies : int array = Array.concat [ [|
 	23; 23; 23; 23; 23; 23; 23; 23; 
 	23; 23; 23; 23; 23; 23; 23; 23; 
 	6; 6; 6; 6; 6; 6; 6; 6; 
-	6; 6; 6; 6; 22; 6; 6; 22; 
+	6; 6; 6; 6; 22; 22; 6; 22; 
 	22; 22; 22; 22; 22; 22; 22; 22; 
 	22; 22; 6; 6; 6; 25; 26; 6; 
 	22; 22; 22; 22; 22; 22; 22; 22; 
@@ -162,7 +162,7 @@ let _htmlstream_indicies : int array = Array.concat [ [|
 	27; 27; 27; 27; 27; 27; 27; 27; 
 	27; 27; 27; 27; 6; 6; 6; 6; 
 	6; 6; 6; 6; 6; 6; 6; 6; 
-	29; 6; 6; 29; 29; 29; 29; 29; 
+	29; 29; 6; 29; 29; 29; 29; 29; 
 	29; 29; 29; 29; 29; 29; 6; 6; 
 	6; 30; 31; 6; 29; 29; 29; 29; 
 	29; 29; 29; 29; 29; 29; 29; 29; 
@@ -177,7 +177,7 @@ let _htmlstream_indicies : int array = Array.concat [ [|
 	32; 32; 32; 32; 32; 32; 32; 32; 
 	32; 32; 32; 32; 32; 32; 32; 32; 
 	6; 6; 6; 6; 6; 6; 6; 6; 
-	6; 6; 6; 6; 34; 6; 6; 34; 
+	6; 6; 6; 6; 34; 34; 6; 34; 
 	34; 34; 34; 34; 34; 34; 34; 34; 
 	34; 34; 6; 6; 35; 36; 37; 6; 
 	34; 34; 34; 34; 34; 34; 34; 34; 
@@ -193,7 +193,7 @@ let _htmlstream_indicies : int array = Array.concat [ [|
 	38; 38; 38; 38; 38; 38; 38; 38; 
 	38; 38; 38; 38; 6; 6; 6; 6; 
 	6; 6; 6; 6; 6; 6; 6; 6; 
-	40; 6; 6; 40; 40; 40; 40; 40; 
+	40; 40; 6; 40; 40; 40; 40; 40; 
 	40; 40; 40; 40; 40; 40; 6; 6; 
 	41; 42; 43; 6; 40; 40; 40; 40; 
 	40; 40; 40; 40; 40; 40; 40; 40; 
@@ -237,7 +237,7 @@ let _htmlstream_indicies : int array = Array.concat [ [|
 	61; 61; 61; 61; 61; 61; 61; 61; 
 	61; 61; 61; 61; 61; 61; 61; 61; 
 	6; 6; 6; 6; 6; 6; 6; 6; 
-	6; 6; 6; 6; 40; 6; 6; 40; 
+	6; 6; 6; 6; 40; 40; 6; 40; 
 	40; 40; 40; 40; 40; 40; 40; 40; 
 	40; 40; 6; 6; 6; 42; 43; 6; 
 	40; 40; 40; 40; 40; 40; 40; 40; 
@@ -267,7 +267,7 @@ let _htmlstream_indicies : int array = Array.concat [ [|
 	67; 67; 67; 67; 67; 67; 67; 67; 
 	67; 67; 67; 67; 67; 67; 67; 67; 
 	6; 6; 6; 6; 6; 6; 6; 6; 
-	6; 6; 6; 6; 69; 6; 70; 69; 
+	6; 6; 6; 6; 69; 69; 70; 69; 
 	69; 69; 69; 69; 69; 69; 69; 69; 
 	69; 69; 6; 6; 6; 71; 6; 6; 
 	69; 69; 69; 69; 69; 69; 69; 69; 
@@ -283,7 +283,7 @@ let _htmlstream_indicies : int array = Array.concat [ [|
 	72; 72; 72; 72; 72; 72; 72; 72; 
 	72; 72; 72; 72; 6; 6; 6; 6; 
 	6; 6; 6; 6; 6; 6; 6; 6; 
-	74; 6; 75; 74; 74; 74; 74; 74; 
+	74; 74; 75; 74; 74; 74; 74; 74; 
 	74; 74; 74; 74; 74; 74; 6; 6; 
 	6; 76; 6; 6; 74; 74; 74; 74; 
 	74; 74; 74; 74; 74; 74; 74; 74; 
@@ -298,7 +298,7 @@ let _htmlstream_indicies : int array = Array.concat [ [|
 	77; 77; 77; 77; 77; 77; 77; 77; 
 	77; 77; 77; 77; 77; 77; 77; 77; 
 	6; 6; 6; 6; 6; 6; 6; 6; 
-	6; 6; 6; 6; 79; 6; 80; 79; 
+	6; 6; 6; 6; 79; 79; 80; 79; 
 	79; 79; 79; 79; 79; 79; 79; 79; 
 	79; 79; 6; 6; 81; 82; 6; 6; 
 	79; 79; 79; 79; 79; 79; 79; 79; 
@@ -314,7 +314,7 @@ let _htmlstream_indicies : int array = Array.concat [ [|
 	83; 83; 83; 83; 83; 83; 83; 83; 
 	83; 83; 83; 83; 6; 6; 6; 6; 
 	6; 6; 6; 6; 6; 6; 6; 6; 
-	85; 6; 86; 85; 85; 85; 85; 85; 
+	85; 85; 86; 85; 85; 85; 85; 85; 
 	85; 85; 85; 85; 85; 85; 6; 6; 
 	87; 88; 6; 6; 85; 85; 85; 85; 
 	85; 85; 85; 85; 85; 85; 85; 85; 
@@ -373,7 +373,7 @@ let _htmlstream_indicies : int array = Array.concat [ [|
 	111; 111; 111; 111; 111; 111; 111; 111; 
 	111; 111; 111; 111; 6; 6; 6; 6; 
 	6; 6; 6; 6; 6; 6; 6; 6; 
-	85; 6; 86; 85; 85; 85; 85; 85; 
+	85; 85; 86; 85; 85; 85; 85; 85; 
 	85; 85; 85; 85; 85; 85; 6; 6; 
 	6; 88; 6; 6; 85; 85; 85; 85; 
 	85; 85; 85; 85; 85; 85; 85; 85; 
@@ -396,7 +396,7 @@ let _htmlstream_indicies : int array = Array.concat [ [|
 	118; 118; 118; 118; 118; 118; 118; 118; 
 	118; 118; 118; 118; 118; 118; 117; 117; 
 	117; 117; 117; 117; 117; 117; 117; 117; 
-	117; 117; 120; 117; 117; 120; 120; 120; 
+	117; 117; 120; 120; 117; 120; 120; 120; 
 	120; 120; 120; 120; 120; 120; 120; 120; 
 	117; 117; 117; 121; 117; 117; 120; 120; 
 	120; 120; 120; 120; 120; 120; 120; 120; 
@@ -417,7 +417,7 @@ let _htmlstream_indicies : int array = Array.concat [ [|
 	124; 124; 124; 124; 124; 124; 124; 124; 
 	124; 124; 124; 124; 124; 124; 124; 124; 
 	124; 124; 124; 124; 124; 124; 124; 124; 
-	124; 124; 126; 124; 124; 126; 126; 126; 
+	124; 124; 126; 126; 124; 126; 126; 126; 
 	126; 126; 126; 126; 126; 126; 126; 126; 
 	124; 124; 124; 127; 124; 124; 126; 126; 
 	126; 126; 126; 126; 126; 126; 126; 126; 
@@ -745,9 +745,9 @@ let _htmlstream_indicies : int array = Array.concat [ [|
 	186; 186; 186; 186; 186; 186; 186; 186; 
 	186; 186; 186; 186; 186; 188; 186; 190; 
 	189; 0
-|] ]
+|]
 
-let _htmlstream_trans_targs : int array = Array.concat [ [|
+let _htmlstream_trans_targs : int array = [|
 	1; 1; 2; 1; 1; 2; 3; 2; 
 	4; 23; 37; 40; 3; 3; 3; 5; 
 	9; 6; 6; 7; 8; 0; 10; 11; 
@@ -772,9 +772,9 @@ let _htmlstream_trans_targs : int array = Array.concat [ [|
 	63; 64; 63; 63; 64; 64; 64; 65; 
 	65; 66; 67; 68; 69; 70; 70; 71; 
 	71; 71; 72; 72; 73; 73; 73
-|] ]
+|]
 
-let _htmlstream_trans_actions : int array = Array.concat [ [|
+let _htmlstream_trans_actions : int array = [|
 	1; 2; 0; 0; 4; 3; 5; 4; 
 	6; 7; 6; 6; 0; 4; 8; 0; 
 	1; 0; 4; 0; 0; 0; 0; 9; 
@@ -799,9 +799,9 @@ let _htmlstream_trans_actions : int array = Array.concat [ [|
 	35; 21; 0; 4; 22; 0; 4; 0; 
 	4; 0; 0; 0; 0; 0; 4; 38; 
 	0; 4; 0; 4; 39; 0; 4
-|] ]
+|]
 
-let _htmlstream_eof_actions : int array = Array.concat [ [|
+let _htmlstream_eof_actions : int array = [|
 	0; 3; 5; 0; 5; 5; 5; 5; 
 	5; 5; 5; 5; 5; 5; 5; 5; 
 	18; 5; 5; 5; 5; 5; 5; 5; 
@@ -812,7 +812,7 @@ let _htmlstream_eof_actions : int array = Array.concat [ [|
 	0; 0; 0; 0; 0; 0; 0; 0; 
 	0; 0; 0; 0; 0; 0; 0; 0; 
 	0; 0
-|] ]
+|]
 
 let htmlstream_start : int = 0
 let htmlstream_first_final : int = 0
@@ -825,9 +825,9 @@ let htmlstream_en_garbage_tag : int = 72
 let htmlstream_en_main : int = 0
 
 type _htmlstream_state = { mutable keys : int; mutable trans : int; }
-exception Goto_match_htmlstream
-exception Goto_again_htmlstream
-exception Goto_eof_trans_htmlstream
+exception Goto_match
+exception Goto_again
+exception Goto_eof_trans
 
 # 72 "htmlStream_ragel.ml.rl"
 
@@ -878,13 +878,13 @@ and do_resume () =
 		Char.code data.[p.contents] <= _htmlstream_trans_keys.(keys+1) then
 		Char.code data.[p.contents] - _htmlstream_trans_keys.(keys) else slen));
 
-	with Goto_match_htmlstream -> () end;
+	with Goto_match -> () end;
 	do_eof_trans ()
 and do_eof_trans () =
 	cs.contents <- _htmlstream_trans_targs.(state.trans);
 
 	begin try if _htmlstream_trans_actions.(state.trans) = 0 then
-		raise_notrace Goto_again_htmlstream;
+		raise Goto_again;
 
 	match _htmlstream_trans_actions.(state.trans) with
 	| 1 ->
@@ -923,9 +923,9 @@ and do_eof_trans () =
 # 33 "htmlStream_ragel.ml.rl"
 		begin 
     match !tag with
-    | "script" -> p.contents <- p.contents - 1;  begin cs.contents <- 41; if true then raise_notrace Goto_again_htmlstream end
-    | "style" -> p.contents <- p.contents - 1;  begin cs.contents <- 52; if true then raise_notrace Goto_again_htmlstream end
-    | "title" -> p.contents <- p.contents - 1;  begin cs.contents <- 62; if true then raise_notrace Goto_again_htmlstream end
+    | "script" -> p.contents <- p.contents - 1;  begin cs.contents <- 41; if true then raise Goto_again end
+    | "style" -> p.contents <- p.contents - 1;  begin cs.contents <- 52; if true then raise Goto_again end
+    | "title" -> p.contents <- p.contents - 1;  begin cs.contents <- 62; if true then raise Goto_again end
     | "" -> ()
     | _ -> call @@ Tag (!tag, List.rev !attrs)
   end;
@@ -940,7 +940,7 @@ and do_eof_trans () =
 	()
 	| 5 ->
 # 44 "htmlStream_ragel.ml.rl"
-		begin  (*printfn "GARBAGE %S" (current ()); *) p.contents <- p.contents - 1;  begin cs.contents <- 72; if true then raise_notrace Goto_again_htmlstream end end;
+		begin  (*printfn "GARBAGE %S" (current ()); *) p.contents <- p.contents - 1;  begin cs.contents <- 72; if true then raise Goto_again end end;
 	()
 	| 4 ->
 # 46 "htmlStream_ragel.ml.rl"
@@ -1020,9 +1020,9 @@ and do_eof_trans () =
 # 33 "htmlStream_ragel.ml.rl"
 		begin 
     match !tag with
-    | "script" -> p.contents <- p.contents - 1;  begin cs.contents <- 41; if true then raise_notrace Goto_again_htmlstream end
-    | "style" -> p.contents <- p.contents - 1;  begin cs.contents <- 52; if true then raise_notrace Goto_again_htmlstream end
-    | "title" -> p.contents <- p.contents - 1;  begin cs.contents <- 62; if true then raise_notrace Goto_again_htmlstream end
+    | "script" -> p.contents <- p.contents - 1;  begin cs.contents <- 41; if true then raise Goto_again end
+    | "style" -> p.contents <- p.contents - 1;  begin cs.contents <- 52; if true then raise Goto_again end
+    | "title" -> p.contents <- p.contents - 1;  begin cs.contents <- 62; if true then raise Goto_again end
     | "" -> ()
     | _ -> call @@ Tag (!tag, List.rev !attrs)
   end;
@@ -1033,14 +1033,14 @@ and do_eof_trans () =
 # 33 "htmlStream_ragel.ml.rl"
 		begin 
     match !tag with
-    | "script" -> p.contents <- p.contents - 1;  begin cs.contents <- 41; if true then raise_notrace Goto_again_htmlstream end
-    | "style" -> p.contents <- p.contents - 1;  begin cs.contents <- 52; if true then raise_notrace Goto_again_htmlstream end
-    | "title" -> p.contents <- p.contents - 1;  begin cs.contents <- 62; if true then raise_notrace Goto_again_htmlstream end
+    | "script" -> p.contents <- p.contents - 1;  begin cs.contents <- 41; if true then raise Goto_again end
+    | "style" -> p.contents <- p.contents - 1;  begin cs.contents <- 52; if true then raise Goto_again end
+    | "title" -> p.contents <- p.contents - 1;  begin cs.contents <- 62; if true then raise Goto_again end
     | "" -> ()
     | _ -> call @@ Tag (!tag, List.rev !attrs)
   end;
 # 59 "htmlStream_ragel.ml.rl"
-		begin  begin cs.contents <- 0; if true then raise_notrace Goto_again_htmlstream end  end;
+		begin  begin cs.contents <- 0; if true then raise Goto_again end  end;
 	()
 	| 27 ->
 # 41 "htmlStream_ragel.ml.rl"
@@ -1056,7 +1056,7 @@ and do_eof_trans () =
 	()
 	| 8 ->
 # 44 "htmlStream_ragel.ml.rl"
-		begin  (*printfn "GARBAGE %S" (current ()); *) p.contents <- p.contents - 1;  begin cs.contents <- 72; if true then raise_notrace Goto_again_htmlstream end end;
+		begin  (*printfn "GARBAGE %S" (current ()); *) p.contents <- p.contents - 1;  begin cs.contents <- 72; if true then raise Goto_again end end;
 # 46 "htmlStream_ragel.ml.rl"
 		begin  ctx.lnum <- ctx.lnum + 1  end;
 	()
@@ -1070,13 +1070,13 @@ and do_eof_trans () =
 # 51 "htmlStream_ragel.ml.rl"
 		begin call @@ Script (List.rev !attrs, sub ()) end;
 # 51 "htmlStream_ragel.ml.rl"
-		begin begin cs.contents <- 0; if true then raise_notrace Goto_again_htmlstream end end;
+		begin begin cs.contents <- 0; if true then raise Goto_again end end;
 	()
 	| 37 ->
 # 52 "htmlStream_ragel.ml.rl"
 		begin call @@ Style (List.rev !attrs, sub ()) end;
 # 52 "htmlStream_ragel.ml.rl"
-		begin begin cs.contents <- 0; if true then raise_notrace Goto_again_htmlstream end end;
+		begin begin cs.contents <- 0; if true then raise Goto_again end end;
 	()
 	| 38 ->
 # 53 "htmlStream_ragel.ml.rl"
@@ -1086,7 +1086,7 @@ and do_eof_trans () =
    call @@ Close ("title");
   end;
 # 57 "htmlStream_ragel.ml.rl"
-		begin begin cs.contents <- 0; if true then raise_notrace Goto_again_htmlstream end end;
+		begin begin cs.contents <- 0; if true then raise Goto_again end end;
 	()
 	| 7 ->
 # 68 "htmlStream_ragel.ml.rl"
@@ -1106,9 +1106,9 @@ and do_eof_trans () =
 # 33 "htmlStream_ragel.ml.rl"
 		begin 
     match !tag with
-    | "script" -> p.contents <- p.contents - 1;  begin cs.contents <- 41; if true then raise_notrace Goto_again_htmlstream end
-    | "style" -> p.contents <- p.contents - 1;  begin cs.contents <- 52; if true then raise_notrace Goto_again_htmlstream end
-    | "title" -> p.contents <- p.contents - 1;  begin cs.contents <- 62; if true then raise_notrace Goto_again_htmlstream end
+    | "script" -> p.contents <- p.contents - 1;  begin cs.contents <- 41; if true then raise Goto_again end
+    | "style" -> p.contents <- p.contents - 1;  begin cs.contents <- 52; if true then raise Goto_again end
+    | "title" -> p.contents <- p.contents - 1;  begin cs.contents <- 62; if true then raise Goto_again end
     | "" -> ()
     | _ -> call @@ Tag (!tag, List.rev !attrs)
   end;
@@ -1135,7 +1135,7 @@ and do_eof_trans () =
 	()
 # 1131 "htmlStream_ragel.ml"
 		| _ -> ()
-	with Goto_again_htmlstream -> () end;
+	with Goto_again -> () end;
 
 	do_again ()
 	and do_again () =
@@ -1155,9 +1155,9 @@ and do_test_eof () =
 # 33 "htmlStream_ragel.ml.rl"
 		begin 
     match !tag with
-    | "script" -> p.contents <- p.contents - 1;  begin cs.contents <- 41; if true then raise_notrace Goto_again_htmlstream end
-    | "style" -> p.contents <- p.contents - 1;  begin cs.contents <- 52; if true then raise_notrace Goto_again_htmlstream end
-    | "title" -> p.contents <- p.contents - 1;  begin cs.contents <- 62; if true then raise_notrace Goto_again_htmlstream end
+    | "script" -> p.contents <- p.contents - 1;  begin cs.contents <- 41; if true then raise Goto_again end
+    | "style" -> p.contents <- p.contents - 1;  begin cs.contents <- 52; if true then raise Goto_again end
+    | "title" -> p.contents <- p.contents - 1;  begin cs.contents <- 62; if true then raise Goto_again end
     | "" -> ()
     | _ -> call @@ Tag (!tag, List.rev !attrs)
   end;
@@ -1172,13 +1172,13 @@ and do_test_eof () =
 	()
 	| 5 ->
 # 44 "htmlStream_ragel.ml.rl"
-		begin  (*printfn "GARBAGE %S" (current ()); *) p.contents <- p.contents - 1;  begin cs.contents <- 72; if true then raise_notrace Goto_again_htmlstream end end;
+		begin  (*printfn "GARBAGE %S" (current ()); *) p.contents <- p.contents - 1;  begin cs.contents <- 72; if true then raise Goto_again end end;
 	()
 # 1172 "htmlStream_ragel.ml"
 		| _ -> ()
 	end
-	with Goto_again_htmlstream -> do_again ()
-	| Goto_eof_trans_htmlstream -> do_eof_trans () end
+	with Goto_again -> do_again ()
+	| Goto_eof_trans -> do_eof_trans () end
 
 	in do_start ()
 	end;
