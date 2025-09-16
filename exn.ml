@@ -16,15 +16,14 @@ let to_string exn =
   match exn with
   | Unix.Unix_error (e,f,s) -> sprintf "Unix_error %s(%s) %s" f s (Unix.error_message e)
   | Curl.CurlException (_,n,s) -> sprintf "Curl.CurlException(%u,%s)" n s
-  | Pcre.Error err -> sprintf "Pcre.Error(%s)"
+  | Pcre2.Error err -> sprintf "Pcre2.Error(%s)"
     begin match err with
     | Partial -> "Partial"
-    | BadPartial -> "BadPartial"
     | BadPattern(m,p) -> sprintf "BadPattern(%s,%i)" m p
-    | BadUTF8 -> "BadUTF8"
-    | BadUTF8Offset -> "BadUTF8Offset"
+    | BadUTF -> "BadUTF"
+    | BadUTFOffset -> "BadUTFOffset"
     | MatchLimit -> "MatchLimit"
-    | RecursionLimit -> "RecursionLimit"
+    | DepthLimit -> "DepthLimit"
     | InternalError s -> sprintf "InternalError(%s)" s
     | _ -> Printexc.to_string exn
     end

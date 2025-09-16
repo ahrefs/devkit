@@ -163,7 +163,7 @@ let show_client c =
 
 type ('a,'b) result = [ `Ok of 'a | `Error of 'b ]
 
-let space = Pcre.regexp "[ \t]+"
+let space = Pcre2.regexp "[ \t]+"
 
 type reason = Url | Version | Method | Header | RequestLine | Split | Extra | NotAcceptable
 exception Parse of reason * string
@@ -209,7 +209,7 @@ let acceptable_encoding headers =
   | None -> Identity
 
 let make_request_exn ~line1 ~headers ~body c =
-  match Pcre.split ~rex:space line1 with
+  match Pcre2.split ~rex:space line1 with
   | [meth;url;version] ->
     if url.[0] <> '/' then (* abs_path *)
       failed Url url;
