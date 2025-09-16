@@ -17,7 +17,7 @@
     lwt
     lwt.unix
     ocamlnet_lite
-    pcre
+    pcre2
     stdlib-shims
     str
     trace.core

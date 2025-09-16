@@ -4,10 +4,10 @@ open Printf
 open ExtLib
 open Prelude
 
-let by_words = Pcre.regexp ~flags:[`UTF8] "[^\\pL\\pN.]+"
-let by_space = Pcre.regexp "\\s+"
-let by_lines = Pcre.regexp "\\r?\\n"
-let split rex str = match Pcre.split ~rex str with ""::l -> l | l -> l
+let by_words = Pcre2.regexp ~flags:[`UTF] "[^\\pL\\pN.]+"
+let by_space = Pcre2.regexp "\\s+"
+let by_lines = Pcre2.regexp "\\r?\\n"
+let split rex str = match Pcre2.split ~rex str with ""::l -> l | l -> l
 
 let nsplitc_enum str sep =
   let p = ref 0 in
@@ -100,14 +100,14 @@ let divide s sep = try String.split s sep with Invalid_string -> s, ""
 let dividec s sep = try splitc s sep with Not_found -> s, ""
 
 let qreplace str sub by =
-  Pcre.qreplace ~rex:(Pcre.regexp @@ Pcre.quote sub) ~templ:by str
+  Pcre2.qreplace ~rex:(Pcre2.regexp @@ Pcre2.quote sub) ~templ:by str
 
 let replace_all ~str ~sub ~by = qreplace str sub by
 
 (** contents of the first submatch *)
 let extract rex str =
   try
-    Some (Pcre.extract ~rex ~full_match:false str).(0)
+    Some (Pcre2.extract ~rex ~full_match:false str).(0)
   with
     _ -> None
 
@@ -158,11 +158,11 @@ let iexists s sub =
 (** sequence of matches *)
 let enum_matches rex s =
   try
-    Pcre.exec_all ~rex s |> Array.enum
+    Pcre2.exec_all ~rex s |> Array.enum
   with
     _ -> Enum.empty ()
 
-let enum_extract rex s = enum_matches rex s |> Enum.map (flip Pcre.get_substring 1)
+let enum_extract rex s = enum_matches rex s |> Enum.map (flip Pcre2.get_substring 1)
 
 module ASCII = struct
 let is_alpha = function

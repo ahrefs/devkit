@@ -3,5 +3,5 @@
  (public_name devkit.ocamlnet_lite)
  (libraries
   extlib ; just for Array.create
-  pcre
+  pcre2
   str))

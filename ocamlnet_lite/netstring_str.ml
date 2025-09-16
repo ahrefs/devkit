@@ -56,9 +56,9 @@ type re_term =
 (**********************************************************************)
 (* Final types *)
 
-type regexp = Pcre.regexp
+type regexp = Pcre2.regexp
 type split_result = Str.split_result = Text of string | Delim of string
-type result = Pcre.substrings
+type result = Pcre2.substrings
 
 (**********************************************************************)
 (* Parse Str-style regexps, and convert to Pcre-style regexps *)
@@ -268,9 +268,9 @@ let pcre_safe_quote c =
 
 let rec print_pcre_regexp ret =
   match ret with
-  | Texact s -> Pcre.quote s
+  | Texact s -> Pcre2.quote s
   | Tnullchar ->
-      (* Pcre.quote "\000" returns nonsense *)
+      (* Pcre2.quote "\000" returns nonsense *)
       "[\\000]"
   | Tany -> "."
   | Tnull -> "(?:)"
@@ -315,42 +315,42 @@ and print_set s =
 let regexp s =
   let ret = scan_str_regexp s in
   let s' = print_pcre_regexp ret in
-  Pcre.regexp ~flags:[ `MULTILINE ] s'
+  Pcre2.regexp ~flags:[ `MULTILINE ] s'
 
 let search_forward pat s pos =
-  let result = Pcre.exec ~rex:pat ~pos s in
-  (fst (Pcre.get_substring_ofs result 0), result)
+  let result = Pcre2.exec ~rex:pat ~pos s in
+  (fst (Pcre2.get_substring_ofs result 0), result)
 
 let matched_string result _ =
-  (* Unfortunately, Pcre.get_substring will not raise Not_found if there is
+  (* Unfortunately, Pcre2.get_substring will not raise Not_found if there is
    * no matched string. Instead, it returns "", but this value cannot be
    * distinguished from an empty match.
-   * The workaround is to call Pcre.get_substring_ofs first. This function
+   * The workaround is to call Pcre2.get_substring_ofs first. This function
    * will raise Not_found if there is not any matched string.
    *
    * NOTE: Current versions of Pcre do return Not_found!
    *)
-  ignore (Pcre.get_substring_ofs result 0);
-  Pcre.get_substring result 0
+  ignore (Pcre2.get_substring_ofs result 0);
+  Pcre2.get_substring result 0
 
-let match_beginning result = fst (Pcre.get_substring_ofs result 0)
-let match_end result = snd (Pcre.get_substring_ofs result 0)
+let match_beginning result = fst (Pcre2.get_substring_ofs result 0)
+let match_end result = snd (Pcre2.get_substring_ofs result 0)
 
 let matched_group result n _ =
   (* See also the comment for [matched_string] *)
-  if n < 0 || n >= Pcre.num_of_subs result then raise Not_found;
-  ignore (Pcre.get_substring_ofs result n);
-  Pcre.get_substring result n
+  if n < 0 || n >= Pcre2.num_of_subs result then raise Not_found;
+  ignore (Pcre2.get_substring_ofs result n);
+  Pcre2.get_substring result n
 
 let global_substitute pat subst s =
-  Pcre.substitute_substrings ~rex:pat ~subst:(fun r -> subst r s) s
+  Pcre2.substitute_substrings ~rex:pat ~subst:(fun r -> subst r s) s
 
 let tr_split_result r =
   List.map
     (function
-      | Pcre.Text t -> Text t | Pcre.Delim d -> Delim d | _ -> assert false)
+      | Pcre2.Text t -> Text t | Pcre2.Delim d -> Delim d | _ -> assert false)
     (List.filter
-       (function Pcre.Group (_, _) | Pcre.NoGroup -> false | _ -> true)
+       (function Pcre2.Group (_, _) | Pcre2.NoGroup -> false | _ -> true)
        r)
 
-let full_split sep s = tr_split_result (Pcre.full_split ~rex:sep ~max:(-1) s)
+let full_split sep s = tr_split_result (Pcre2.full_split ~rex:sep ~max:(-1) s)
