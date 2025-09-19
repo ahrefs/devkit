@@ -61,6 +61,8 @@ sig
   val project_list : t list -> T.t list
   val compare : t -> t -> int
   val equal : t -> t -> bool
+  val map : (T.t -> T.t) -> t -> t
+  val map2 : (T.t -> T.t -> T.t) -> t -> t -> t
 end
 
 val tuck : 'a list ref -> 'a -> unit
