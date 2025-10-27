@@ -22,6 +22,7 @@
     str
     trace.core
     unix
+    uri
     yojson
     (select
      possibly_otel.ml
