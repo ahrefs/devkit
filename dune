@@ -36,7 +36,8 @@
            memory_jemalloc
            test
            test_gzip
-           test_httpev)
+           test_httpev
+           htmlStream_bench)
   (preprocess
     (per_module
       ((pps lwt_ppx)
@@ -80,3 +81,12 @@
 (rule
   (alias runtest)
   (action (run ./test.exe)))
+
+(executable
+  (name htmlStream_bench)
+  (libraries devkit extlib unix)
+  (modules htmlStream_bench))
+
+(rule
+  (alias bench)
+  (action (run ./htmlStream_bench.exe)))
