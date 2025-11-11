@@ -54,6 +54,3 @@ let call_me_maybe f x =
   match f with
   | None -> ()
   | Some f -> f x
-
-let () =
-  Lwt_engine.set @@ new Lwt_engines.poll
