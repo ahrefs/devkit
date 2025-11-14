@@ -54,3 +54,13 @@ let call_me_maybe f x =
   match f with
   | None -> ()
   | Some f -> f x
+
+(*
+  If libev backend is available, do nothing (lwt uses it as default).
+  Otherwise, prefer poll over select, because select can only monitor fds up to 1024,
+  and poll is guaranteed to be available without the fd limitation.
+*)
+let () =
+  if not (Lwt_config._HAVE_LIBEV && Lwt_config.libev_default) then begin
+    Lwt_engine.set @@ new Lwt_engines.poll
+  end
