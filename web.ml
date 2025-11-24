@@ -129,7 +129,7 @@ type ('body,'ret) http_request_ =
   ?http_1_0:bool ->
   ?headers:string list ->
   ?body:'body ->
-  http_action -> Uri.t -> 'ret
+  http_action -> Lurl.t -> 'ret
 
 type 'ret http_request = ([ `Form of (string * string) list | `Raw of string * string ], 'ret)  http_request_
 
@@ -154,7 +154,7 @@ module type HTTP = sig
     ?http_1_0:bool ->
     ?headers:string list ->
     ?action:http_action ->
-    Uri.t ->
+    Lurl.t ->
     (string * string) list -> [> `Error of string | `Ok of string ] IO.t
 end
 
@@ -253,8 +253,8 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
 
   (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
   (* Don't use curl_setheaders when using ?headers option *)
-  let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?timer ?max_size ?(http_1_0=false) ?headers ?body (action:http_action) (url:Uri.t) =
-    let url = Uri.to_string url in
+  let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?timer ?max_size ?(http_1_0=false) ?headers ?body (action:http_action) (url:Lurl.t) =
+    let url = Lurl.to_string url in
     let open Curl in
     let action_name = string_of_http_action action in
 
@@ -436,7 +436,7 @@ let string_of_http_code = function
 | 411 -> "Length Required"
 | 412 -> "Precondition Failed"
 | 413 -> "Request Entity Too Large"
-| 414 -> "Request-URI Too Long"
+| 414 -> "Request-Lurl Too Long"
 | 415 -> "Unsupported Media Type"
 | 416 -> "Requested Range Not Satisfiable"
 | 417 -> "Expectation Failed"

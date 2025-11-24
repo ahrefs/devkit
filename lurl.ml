@@ -3,6 +3,8 @@
 
 open Printf
 open ExtLib
+open Ocamlnet_lite
+
 let ( let* ) = Result.bind
 
 (* sync urlparse_stubs.c *)
@@ -80,9 +82,11 @@ let string_of_scheme = function
   | Http -> "http"
   | Https -> "https"
 
-let decode = Web.rawurldecode
+(* TODO: this taken from Web, but its quite fishy. It should be investigated. *)
 
-let decode_plus = Web.urldecode
+let decode s = try Netencoding.Url.decode ~plus:false s with _ -> s
+
+let decode_plus s = try Netencoding.Url.decode ~plus:true s with _ -> s
 
 module Re = struct
 
@@ -183,9 +187,8 @@ let rec push_concat ~push ~sep f li =
     push sep;
     push_concat ~push ~sep f li
 
-let encode_plus = Web.urlencode
-
-let encode = Web.rawurlencode
+let encode_plus = Netencoding.Url.encode ~plus:true
+let encode = Netencoding.Url.encode ~plus:false
 
 let push_path ~push path =
   push "/";
