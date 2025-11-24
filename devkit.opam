@@ -30,11 +30,15 @@ depends: [
   "uri"
   "yojson" {>= "1.6.0"}
   "odoc" {with-doc}
+  "ppx_expect" {with-test}
 ]
 depopts: [
   "gperftools"
   "jemalloc"
   "opentelemetry"
+]
+pin-depends: [
+  [ "tyre.dev" "git+https://github.com/drup/tyre.git#master" ]
 ]
 conflicts: [
   "jemalloc" {< "0.2"}

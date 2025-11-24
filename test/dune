@@ -1,0 +1,13 @@
+(library
+ (name lurl)
+ (modules lurl)
+ (inline_tests)
+ (libraries
+  devkit
+  base
+  ppx_expect
+  ppx_expect.common
+  ppx_expect.config
+  ppx_expect.config_types)
+ (preprocess
+  (pps ppx_expect ppx_deriving.show ppx_deriving.eq ppx_deriving.make)))
