@@ -11,10 +11,19 @@ open ExtLib
 
 let log = Log.from "nix"
 
+let register_on_fork, call_on_fork =
+  let on_fork_li = ref [] in
+  begin fun on_fork ->
+    on_fork_li := on_fork :: !on_fork_li
+  end,
+  begin fun () ->
+    List.iter (fun f -> f ()) !on_fork_li
+  end
+
 let fork () =
   match Lwt_unix.fork () with
   | -1 -> Exn.fail "failed to fork"
-  | 0 -> Random.self_init (); Pid.update (); `Child
+  | 0 -> Random.self_init (); call_on_fork (); `Child
   | pid -> `Forked pid
 
 (** fork off and die *)
