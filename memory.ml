@@ -130,12 +130,6 @@ let (add_stats,new_stats,log_stats,get_stats) =
   let get_stats () = List.map (fun f -> f ()) !f_get in
   (tuck f_print), (tuck f_get), log_stats, get_stats
 
-let track_global = ref []
-let show_global_reachable () =
-  let l = List.map (fun (name,repr) -> sprintf "%s %s" name (Action.caml_words @@ Obj.reachable_words repr)) !track_global in
-  sprintf "reachable: %s" (String.concat " " l)
-let track_global name var = tuck track_global (name,Obj.repr var)
-
 let show_c_info () = sprintf "%s. %s" (show_vm_info ()) (!show_crt_info ())
 
 let show_all_info () =
@@ -150,4 +144,3 @@ let log_all_info () = show_all_info () |> List.iter log#info_s
 let () = new_stats show_c_info
 let () = new_stats show_gc_info
 let () = new_stats show_lwt_info
-let () = new_stats show_global_reachable
