@@ -1,6 +1,9 @@
 open Opentelemetry
 
-let (let*) o f = Option.map f o
+let[@inline]  (let*) o f = Option.map f o
+
+type Trace_core.span +=
+  | Span_otel of Scope.t
 
 module Traceparent = struct
   let name = Trace_context.Traceparent.name
