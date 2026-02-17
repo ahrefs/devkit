@@ -304,7 +304,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     let explicit_span =
       let span_name = Printf.sprintf "devkit.web.%s" action_name in
       (* We set the value of `__FUNCTION__` to preserve the build with OCaml < 4.12. *)
-      Possibly_otel.enter_manual_span
+      Possibly_otel.enter_span
         ~__FUNCTION__:"Devkit.Web.Http.http_request'" ~__FILE__ ~__LINE__ ~data:describe span_name in
 
     let headers = match Possibly_otel.Traceparent.get_ambient ~explicit_span () with
@@ -321,8 +321,8 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     let t = new Action.timer in
     let result = Some (fun h code ->
       if verbose then verbose_curl_result nr_http action t h code;
-      Trace_core.add_data_to_manual_span explicit_span ["http.response.status_code", `Int (Curl.get_httpcode h)];
-      Trace_core.exit_manual_span explicit_span;
+      Trace_core.add_data_to_span explicit_span ["http.response.status_code", `Int (Curl.get_httpcode h)];
+      Trace_core.exit_span explicit_span;
       return ()
     ) in
 
