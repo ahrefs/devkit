@@ -22,7 +22,7 @@ depends: [
   "pcre2" {>= "8.0.3"}
   "trace" {>= "0.4"}
   "extunix" {>= "0.1.4"}
-  "lwt" {>= "5.7.0"}
+  "lwt" {>= "6.0.0"}
   "lwt_ppx"
   "base-bytes"
   "base-unix"
