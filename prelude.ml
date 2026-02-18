@@ -61,6 +61,13 @@ let call_me_maybe f x =
   and poll is guaranteed to be available without the fd limitation.
 *)
 let () =
-  if not (Lwt_config._HAVE_LIBEV && Lwt_config.libev_default) then begin
+  match Lwt_engine.id () with
+  | Lwt_engine.Engine_id__libev _ -> ()
+  | Lwt_engine.Engine_id__select ->
+    (* Otherwise, prefer poll over select, because select can only monitor fds up to 1024,
+       and poll is guaranteed to be available without the fd limitation. *)
     Lwt_engine.set @@ new Lwt_engines.poll
-  end
+  | Lwt_engine.Engine_id__poll -> ()
+  | lwteng ->
+      eprintfn "Unknown Lwt engine (%s) in use, leaving as is" Obj.Extension_constructor.(name (of_val lwteng));
+      ()
