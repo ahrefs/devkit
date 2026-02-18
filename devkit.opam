@@ -17,7 +17,8 @@ depends: [
   "ounit2"
   "camlzip"
   "libevent" {>= "0.8.0"}
-  "ocurl" {>= "0.7.2"}
+  "curl" {>= "0.10.0"}
+  "curl_lwt"
   "pcre2" {>= "8.0.3"}
   "trace" {>= "0.4"}
   "extunix" {>= "0.1.4"}
