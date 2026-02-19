@@ -98,6 +98,7 @@ type client = {
   sockaddr : Unix.sockaddr;
   mutable req : request_state;
   server : server;
+  span: Trace_core.span;
 }
 
 (** server state *)
@@ -278,6 +279,7 @@ let teardown fd =
 let finish ?(shutdown=true) c =
   decr_active c.server;
   Hashtbl.remove c.server.clients c.req_id;
+  Trace_core.exit_span c.span;
   if shutdown then teardown c.fd else Unix.close c.fd;
   match c.req with
   | Headers _ | Body _ | Body_lwt _ -> ()
@@ -680,7 +682,8 @@ let setup_server_fd fd config answer =
       teardown fd
     | false ->
       incr_active server;
-      let client = { fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 1024); } in
+      let span = Trace_core.enter_span ~__FILE__ ~__LINE__ "httpev.handle" in
+      let client = { fd; req_id; sockaddr; time_conn=Time.get (); server; span; req=Headers (Buffer.create 1024); } in
       Hashtbl.replace server.clients req_id client;
       Unix.set_nonblock fd;
       if config.debug then log #info "accepted #%d %s" req_id (Nix.show_addr sockaddr);
@@ -1084,9 +1087,10 @@ let setup_fd_lwt fd config answer =
     | true -> incr_reject server; if config.debug then log #info "rejected #%d %s" req_id (Nix.show_addr sockaddr); Lwt.return_unit
     | false ->
     let error = lazy (incr_errors server) in
+    let span = Trace_core.enter_span ~__FILE__ ~__LINE__ "httpev.handle" in
     let client =
       (* used only in show_socket_error *)
-      { fd = Lwt_unix.unix_file_descr fd; req_id; sockaddr; time_conn=Time.get (); server; req=Headers (Buffer.create 0); }
+      { fd = Lwt_unix.unix_file_descr fd; req_id; sockaddr; time_conn=Time.get (); span; server; req=Headers (Buffer.create 0); }
     in
     if config.debug then log #info "accepted #%d %s" req_id (Nix.show_addr sockaddr);
     incr_active server;
@@ -1124,7 +1128,7 @@ let setup_fd_lwt fd config answer =
         log #warn ~exn "send_reply %s" (show_client client);
         Lwt.return_unit
       end
-    end [%lwt.finally decr_active server; Hashtbl.remove server.clients req_id; BuffersCache.release buffer; Lwt.return_unit; ]
+    end [%lwt.finally decr_active server; Hashtbl.remove server.clients req_id; Trace_core.exit_span span; BuffersCache.release buffer; Lwt.return_unit; ]
   end
 
 let setup_lwt config answer =
