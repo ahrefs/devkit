@@ -5,7 +5,7 @@ module Traceparent : sig
   val get_ambient : ?explicit_span:Trace_core.span -> unit -> string option
 end
 
-val enter_manual_span :
+val enter_span :
   __FUNCTION__:string ->
   __FILE__:string ->
   __LINE__:int ->

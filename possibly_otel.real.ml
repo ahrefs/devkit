@@ -21,6 +21,6 @@ module Traceparent = struct
         ~parent_id:(Span_id.of_bytes sp.span_id) ()
 end
 
-let enter_manual_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ?data name =
+let enter_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ?data name =
   let parent = Ambient_span.get () |> Option.map (fun sp -> Span_otel sp) in
   Trace_core.enter_span ~parent ~__FUNCTION__ ~__FILE__ ~__LINE__ ?data name
