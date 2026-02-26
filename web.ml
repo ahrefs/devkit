@@ -183,7 +183,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
   let with_curl_cache f = bracket (return @@ CurlCache.get ()) (fun h -> CurlCache.release h; return_unit) f
 
   let get_curl_data h =
-    [
+    let data = [
       "http.response.status_code",  `Int (Curl.get_httpcode h);
       "http.response.body.size",    `Int (int_of_float (Curl.get_sizedownload h));
       "http.request.body.size",     `Int (int_of_float (Curl.get_sizeupload h));
@@ -195,7 +195,9 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
         | HTTP_VERSION_2 | HTTP_VERSION_2TLS | HTTP_VERSION_2_PRIOR_KNOWLEDGE -> "2"
         | HTTP_VERSION_3 -> "3" | HTTP_VERSION_NONE -> "?");
         *)
-    ]
+    ] in
+    let ct = Curl.get_contenttype h in
+    if ct <> "" then ("http.response.header.content-type", `String ct) :: data else data
 
   let update_timer h timer =
     match timer with
@@ -271,8 +273,9 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
   let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?timer ?max_size ?(http_1_0=false) ?headers ?body (action:http_action) url =
     let open Curl in
     let action_name = string_of_http_action action in
-    let ch_query_id = ref None in
-    let ch_summary  = ref None in
+    let ch_query_id        = ref None in
+    let ch_summary         = ref None in
+    let resp_content_encoding = ref None in
 
     let setup ~headers set_body_and_headers h =
       begin match body with
@@ -301,7 +304,8 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
         (let k, v = Stre.dividec s ':' in
         match String.lowercase_ascii k with
         | "x-clickhouse-query-id" -> ch_query_id := Some (String.trim v)
-        | "x-clickhouse-summary"  -> ch_summary  := Some (String.trim v)
+        | "x-clickhouse-summary" -> ch_summary := Some (String.trim v)
+        | "content-encoding" -> resp_content_encoding := Some (String.trim v)
         | _ -> ());
         String.length s
       );
@@ -356,6 +360,8 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
           | Some v -> ("http.response.header.x-clickhouse-query-id", `String v) :: data in
         let data = match !ch_summary  with None -> data
           | Some v -> ("http.response.header.x-clickhouse-summary",  `String v) :: data in
+        let data = match !resp_content_encoding with None -> data
+          | Some v -> ("http.response.header.content-encoding", `String v) :: data in
         Trace_core.add_data_to_manual_span explicit_span data
       );
       Trace_core.exit_manual_span explicit_span;
