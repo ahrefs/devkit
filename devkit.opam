@@ -20,7 +20,7 @@ depends: [
   "curl" {>= "0.10.0"}
   "curl_lwt"
   "pcre2" {>= "8.0.3"}
-  "trace" {>= "0.10"}
+  "trace" {>= "0.10" & < "0.11"}
   "extunix" {>= "0.1.4"}
   "lwt" {>= "6.0.0"}
   "lwt_ppx"
