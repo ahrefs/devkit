@@ -182,6 +182,18 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
   let with_curl f = bracket (return @@ Curl.init ()) (fun h -> Curl.cleanup h; return_unit) f
   let with_curl_cache f = bracket (return @@ CurlCache.get ()) (fun h -> CurlCache.release h; return_unit) f
 
+  let get_curl_data h =
+    [
+      "http.response.status_code",  `Int (Curl.get_httpcode h);
+      "http.response.body.size",    `Int (int_of_float (Curl.get_sizedownload h));
+      "http.request.body.size",     `Int (int_of_float (Curl.get_sizeupload h));
+      "server.address",             `String (Curl.get_primaryip h);
+      "network.protocol.version",   `String (match Curl.get_http_version h with
+        | HTTP_VERSION_1_0 -> "1.0" | HTTP_VERSION_1_1 -> "1.1"
+        | HTTP_VERSION_2 | HTTP_VERSION_2TLS | HTTP_VERSION_2_PRIOR_KNOWLEDGE -> "2"
+        | HTTP_VERSION_3 -> "3" | HTTP_VERSION_NONE -> "?");
+    ]
+
   let update_timer h timer =
     match timer with
     | None -> ()
@@ -256,6 +268,8 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
   let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?timer ?max_size ?(http_1_0=false) ?headers ?body (action:http_action) url =
     let open Curl in
     let action_name = string_of_http_action action in
+    let ch_query_id = ref None in
+    let ch_summary  = ref None in
 
     let setup ~headers set_body_and_headers h =
       begin match body with
@@ -280,6 +294,14 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       if http_1_0 then set_httpversion h HTTP_VERSION_1_0;
       Option.may (set_timeout h) timeout;
       Option.may (set_useragent h) ua;
+      set_headerfunction h (fun s ->
+        (let k, v = Stre.dividec s ':' in
+        match String.lowercase_ascii k with
+        | "x-clickhouse-query-id" -> ch_query_id := Some (String.trim v)
+        | "x-clickhouse-summary"  -> ch_summary  := Some (String.trim v)
+        | _ -> ());
+        String.length s
+      );
       let () = setup h in
       ()
     in
@@ -295,11 +317,15 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     end;
 
     let describe () =
-      [
+      let base = [
         "otrace.spankind", `String "CLIENT";
         "http.request.method", `String action_name;
         "url.full", `String url;
-      ]
+      ] in
+      match body with
+      | Some (`Raw (ct,_)) | Some (`Chunked (ct,_)) -> ("http.request.header.content-type", `String ct) :: base
+      | Some (`Form _) -> ("http.request.header.content-type", `String "application/x-www-form-urlencoded") :: base
+      | None -> base
     in
     let explicit_span =
       let span_name = Printf.sprintf "devkit.web.%s" action_name in
@@ -321,7 +347,14 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     let t = new Action.timer in
     let result = Some (fun h code ->
       if verbose then verbose_curl_result nr_http action t h code;
-      Trace_core.add_data_to_manual_span explicit_span ["http.response.status_code", `Int (Curl.get_httpcode h)];
+      if Trace_core.enabled () then (
+        let data = get_curl_data h in
+        let data = match !ch_query_id with None -> data
+          | Some v -> ("http.response.header.x-clickhouse-query-id", `String v) :: data in
+        let data = match !ch_summary  with None -> data
+          | Some v -> ("http.response.header.x-clickhouse-summary",  `String v) :: data in
+        Trace_core.add_data_to_manual_span explicit_span data
+      );
       Trace_core.exit_manual_span explicit_span;
       return ()
     ) in
