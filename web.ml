@@ -188,10 +188,13 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       "http.response.body.size",    `Int (int_of_float (Curl.get_sizedownload h));
       "http.request.body.size",     `Int (int_of_float (Curl.get_sizeupload h));
       "server.address",             `String (Curl.get_primaryip h);
+      (* NOTE: this crashes with
+         exn File "curl.ml", line 1365, characters 9-15: Assertion failed
       "network.protocol.version",   `String (match Curl.get_http_version h with
         | HTTP_VERSION_1_0 -> "1.0" | HTTP_VERSION_1_1 -> "1.1"
         | HTTP_VERSION_2 | HTTP_VERSION_2TLS | HTTP_VERSION_2_PRIOR_KNOWLEDGE -> "2"
         | HTTP_VERSION_3 -> "3" | HTTP_VERSION_NONE -> "?");
+        *)
     ]
 
   let update_timer h timer =
