@@ -17,11 +17,12 @@ depends: [
   "ounit2"
   "camlzip"
   "libevent" {>= "0.8.0"}
-  "ocurl" {>= "0.7.2"}
+  "curl" {>= "0.10.0"}
+  "curl_lwt"
   "pcre2" {>= "8.0.3"}
-  "trace" {>= "0.4"}
+  "trace" {>= "0.10" & < "0.11"}
   "extunix" {>= "0.1.4"}
-  "lwt" {>= "5.7.0"}
+  "lwt" {>= "6.0.0"}
   "lwt_ppx"
   "base-bytes"
   "base-unix"
