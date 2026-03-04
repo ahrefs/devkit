@@ -362,9 +362,9 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
           | Some v -> ("http.response.header.x-clickhouse-summary",  `String v) :: data in
         let data = match !resp_content_encoding with None -> data
           | Some v -> ("http.response.header.content-encoding", `String v) :: data in
-        Trace_core.add_data_to_manual_span explicit_span data
+        Trace_core.add_data_to_span explicit_span data
       );
-      Trace_core.exit_manual_span explicit_span;
+      Trace_core.exit_span explicit_span;
       return ()
     ) in
 
