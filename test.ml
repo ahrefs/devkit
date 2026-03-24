@@ -544,6 +544,28 @@ let () = test "Web.urlencode" @@ fun () ->
   assert_equal (Web.urlencode "Hello Günter") "Hello+G%C3%BCnter";
   ()
 
+let () = test "Action.make_config_lines" @@ fun () ->
+  let config_lines = [
+    "";
+    "foobar";
+    "# only comment line";
+    "arg # a comment";
+    "test # comment1 # comment2 ";
+    "  test # comment ";
+    "foo";
+    "  baz";
+    "bar  ";
+  ] in
+  assert_equal ~printer:(Stre.list (Printf.sprintf "%S")) (Action.make_config_lines config_lines) [
+    "foobar";
+    "arg";
+    "test";
+    "test";
+    "foo";
+    "baz";
+    "bar"
+  ]
+
 let () =
   let open Lwt.Syntax in
   let rec pings f = function

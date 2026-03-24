@@ -185,9 +185,16 @@ val io_null : unit IO.output
 val file_lines_exn : string -> string list
 val file_lines : string -> string list
 
-(** read lines from file skipping empty lines and comments (lines starting with '#') *)
+(** Read lines from file skipping empty lines and comments (lines starting with '#').
+
+    Moreover, comments are stripped from lines (all characters
+    including and following a '#') and returned lines are trimmed. *)
 val make_config_lines : string list -> string list
 val config_lines_exn : string -> string list
+
+(** [config_lines file] read [file] and return the config lines.
+
+    See {!make_config_lines} for details on config lines. *)
 val config_lines : string -> string list
 
 
