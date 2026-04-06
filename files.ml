@@ -55,6 +55,18 @@ let () =
   iter_files "/etc" (fun s _ -> print_endline s)
 *)
 
+let mkdir_p ?(perm=0o755) path =
+  let rec aux path =
+    if Sys.file_exists path then begin
+      if not (Sys.is_directory path) then
+        Exn.fail "mkdir_p: %s exists but is not a directory" path
+    end else begin
+      aux (Filename.dirname path);
+      try Unix.mkdir path perm with Unix.Unix_error (Unix.EEXIST, _, _) -> ()
+    end
+  in
+  aux path
+
 let save_as name ?(mode=0o644) f =
   (* not using make_temp_file cause same dir is needed for atomic rename *)
   let temp = Printf.sprintf "%s.save.%d.tmp" name (U.gettid ()) in
