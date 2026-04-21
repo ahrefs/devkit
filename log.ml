@@ -91,16 +91,25 @@ module State = struct
       pairs_str
 
   let format_logfmt level facil ts pairs msg =
-    let pairs = [
-      "level", Logger.string_level level;
-      "facil", facil;
-      "time", Time.to_string ~gmt:!utc_timezone ~ms:true ts;
-      "msg", msg;
-    ] @ pairs in
+    let pairs = ("msg", msg) :: pairs in
+    let pid = Unix.getpid () in
+    let tid = U.gettid () in
+    let pairs =
+      if pid = tid then ("pid", string_of_int pid) :: pairs
+      else ("pid", string_of_int pid) :: ("tid", string_of_int tid) :: pairs
+    in
+    let pairs =
+      ("time", Time.to_string ~gmt:!utc_timezone ~ms:true ts) ::
+      ("level", Logger.string_level level) ::
+      ("facil", facil.Logger.name) ::
+      pairs
+    in
     Logfmt.to_string pairs
 
   let cur_format = Atomic.make format_simple_full
   let set_cur_format f = Atomic.set cur_format f
+  let set_plaintext () = set_cur_format format_simple_full
+  let set_logfmt () = set_cur_format format_logfmt
 
   let format level facil ts pairs msg =
     (Atomic.get cur_format) level facil ts pairs msg
