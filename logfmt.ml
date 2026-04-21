@@ -1,18 +1,22 @@
 
-let[@inline] needs_escape c = Char.code c < 0x20 || Char.code c >= 0x7f
+let[@inline] needs_escape c =
+  Char.code c < 0x20 || c = '"' || c = '\\'
+
+let[@inline] needs_quotes c =
+  c = ' ' || Char.code c >= 0x80
 
 type cat = Safe | Has_space | Needs_escape
 
 let categorize s : cat =
-  let space = ref false in
+  let quote = ref false in
 
   try
     for i=0 to String.length s-1 do
       let c = String.unsafe_get s i in
       if needs_escape c then raise_notrace Exit;
-      if c = ' ' then space := true
+      if needs_quotes c then quote := true
     done;
-    if !space then Has_space else Safe
+    if !quote then Has_space else Safe
   with Exit -> Needs_escape
 
 let add_pair buf k v =

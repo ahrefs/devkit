@@ -33,64 +33,72 @@ let level = function
   | "nothing" -> `Nothing
   | s -> Exn.fail "unrecognized level %s" s
 
-module type Target =
-sig
-  val format : level -> facil -> string -> string
-  val output : level -> facil -> string -> unit
+module Pairs = struct
+  type pair = string*string
+  type t = pair list
 end
 
-module type Put = sig
-val put : level -> facil -> string -> unit
-end
+type target = {
+  format : level -> facil -> Time.t -> Pairs.t -> string -> string;
+  output : level -> facil -> string -> unit;
+}
 
-module PutSimple(T : Target) : Put =
-struct
+type put = {
+  put : level -> facil -> Time.t -> Pairs.t -> string -> unit
+} [@@unboxed]
 
-  let put level facil str =
+let put_simple (t:target) : put = {
+  put = fun level facil ts pairs str ->
     if allowed facil level then
-      T.output level facil (T.format level facil str)
+      t.output level facil (t.format level facil ts pairs str)
+}
 
-end
+let put_limited (t:target) : put =
+  let last = ref (`Debug,"") in
+  let n = ref 0 in
 
-module PutLimited(T : Target) : Put =
-struct
-
-  let last = ref (`Debug,"")
-  let n = ref 0
-
-  (** FIXME not thread safe *)
-  let put level facil str =
+  (* FIXME not thread safe *)
+  let put level facil ts pairs str =
     match allowed facil level with
     | false -> ()
     | true ->
       let this = (level,str) in
       if !last = this then
-        incr n
+        n := !n + 1
       else
       begin
         if !n <> 0 then
         begin
-         T.output level facil (sprintf
+         t.output level facil (sprintf
           "last message repeated %u times, suppressed\n" !n);
           n := 0
         end;
         last := this;
-        T.output level facil (T.format level facil str);
+        t.output level facil (t.format level facil ts pairs str);
       end
+  in { put }
 
-end
+(** A logger *)
+type t = {
+  debug_s: facil -> Time.t -> Pairs.t -> string -> unit;
+  info_s: facil -> Time.t -> Pairs.t -> string -> unit;
+  warn_s: facil -> Time.t -> Pairs.t -> string -> unit;
+  error_s: facil -> Time.t -> Pairs.t -> string -> unit;
+  put_s: level -> facil -> Time.t -> Pairs.t -> string -> unit;
+  debug: 'a. facil -> Time.t -> Pairs.t -> ('a, unit, string, unit) format4 -> 'a;
+  info: 'a. facil -> Time.t -> Pairs.t -> ('a, unit, string, unit) format4 -> 'a;
+  warn: 'a. facil -> Time.t -> Pairs.t -> ('a, unit, string, unit) format4 -> 'a;
+  error: 'a. facil -> Time.t -> Pairs.t -> ('a, unit, string, unit) format4 -> 'a;
+}
 
-module Make(T : Put) = struct
-
-  let debug_s = T.put `Debug
-  let info_s = T.put `Info
-  let warn_s = T.put `Warn
-  let error_s = T.put `Error
-  let put_s = T.put
-
-  let debug f fmt = ksprintf (debug_s f) fmt
-  let info f fmt = ksprintf (info_s f) fmt
-  let warn f fmt = ksprintf (warn_s f) fmt
-  let error f fmt = ksprintf (error_s f) fmt
-
-end
+let make (t:put) : t =
+  let debug_s = t.put `Debug in
+  let info_s = t.put `Info in
+  let warn_s = t.put `Warn in
+  let error_s = t.put `Error in
+  let put_s = t.put in
+  let debug f ts pairs fmt = ksprintf (debug_s f ts pairs) fmt in
+  let info f ts pairs fmt = ksprintf (info_s f ts pairs) fmt in
+  let warn f ts pairs fmt = ksprintf (warn_s f ts pairs) fmt in
+  let error f ts pairs fmt = ksprintf (error_s f ts pairs) fmt in
+  { debug_s; info_s; warn_s; error_s; put_s; debug; info; warn; error }

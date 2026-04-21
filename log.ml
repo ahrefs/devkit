@@ -77,30 +77,50 @@ module State = struct
   let output_ch ch =
     fun str -> try output_string ch str; flush ch with _ -> () (* logging never fails, most probably ENOSPC *)
 
-  let format_simple level facil msg =
+  let format_simple_full level facil ts pairs msg =
     let pid = Unix.getpid () in
     let tid = U.gettid () in
     let pinfo = if pid = tid then sprintf "%5u:" pid else sprintf "%5u:%u" pid tid in
-    sprintf "[%s] %s [%s:%s] %s\n"
-      (Time.to_string ~gmt:!utc_timezone ~ms:true (Unix.gettimeofday ()))
+    let pairs_str = match pairs with [] -> "" | _ -> " " ^ Logfmt.to_string pairs in
+    sprintf "[%s] %s [%s:%s] %s%s\n"
+      (Time.to_string ~gmt:!utc_timezone ~ms:true ts)
       pinfo
       facil.Logger.name
       (Logger.string_level level)
       msg
+      pairs_str
+
+  let format_logfmt level facil ts pairs msg =
+    let pairs = [
+      "level", Logger.string_level level;
+      "facil", facil;
+      "time", Time.to_string ~gmt:!utc_timezone ~ms:true ts;
+      "msg", msg;
+    ] @ pairs in
+    Logfmt.to_string pairs
+
+  let cur_format = Atomic.make format_simple_full
+  let set_cur_format f = Atomic.set cur_format f
+
+  let format level facil ts pairs msg =
+    (Atomic.get cur_format) level facil ts pairs msg
+
+  let format_simple level facil msg =
+    format level facil (Unix.gettimeofday()) [] msg
 
   let log_ch = stderr
   let () = assert (Unix.descr_of_out_channel stderr = Unix.stderr)
   let base_name = ref ""
-
   let hook = ref (fun _ _ _ -> ())
+  let output_simple level facil s = !hook level facil s; output_ch log_ch s
 
-  module Put = Logger.PutSimple(
-  struct
-    let format = format_simple
-    let output = fun level facil s -> let () = !hook level facil s in output_ch log_ch s
-  end)
+  let put = Logger.put_simple {
+    format;
+    output = output_simple;
+  }
 
-  module M = Logger.Make(Put)
+  (** Main logger, writes into [put] *)
+  let logger = Logger.make put
 
   let self = "lib"
 
@@ -117,11 +137,21 @@ module State = struct
         (fun () -> Unix.dup2 (Unix.descr_of_out_channel ch) Unix.stderr)
         ()
     with
-      e -> M.warn (facility self) "reopen_log_ch(%s) failed : %s" file (Printexc.to_string e)
+      e ->
+        let now = (Unix.gettimeofday ()) in
+        logger.warn (facility self) now [] "reopen_log_ch(%s) failed : %s" file (Printexc.to_string e)
 
 end
 
-include State.M
+let debug_s = State.logger.debug_s
+let info_s = State.logger.info_s
+let warn_s = State.logger.warn_s
+let error_s = State.logger.error_s
+let put_s = State.logger.put_s
+let debug = State.logger.debug
+let info = State.logger.info
+let warn = State.logger.warn
+let error = State.logger.error
 
 let facility = State.facility
 let set_filter = State.set_filter
@@ -146,39 +176,39 @@ let read_env_config = State.read_env_config
 
   param [saved_backtrace]: supply backtrace to show instead of using [Printexc.get_backtrace]
 *)
-type 'a pr = ?exn:exn -> ?lines:bool -> ?backtrace:bool -> ?saved_backtrace:string list -> ('a, unit, string, unit) format4 -> 'a
+type 'a pr = ?exn:exn -> ?lines:bool -> ?backtrace:bool -> ?saved_backtrace:string list -> ?ts:Time.t -> ?pairs:Logger.Pairs.t -> ('a, unit, string, unit) format4 -> 'a
 
 class logger facil =
-let make_s output_line =
+  let make_s (output_line:Logger.facil -> Time.t -> Logger.Pairs.t -> string -> unit) =
   let output = function
   | true ->
-      fun facil s ->
+      fun facil ts pairs s ->
         if String.contains s '\n' then
-          List.iter (output_line facil) @@ String.nsplit s "\n"
+          List.iter (output_line facil ts pairs) @@ String.nsplit s "\n"
         else
-          output_line facil s
+          output_line facil ts pairs s
   | false -> output_line
   in
-  let print_bt lines exn bt s =
-    output lines facil (s ^ " : exn " ^ Exn.str exn ^ (if bt = [] then " (no backtrace)" else ""));
-    List.iter (fun line -> output_line facil ("    " ^ line)) bt
+  let print_bt lines exn bt ts pairs s =
+    output lines facil ts pairs (s ^ " : exn " ^ Exn.str exn ^ (if bt = [] then " (no backtrace)" else ""));
+    List.iter (fun line -> output_line facil ts pairs ("    " ^ line)) bt
   in
-  fun ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace s ->
+  fun ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace ?(ts=Unix.gettimeofday()) ?(pairs=[]) s ->
     try
       match exn with
-      | None -> output lines facil s
+      | None -> output lines facil ts pairs s
       | Some exn ->
       match saved_backtrace with
-      | Some bt -> print_bt lines exn bt s
+      | Some bt -> print_bt lines exn bt ts pairs s
       | None ->
       match backtrace with
-      | true -> print_bt lines exn (Exn.get_backtrace ()) s
-      | false -> output lines facil (s ^ " : exn " ^ Exn.str exn)
+      | true -> print_bt lines exn (Exn.get_backtrace ()) ts pairs s
+      | false -> output lines facil ts pairs (s ^ " : exn " ^ Exn.str exn)
     with exn ->
-      output_line facil (sprintf "LOG FAILED : %S with message %S" (Exn.str exn) s)
+      output_line facil ts pairs (sprintf "LOG FAILED : %S with message %S" (Exn.str exn) s)
 in
-let make output ?exn ?lines ?backtrace ?saved_backtrace fmt =
-  ksprintf (fun s -> output ?exn ?lines ?backtrace ?saved_backtrace s) fmt
+let make : _ -> _ pr = fun output ?exn ?lines ?backtrace ?saved_backtrace ?ts ?pairs fmt ->
+  ksprintf (fun s -> output ?exn ?lines ?backtrace ?saved_backtrace ?ts ?pairs s) fmt
 in
 let debug_s = make_s debug_s in
 let warn_s = make_s warn_s in
