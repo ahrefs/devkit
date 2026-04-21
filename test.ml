@@ -595,6 +595,69 @@ let () =
   assert_equal !accumulator 4;
   ()
 
+let () = test "Logfmt" begin fun () ->
+  let eq name expected got =
+    assert_equal ~msg:name ~printer:(fun s -> sprintf "%S" s) expected got
+  in
+  eq "empty" "" (Logfmt.to_string []);
+  eq "safe" "k=v" (Logfmt.to_string ["k","v"]);
+  eq "multiple" "a=1 b=2" (Logfmt.to_string [("a","1");("b","2")]);
+  eq "empty value" "k=" (Logfmt.to_string ["k",""]);
+  eq "space" {|k="hello world"|} (Logfmt.to_string ["k","hello world"]);
+  eq "newline" {|k="a\nb"|} (Logfmt.to_string ["k","a\nb"]);
+  eq "quote" {|k="a\"b"|} (Logfmt.to_string ["k","a\"b"]);
+  eq "backslash" {|k="a\\b"|} (Logfmt.to_string ["k","a\\b"]);
+  eq "utf8" {|k="é"|} (Logfmt.to_string ["k","é"]);
+end
+
+let with_log_hook f =
+  let buf = Buffer.create 128 in
+  let prev = !Log.State.hook in
+  Log.State.hook := (fun _ _ s -> Buffer.add_string buf s);
+  Std.finally (fun () -> Log.State.hook := prev) f ();
+  buf
+
+let () = test "Log.pairs" begin fun () ->
+  let prev_utc = !Log.State.utc_timezone in
+  Log.State.utc_timezone := true;
+  Std.finally (fun () -> Log.State.utc_timezone := prev_utc) (fun () ->
+    let ts = 1700000000. in (* 2023-11-14 22:13:20 UTC *)
+    let log = Log.from "logtest" in
+    let check ~msg ~suffix out =
+      assert_bool (sprintf "%s: expected suffix %S, got %S" msg suffix out)
+        (Stre.ends_with out suffix)
+    in
+    let run action =
+      let out = Buffer.contents (with_log_hook action) in
+      assert_bool ("facility in output: " ^ out) (Stre.exists out "[logtest:");
+      assert_bool ("ts in output: " ^ out) (Stre.exists out "2023-11-14");
+      out
+    in
+    let out = run (fun () -> log#info ~ts ~pairs:["k","v"] "hello %d" 42) in
+    check ~msg:"pairs suffix" ~suffix:" hello 42 k=v\n" out;
+    let out = run (fun () -> log#info ~ts "plain") in
+    check ~msg:"no pairs" ~suffix:" plain\n" out;
+    let out = run (fun () -> log#warn ~ts ~pairs:[("a","1");("quoted","he said \"hi\"")] "m") in
+    check ~msg:"escape+multi" ~suffix:({| m a=1 quoted="he said \"hi\""|} ^ "\n") out;
+    assert_bool ("warn level: " ^ out) (Stre.exists out "[logtest:warn]")
+  ) ()
+end
+
+let () = test "Log.filter" begin fun () ->
+  let log = Log.from "filtertest" in
+  let prev_level = log#level in
+  log#allow `Warn;
+  Std.finally (fun () -> log#allow prev_level) (fun () ->
+    let buf = with_log_hook (fun () ->
+      log#info "suppressed";
+      log#warn "kept"
+    ) in
+    let out = Buffer.contents buf in
+    assert_bool ("only warn survives: " ^ out) (not (Stre.exists out "suppressed"));
+    assert_bool ("warn kept: " ^ out) (Stre.exists out "kept")
+  ) ()
+end
+
 let tests () =
   let (_:test_results) = run_test_tt_main ("devkit" >::: List.rev !tests) in
   ()
