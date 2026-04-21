@@ -133,7 +133,7 @@ let set_utc () = State.utc_timezone := true
     By default, it reads the configuration in the environment variable [DEVKIT_LOG]
     which can be overwritten using the optional [process_name] parameter.
 
-    The value of environment variable should match the following grammar: [(\[<facil|prefix*>=\]debug|info|warn|error\[,\])*]
+    The value of environment variable should match the following grammar: [(\[<facil|prefix*>=\]debug|info|warn|error|critical\[,\])*]
 
     @raise Failure on invalid level values of wrong format
 *)
@@ -184,12 +184,14 @@ let debug_s = make_s debug_s in
 let warn_s = make_s warn_s in
 let info_s = make_s info_s in
 let error_s = make_s error_s in
+let critical_s = make_s critical_s in
 let put_s level = make_s (put_s level) in
 object
 method debug_s = debug_s
 method warn_s = warn_s
 method info_s = info_s
 method error_s = error_s
+method critical_s = critical_s
 method put_s = put_s
 
 (* expecting direct inlining to be faster but it is not o_O
@@ -201,6 +203,7 @@ method debug : 'a. 'a pr = make debug_s
 method warn : 'a. 'a pr = make warn_s
 method info : 'a. 'a pr = make info_s
 method error : 'a. 'a pr = make error_s
+method critical : 'a. 'a pr = make critical_s
 method put : 'a. Logger.level -> 'a pr = fun level -> make (put_s level)
 
 method allow (level:Logger.level) = Logger.set_filter facil level

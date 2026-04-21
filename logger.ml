@@ -1,21 +1,23 @@
 
 open Printf
 
-type level = [`Debug | `Info | `Warn | `Error | `Nothing]
+type level = [`Debug | `Info | `Warn | `Error | `Critical | `Nothing]
 type facil = { name : string; mutable show : int; }
 let int_level = function
   | `Debug -> 0
   | `Info -> 1
   | `Warn -> 2
   | `Error -> 3
+  | `Critical -> 4
   | `Nothing -> 100
 let set_filter facil level = facil.show <- int_level level
 let get_level facil = match facil.show with
   | 0 -> `Debug
   | 1 -> `Info
   | 2 -> `Warn
+  | 3 -> `Error
   | x when x = 100 -> `Nothing
-  | _ -> `Error (* ! *)
+  | _ -> `Critical (* ! *)
 let allowed facil level = level <> `Nothing && int_level level >= facil.show
 
 let string_level = function
@@ -23,6 +25,7 @@ let string_level = function
   | `Info -> "info"
   | `Warn -> "warn"
   | `Error -> "error"
+  | `Critical -> "critical"
   | `Nothing -> "nothing"
 
 let level = function
@@ -30,6 +33,7 @@ let level = function
   | "debug" -> `Debug
   | "warn" -> `Warn
   | "error" -> `Error
+  | "critical" -> `Critical
   | "nothing" -> `Nothing
   | s -> Exn.fail "unrecognized level %s" s
 
@@ -86,11 +90,13 @@ module Make(T : Put) = struct
   let info_s = T.put `Info
   let warn_s = T.put `Warn
   let error_s = T.put `Error
+  let critical_s = T.put `Critical
   let put_s = T.put
 
   let debug f fmt = ksprintf (debug_s f) fmt
   let info f fmt = ksprintf (info_s f) fmt
   let warn f fmt = ksprintf (warn_s f) fmt
   let error f fmt = ksprintf (error_s f) fmt
+  let critical f fmt = ksprintf (critical_s f) fmt
 
 end
