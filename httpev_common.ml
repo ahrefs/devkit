@@ -107,14 +107,14 @@ let show_request req =
     (header_safe req "x-request-id")
 
 let pairs_of_request req : Logger.Pairs.t =
-  [ "req.id", string_of_int req.id;
-    "client.addr", show_client_addr req;
-    "duration", sprintf "%.4f" (Time.get () -. req.conn);
-    "duration.recv", sprintf "%.4f" (req.recv -. req.conn);
-    "header.host", header_safe req "host";
+  [ "req_id", string_of_int req.id;
+    "client_addr", show_client_addr req;
+    "http_duration", sprintf "%.4f" (Time.get () -. req.conn);
+    "http_recv_duration", sprintf "%.4f" (req.recv -. req.conn);
+    "http_host", header_safe req "host";
     "url", req.url;
-    "header.user-agent", header_safe req "user-agent";
-    "header.req-id", header_safe req "x-request-id"
+    "http_user_agent", header_safe req "user-agent";
+    "http_req_id", header_safe req "x-request-id"
   ]
 
 let status_code : reply_status -> int = function
