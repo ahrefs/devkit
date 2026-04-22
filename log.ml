@@ -104,7 +104,10 @@ module State = struct
       ("facil", facil.Logger.name) ::
       pairs
     in
-    Logfmt.to_string pairs
+    let buf = Buffer.create 32 in
+    Logfmt.add_to_buffer buf pairs;
+    Buffer.add_char buf '\n';
+    Buffer.contents buf
 
   let cur_format = Atomic.make format_simple_full
   let set_cur_format f = Atomic.set cur_format f
