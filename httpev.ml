@@ -275,6 +275,13 @@ let teardown fd =
   Exn.suppress (Unix.shutdown fd) Unix.SHUTDOWN_ALL;
   Unix.close fd
 
+let log_req ?exn ?backtrace ?saved_backtrace level req fmt =
+  ksprintf (fun msg ->
+    match Log.State.get_cur_format () with
+    | `Plain, _ -> log #put level ?exn ?backtrace ?saved_backtrace "%s : %s" msg (show_request req)
+    | `Logfmt, _ -> log #put level ?exn ?backtrace ?saved_backtrace "%s" msg ~pairs:(pairs_of_request req)
+  ) fmt
+
 let finish ?(shutdown=true) c =
   decr_active c.server;
   Hashtbl.remove c.server.clients c.req_id;
@@ -284,7 +291,7 @@ let finish ?(shutdown=true) c =
   | Ready req ->
     Hashtbl.remove c.server.reqs req.id;
     if c.server.config.debug then
-      log #info "finished" ~pairs:(pairs_of_request req)
+      log_req `Info req "finished"
 
 let write_f c (data,ack) ev fd _flags =
   let finish () = finish c; Ev.del ev in
@@ -324,7 +331,7 @@ let log_access_apache ch code size ?(background=false) req =
       (header_safe req "x-request-id")
       (if background then " (BG)" else "")
   with exn ->
-    log #warn ~exn "access log" ~pairs:(pairs_of_request req)
+    log_req ~exn `Warn req "access log"
 
 let log_status_apache ch status size req =
   match status with
@@ -498,10 +505,10 @@ let handle_request c body answer =
       | `Ok -> answer c.server req k
       end
     | _ ->
-      log #info "version %u.%u not supported" (fst req.version) (snd req.version) ~pairs:(pairs_of_request req);
+      log_req `Info req "version %u.%u not supported" (fst req.version) (snd req.version);
       send_reply_async c Identity (`Version_not_supported,[],"HTTP/1.0 is supported")
   with exn ->
-    log #error ~exn "answer" ~pairs:(pairs_of_request req);
+    log_req ~exn `Error req "answer";
     match req.blocking with
     | None -> send_reply_async c Identity (`Not_found,[],"Not found")
     | Some _ -> Exn.suppress teardown c.fd
@@ -639,7 +646,7 @@ let check_hung_requests server =
   let now = Time.now () in
   server.reqs |> Hashtbl.iter begin fun _ req ->
     if req.recv -. now > Time.minutes 30 then
-      log #warn "request takes too much time to process" ~pairs:(pairs_of_request req)
+      log_req `Warn req "request takes too much time to process"
   end
 
 let check_waiting_requests srv =
@@ -845,7 +852,7 @@ let answer_blocking ?(debug=false) srv req answer k =
     | Continue continue -> 200, Some continue
     | exn ->
       let saved_backtrace = Exn.get_backtrace () in
-      log #warn ~exn ~backtrace:debug ~saved_backtrace "answer forked" ~pairs:(pairs_of_request req);
+      log_req ~exn ~backtrace:debug ~saved_backtrace `Warn req "answer forked";
       -1, None
   in
   if srv.config.access_log_enabled then
@@ -861,7 +868,7 @@ let nr_rejected = stats#count "rejected"
 let answer_forked ?debug srv req answer k =
   let do_fork () =
     match check_req req with
-    | `Error err -> Exn.fail "pre fork : %s" (show_request req) (Unix.error_message err)
+    | `Error err -> Exn.fail "pre fork %s : %s" (show_request req) (Unix.error_message err)
     | `Ok ->
     begin match Nix.fork () with
     | `Child ->
@@ -873,7 +880,7 @@ let answer_forked ?debug srv req answer k =
       end;
       U.sys_exit 0
     | `Forked pid ->
-      log #info "forked %d" pid ~pairs:(pairs_of_request req);
+      log_req `Info req "forked %d" pid;
       k (`No_reply,[],""); (* close socket in parent immediately *)
       Hashtbl.add srv.h_childs pid ()
     end
@@ -883,7 +890,7 @@ let answer_forked ?debug srv req answer k =
       do_fork ()
     with
       exn ->
-        log #warn ~exn "answer fork failed" ~pairs:(pairs_of_request req);
+        log_req ~exn `Warn req "answer fork failed";
         k (`Internal_server_error,[],"")
   in
   if Hashtbl.length srv.h_childs < srv.config.max_data_childs then
@@ -899,7 +906,7 @@ let answer_forked ?debug srv req answer k =
   else
   begin
     incr nr_rejected;
-    log #info "rejecting, overloaded" ~pairs:(pairs_of_request req);
+    log_req `Info req "rejecting, overloaded";
     k (`Service_unavailable, ["Content-Type", "text/plain"], "overloaded")
   end
 
@@ -989,11 +996,11 @@ let handle_request_lwt c req answer =
       try%lwt
         answer c.server req
       with exn ->
-        log #error ~exn "answer" ~pairs:(pairs_of_request req);
+        log_req ~exn `Error req "answer";
         return (`Not_found,[],"Not found")
     end
   | _ ->
-    log #info "version %u.%u not supported" (fst req.version) (snd req.version) ~pairs:(pairs_of_request req);
+    log_req `Info req "version %u.%u not supported" (fst req.version) (snd req.version);
     return (`Version_not_supported,[],"HTTP/1.0 is supported")
 
 let read_buf ic buf =
@@ -1163,7 +1170,7 @@ let rest ~show_exn req answer =
   | Arg.Bad s -> bad_request @@ sprintf "bad parameter %s in %s" s req.url
   | exn ->
     let ref = random_ref () in
-    log#warn ~exn "failed ref:%Ld" ref ~pairs:(pairs_of_request req);
+    log_req ~exn `Warn req "failed ref:%Ld" ref;
     if show_exn then
       internal_error @@ sprintf "internal error ref:%Ld : %s" ref (match exn with Failure s -> s | _ -> Exn.str exn)
     else

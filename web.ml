@@ -236,7 +236,32 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       | code -> `Error code
     end
 
-  let verbose_curl_result nr_http action t h code =
+  let verbose_curl_result_plain nr_http action t h code =
+    let open Curl in
+    let b = Buffer.create 10 in
+    bprintf b "%s #%d %s ⇓%s ⇑%s %s "
+      (string_of_http_action action) nr_http (Time.compact_duration t#get)
+      (Action.bytes_string_f @@ get_sizedownload h)
+      (Action.bytes_string_f @@ get_sizeupload h)
+      (get_primaryip h)
+    ;
+    begin match code with
+    | CURLE_OK ->
+      bprintf b "HTTP %d %s" (get_httpcode h) (get_effectiveurl h);
+      begin match get_redirecturl h with
+      | "" -> ()
+      | s -> bprintf b " -> %s" s
+      end;
+      begin match get_redirectcount h with
+      | 0 -> ()
+      | n -> bprintf b " after %d redirects" n
+      end
+    | _ ->
+      bprintf b "error (%d) %s (errno %d)" (errno code) (strerror code) (Curl.get_oserrno h)
+    end;
+    log #info_s (Buffer.contents b)
+
+  let verbose_curl_result_logfmt nr_http action t h code =
     let open Curl in
     let size_down = get_sizedownload h in
     let size_up = get_sizeupload h in
@@ -268,6 +293,11 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
         base
       in
       log #info ~pairs "http error"
+
+  let verbose_curl_result nr_http action t h code =
+    match Log.State.get_cur_format () with
+    | `Plain, _ -> verbose_curl_result_plain nr_http action t h code
+    | `Logfmt, _ -> verbose_curl_result_logfmt nr_http action t h code
 
   (* Given a list of strings, check pre-existing entry starting with `~name`; and adds the concatenation of `~name` and `~value` if not. *)
   let add_if_absent ~name ~value strs =

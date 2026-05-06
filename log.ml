@@ -40,7 +40,6 @@ open Prelude
 
 (** Global logger state *)
 module State = struct
-
   let all = Hashtbl.create 10
   let default_level = ref (`Info : Logger.level)
 
@@ -109,13 +108,16 @@ module State = struct
     Buffer.add_char buf '\n';
     Buffer.contents buf
 
-  let cur_format = Atomic.make format_simple_full
-  let set_cur_format f = Atomic.set cur_format f
-  let set_plaintext () = set_cur_format format_simple_full
-  let set_logfmt () = set_cur_format format_logfmt
+  open struct
+    let cur_format: ([`Plain|`Logfmt]*_) Atomic.t = Atomic.make (`Plain, format_simple_full)
+    let set_cur_format f = Atomic.set cur_format f
+  end
+  let get_cur_format () = Atomic.get cur_format
+  let set_plaintext () = set_cur_format (`Plain, format_simple_full)
+  let set_logfmt () = set_cur_format (`Logfmt, format_logfmt)
 
   let format level facil ts pairs msg =
-    (Atomic.get cur_format) level facil ts pairs msg
+    (snd (Atomic.get cur_format)) level facil ts pairs msg
 
   let format_simple level facil msg =
     format level facil (Unix.gettimeofday()) [] msg
