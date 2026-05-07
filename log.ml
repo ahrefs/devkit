@@ -189,7 +189,7 @@ let read_env_config = State.read_env_config
 (**
   param [lines]: whether to split multiline message as separate log lines (default [true])
 
-  param [backtrace]: whethgter to show backtrace if [exn] is given (default is [false])
+  param [backtrace]: whether to show backtrace if [exn] is given (default is [false])
 
   param [saved_backtrace]: supply backtrace to show instead of using [Printexc.get_backtrace]
 
