@@ -215,7 +215,7 @@ class logger facil =
     List.iter (fun line -> output_line facil ts pairs ("    " ^ line)) bt
   in
   fun ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace ?(ts=Unix.gettimeofday()) ?(structured_pairs=[]) ?(pairs=[]) s ->
-    let pairs = if structured_pairs!=[] && State.is_structured_format () then List.rev_append structured_pairs pairs else pairs in
+    let pairs = if State.is_structured_format () then List.rev_append structured_pairs pairs else pairs in
     try
       match exn with
       | None -> output lines facil ts pairs s
