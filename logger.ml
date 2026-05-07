@@ -37,33 +37,33 @@ let level = function
   | "nothing" -> `Nothing
   | s -> Exn.fail "unrecognized level %s" s
 
-module type Target =
-sig
-  val format : level -> facil -> string -> string
-  val output : level -> facil -> string -> unit
+module Pairs = struct
+  type pair = string*string
+  type t = pair list
 end
 
-module type Put = sig
-val put : level -> facil -> string -> unit
-end
+type target = {
+  format : level -> facil -> Time.t -> Pairs.t -> string -> string;
+  output : level -> facil -> string -> unit;
+}
 
-module PutSimple(T : Target) : Put =
-struct
+(** A logger *)
+type t = {
+  put : level -> facil -> Time.t -> Pairs.t -> string -> unit
+} [@@unboxed]
 
-  let put level facil str =
+let put_simple (t:target) : t = {
+  put = fun level facil ts pairs str ->
     if allowed facil level then
-      T.output level facil (T.format level facil str)
+      t.output level facil (t.format level facil ts pairs str)
+}
 
-end
+let put_limited (t:target) : t =
+  let last = ref (`Debug,"") in
+  let n = ref 0 in
 
-module PutLimited(T : Target) : Put =
-struct
-
-  let last = ref (`Debug,"")
-  let n = ref 0
-
-  (** FIXME not thread safe *)
-  let put level facil str =
+  (* FIXME not thread safe *)
+  let put level facil ts pairs str =
     match allowed facil level with
     | false -> ()
     | true ->
@@ -74,29 +74,11 @@ struct
       begin
         if !n <> 0 then
         begin
-         T.output level facil (sprintf
+         t.output level facil (sprintf
           "last message repeated %u times, suppressed\n" !n);
           n := 0
         end;
         last := this;
-        T.output level facil (T.format level facil str);
+        t.output level facil (t.format level facil ts pairs str);
       end
-
-end
-
-module Make(T : Put) = struct
-
-  let debug_s = T.put `Debug
-  let info_s = T.put `Info
-  let warn_s = T.put `Warn
-  let error_s = T.put `Error
-  let critical_s = T.put `Critical
-  let put_s = T.put
-
-  let debug f fmt = ksprintf (debug_s f) fmt
-  let info f fmt = ksprintf (info_s f) fmt
-  let warn f fmt = ksprintf (warn_s f) fmt
-  let error f fmt = ksprintf (error_s f) fmt
-  let critical f fmt = ksprintf (critical_s f) fmt
-
-end
+  in { put }

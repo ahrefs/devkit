@@ -236,7 +236,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       | code -> `Error code
     end
 
-  let verbose_curl_result nr_http action t h code =
+  let verbose_curl_result_plain nr_http action t h code =
     let open Curl in
     let b = Buffer.create 10 in
     bprintf b "%s #%d %s ⇓%s ⇑%s %s "
@@ -260,6 +260,44 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       bprintf b "error (%d) %s (errno %d)" (errno code) (strerror code) (Curl.get_oserrno h)
     end;
     log #info_s (Buffer.contents b)
+
+  let verbose_curl_result_logfmt nr_http action t h code =
+    let open Curl in
+    let size_down = get_sizedownload h in
+    let size_up = get_sizeupload h in
+    let base = [
+      "method", string_of_http_action action;
+      "http_seq", string_of_int nr_http;
+      "duration", sprintf "%.3f" t#get;
+      "size_down", Action.bytes_string_f size_down;
+      "size_down_raw", sprintf "%.0f" size_down;
+      "size_up", Action.bytes_string_f size_up;
+      "size_up_raw", sprintf "%.0f" size_up;
+      "ip", get_primaryip h;
+    ] in
+    let base = match get_httpcode h with
+      | 0 -> base
+      | n -> ("http_status", string_of_int n) :: base
+    in
+    match code with
+    | CURLE_OK ->
+      let pairs = ("url", get_effectiveurl h) :: base in
+      let pairs = match get_redirecturl h with "" -> pairs | s -> ("redirect", s) :: pairs in
+      let pairs = match get_redirectcount h with 0 -> pairs | n -> ("redirect_count", string_of_int n) :: pairs in
+      log #info ~pairs "http done"
+    | _ ->
+      let pairs =
+        ("err", strerror code) ::
+        ("errno", string_of_int (errno code)) ::
+        ("oserrno", string_of_int (get_oserrno h)) ::
+        base
+      in
+      log #info ~pairs "http error"
+
+  let verbose_curl_result nr_http action t h code =
+    match Log.State.get_cur_format () with
+    | `Plain, _ -> verbose_curl_result_plain nr_http action t h code
+    | `Logfmt, _ -> verbose_curl_result_logfmt nr_http action t h code
 
   (* Given a list of strings, check pre-existing entry starting with `~name`; and adds the concatenation of `~name` and `~value` if not. *)
   let add_if_absent ~name ~value strs =
@@ -320,7 +358,13 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       | Some (`Raw (ct,body)) -> sprintf "%s \"%s\"" ct (Stre.shorten ~escape:true 64 body)
       | Some (`Chunked (ct,_f)) -> sprintf "%s chunked" ct
       in
-      log #info "%s #%d %s %s" action_name nr_http url body
+
+      let structured_pairs = [
+        "method", action_name;
+        "http_seq", string_of_int nr_http;
+        "url", url;
+      ] in
+      log #info "%s #%d %s %s" action_name nr_http url body ~structured_pairs
     end;
 
     let describe () =
