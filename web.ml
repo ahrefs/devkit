@@ -120,9 +120,9 @@ module type CURL = sig
 end
 
 type ('body,'ret) http_request_ =
+  ?verbose:bool ->
   ?ua:string ->
   ?timeout:int ->
-  ?verbose:bool ->
   ?setup:(Curl.t -> unit) ->
   ?timer:Action.timer ->
   ?max_size:int ->
@@ -141,30 +141,53 @@ module type HTTP = sig
   type ('body,'ret) request_ = ('body,'ret IO.t) http_request_
   type 'ret request = 'ret IO.t http_request
 
-  val http_request' : [> `Error of Curl.curlCode | `Ok of int * string ] request
-  val http_request :  [> `Error of string | `Ok of string ] request
+  (** this is the most general form, pass [result] callback to massage the result before returning from the function
+      e.g. if you need the redirect url in case of 3xx, do [http_request_k ~result:http_result] *)
+  val http_request_k : result:(Curl.t * (int * string, Curl.curlCode) result -> 'r) -> 'r request
+
+  (** this is the most straightforward result of http status code and content or error code *)
+  val http_request' : [ `Error of Curl.curlCode | `Ok of int * string ] request
+
+  (** even easier - content on HTTP 2xx or error message *)
+  val http_request :  [ `Error of string | `Ok of string ] request
+
+  (** same as {!http_request} but raise exception on non-2xx *)
   val http_request_exn : string request
-  val http_query : (string * string, [> `Error of string | `Ok of string ]) request_
+
+  (** send GET with a given content-type and body *)
+  val http_query : (string * string, [ `Error of string | `Ok of string ]) request_
+
+  (** send POST with key-value form parameters *)
   val http_submit :
+    ?verbose:bool ->
     ?ua:string ->
     ?timeout:int ->
-    ?verbose:bool ->
     ?setup:(Curl.t -> unit) ->
     ?timer:Action.timer ->
     ?http_1_0:bool ->
     ?headers:string list ->
     ?action:http_action ->
     string ->
-    (string * string) list -> [> `Error of string | `Ok of string ] IO.t
+    (string * string) list -> [ `Error of string | `Ok of string ] IO.t
 end
 
 let show_result ?(verbose=false) = function
-| `Error code -> sprintf "(%d) %s" (Curl.errno code) (Curl.strerror code)
-| `Ok (n, content) -> sprintf "http %d%s" n (if verbose then ": " ^ content else "")
+| Error code -> sprintf "(%d) %s" (Curl.errno code) (Curl.strerror code)
+| Ok (n, content) -> sprintf "http %d%s" n (if verbose then ": " ^ content else "")
 
-let simple_result ?(is_ok=(fun code -> code / 100 = 2)) ?verbose = function
-| `Ok (code, s) when is_ok code -> `Ok s
-| r -> `Error (show_result ?verbose r)
+let simple_result ?verbose (_,r) =
+  match r with
+  | Ok (n,s) when n / 100 = 2 -> `Ok s
+  | r -> `Error (show_result ?verbose r)
+
+let http_result ?verbose (h,r) =
+  match r with
+  | Error _ -> `Error (show_result ?verbose r)
+  | Ok (n,(s:string)) ->
+    match n/100 with
+    | 2 -> `Ok (n,s)
+    | 3 -> `Redirect (n, Curl.get_redirecturl h)
+    | _ -> `Http (n,s)
 
 let nr_http = ref 0
 
@@ -190,6 +213,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       "server.address",             `String (Curl.get_primaryip h);
       (* NOTE: this crashes with
          exn File "curl.ml", line 1365, characters 9-15: Assertion failed
+         before ocurl 0.11.0
       "network.protocol.version",   `String (match Curl.get_http_version h with
         | HTTP_VERSION_1_0 -> "1.0" | HTTP_VERSION_1_1 -> "1.1"
         | HTTP_VERSION_2 | HTTP_VERSION_2TLS | HTTP_VERSION_2_PRIOR_KNOWLEDGE -> "2"
@@ -210,33 +234,27 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       ()
 
   (* deprecated *)
-  let http_gets ?(setup=ignore) ?timer ?max_size ?(check=(fun _ -> true)) ?(result=(fun _ _ -> return_unit)) url =
+  let http_gets ~setup ?timer ?max_size ~result url =
     with_curl_cache begin fun h ->
       Curl.set_url h url;
       curl_default_setup h;
-      let () = setup h in
+      setup h;
       let b = Buffer.create 10 in
       let read_size = ref 0 in
       Curl.set_writefunction h begin fun s ->
-        match check h with
-        | false -> 0
-        | true ->
-          Buffer.add_string b s;
-          let l = String.length s in
-          read_size += l;
-          match max_size with
-          | Some max_size when !read_size > max_size -> Exn.fail "received too much data (%db) when max is %db" !read_size max_size
-          | _ -> l
+        Buffer.add_string b s;
+        let l = String.length s in
+        read_size += l;
+        match max_size with
+        | Some max_size when !read_size > max_size -> Exn.fail "received too much data (%db) when max is %db" !read_size max_size
+        | _ -> l
       end;
       timer |> Option.may (fun t -> t#mark "Web.http");
       catch (fun () -> Curl_IO.perform h) (fun exn -> update_timer h timer; IO.raise exn) >>= fun code ->
-      (update_timer h timer; result h code) >>= fun () ->
-      return @@ match code with
-      | Curl.CURLE_OK -> `Ok (Curl.get_httpcode h, Buffer.contents b)
-      | code -> `Error code
+      (update_timer h timer; return @@ result (h,match code with CURLE_OK -> Ok (Curl.get_httpcode h, Buffer.contents b) | err -> Error err))
     end
 
-  let verbose_curl_result_plain nr_http action t h code =
+  let verbose_curl_result_plain nr_http action t (h,r) =
     let open Curl in
     let b = Buffer.create 10 in
     bprintf b "%s #%d %s ⇓%s ⇑%s %s "
@@ -245,9 +263,9 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       (Action.bytes_string_f @@ get_sizeupload h)
       (get_primaryip h)
     ;
-    begin match code with
-    | CURLE_OK ->
-      bprintf b "HTTP %d %s" (get_httpcode h) (get_effectiveurl h);
+    begin match r with
+    | Ok (code,_)  ->
+      bprintf b "HTTP %d %s" code (get_effectiveurl h);
       begin match get_redirecturl h with
       | "" -> ()
       | s -> bprintf b " -> %s" s
@@ -256,12 +274,12 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       | 0 -> ()
       | n -> bprintf b " after %d redirects" n
       end
-    | _ ->
+    | Error code ->
       bprintf b "error (%d) %s (errno %d)" (errno code) (strerror code) (Curl.get_oserrno h)
     end;
     log #info_s (Buffer.contents b)
 
-  let verbose_curl_result_logfmt nr_http action t h code =
+  let verbose_curl_result_logfmt nr_http action t (h,r) =
     let open Curl in
     let size_down = get_sizedownload h in
     let size_up = get_sizeupload h in
@@ -279,13 +297,13 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       | 0 -> base
       | n -> ("http_status", string_of_int n) :: base
     in
-    match code with
-    | CURLE_OK ->
+    match r with
+    | Ok _ ->
       let pairs = ("url", get_effectiveurl h) :: base in
       let pairs = match get_redirecturl h with "" -> pairs | s -> ("redirect", s) :: pairs in
       let pairs = match get_redirectcount h with 0 -> pairs | n -> ("redirect_count", string_of_int n) :: pairs in
       log #info ~pairs "http done"
-    | _ ->
+    | Error code ->
       let pairs =
         ("err", strerror code) ::
         ("errno", string_of_int (errno code)) ::
@@ -294,10 +312,10 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       in
       log #info ~pairs "http error"
 
-  let verbose_curl_result nr_http action t h code =
+  let verbose_curl_result nr_http action t hr =
     match Log.State.get_cur_format () with
-    | `Plain, _ -> verbose_curl_result_plain nr_http action t h code
-    | `Logfmt, _ -> verbose_curl_result_logfmt nr_http action t h code
+    | `Plain, _ -> verbose_curl_result_plain nr_http action t hr
+    | `Logfmt, _ -> verbose_curl_result_logfmt nr_http action t hr
 
   (* Given a list of strings, check pre-existing entry starting with `~name`; and adds the concatenation of `~name` and `~value` if not. *)
   let add_if_absent ~name ~value strs =
@@ -308,7 +326,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
 
   (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
   (* Don't use curl_setheaders when using ?headers option *)
-  let http_request' ?ua ?timeout ?(verbose=false) ?(setup=ignore) ?timer ?max_size ?(http_1_0=false) ?headers ?body (action:http_action) url =
+  let http_request_k ~result ?(verbose=false) ?ua ?timeout ?(setup=ignore) ?timer ?max_size ?(http_1_0=false) ?headers ?body (action:http_action) url =
     let open Curl in
     let action_name = string_of_http_action action in
     let ch_query_id        = ref None in
@@ -382,7 +400,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       let span_name = Printf.sprintf "devkit.web.%s" action_name in
       (* We set the value of `__FUNCTION__` to preserve the build with OCaml < 4.12. *)
       Possibly_otel.enter_manual_span
-        ~__FUNCTION__:"Devkit.Web.Http.http_request'" ~__FILE__ ~__LINE__ ~data:describe span_name in
+        ~__FUNCTION__:"Devkit.Web.Http.http_request_k" ~__FILE__ ~__LINE__ ~data:describe span_name in
 
     let headers = match Possibly_otel.Traceparent.get_ambient ~explicit_span () with
     | None -> headers
@@ -396,38 +414,37 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     in
 
     let t = new Action.timer in
-    let result = Some (fun h code ->
-      if verbose then verbose_curl_result nr_http action t h code;
-      if Trace_core.enabled () then (
+    let result (h,_ as res) =
+      if verbose then verbose_curl_result nr_http action t res;
+      if Trace_core.enabled () then
+      begin
         let data = get_curl_data h in
-        let data = match !ch_query_id with None -> data
-          | Some v -> ("http.response.header.x-clickhouse-query-id", `String v) :: data in
-        let data = match !ch_summary  with None -> data
-          | Some v -> ("http.response.header.x-clickhouse-summary",  `String v) :: data in
-        let data = match !resp_content_encoding with None -> data
-          | Some v -> ("http.response.header.content-encoding", `String v) :: data in
+        let data = match !ch_query_id with None -> data | Some v -> ("http.response.header.x-clickhouse-query-id", `String v) :: data in
+        let data = match !ch_summary  with None -> data | Some v -> ("http.response.header.x-clickhouse-summary",  `String v) :: data in
+        let data = match !resp_content_encoding with None -> data | Some v -> ("http.response.header.content-encoding", `String v) :: data in
         Trace_core.add_data_to_span explicit_span data
-      );
+      end;
       Trace_core.exit_span explicit_span;
-      return ()
-    ) in
+      result res
+    in
 
-    http_gets ~setup:(setup ~headers set_body_and_headers) ?timer ?result ?max_size url
+    http_gets ~setup:(setup ~headers set_body_and_headers) ?timer ?max_size ~result url
 
-  let http_request ?ua ?timeout ?verbose ?setup ?timer ?max_size ?http_1_0 ?headers ?body (action:http_action) url =
-    http_request' ?ua ?timeout ?verbose ?setup ?timer ?max_size ?http_1_0 ?headers ?body action url >>= fun res ->
-    return @@ simple_result ?verbose res
+  (* could be [~result:snd], but need to keep compatibility *)
+  let http_request' = http_request_k ~result:(function (_,Ok x) -> `Ok x | (_,Error e) -> `Error e)
 
-  let http_request_exn ?ua ?timeout ?verbose ?setup ?timer ?max_size ?http_1_0 ?headers ?body (action:http_action) url =
-    http_request ?ua ?timeout ?verbose ?setup ?timer ?max_size ?http_1_0 ?headers ?body action url
+  let http_request ?verbose = http_request_k ?verbose ~result:(simple_result ?verbose)
+
+  let http_request_exn ?verbose ?ua ?timeout ?setup ?timer ?max_size ?http_1_0 ?headers ?body (action:http_action) url =
+    http_request ?verbose ?ua ?timeout ?setup ?timer ?max_size ?http_1_0 ?headers ?body action url
     >>= function `Ok s -> return s | `Error error -> fail "%s" error
 
-  let http_query ?ua ?timeout ?verbose ?setup ?timer ?max_size ?http_1_0 ?headers ?body (action:http_action) url =
+  let http_query ?verbose ?ua ?timeout ?setup ?timer ?max_size ?http_1_0 ?headers ?body (action:http_action) url =
     let body = match body with Some (ct,s) -> Some (`Raw (ct,s)) | None -> None in
-    http_request ?ua ?timeout ?verbose ?setup ?timer ?max_size ?http_1_0 ?headers ?body action url
+    http_request ?verbose ?ua ?timeout ?setup ?timer ?max_size ?http_1_0 ?headers ?body action url
 
-  let http_submit ?ua ?timeout ?verbose ?setup ?timer ?http_1_0 ?headers ?(action=`POST) url args =
-    http_request ?ua ?timeout ?verbose ?setup ?timer ?http_1_0 ?headers ~body:(`Form args) action url
+  let http_submit ?verbose ?ua ?timeout ?setup ?timer ?http_1_0 ?headers ?(action=`POST) url args =
+    http_request ?verbose ?ua ?timeout ?setup ?timer ?http_1_0 ?headers ~body:(`Form args) action url
 
 end
 
@@ -471,6 +488,7 @@ end
 module Http_blocking = Http(IO_blocking)(Curl_blocking)
 module Http_lwt = Http(IO_lwt)(Curl_lwt_for_http)
 
+(* there is also Http_blocking.http_request_k *)
 let with_curl = Http_blocking.with_curl
 let with_curl_cache = Http_blocking.with_curl_cache
 let http_request' = Http_blocking.http_request'
@@ -479,6 +497,7 @@ let http_request_exn = Http_blocking.http_request_exn
 let http_query = Http_blocking.http_query
 let http_submit = Http_blocking.http_submit
 
+(* there is also Http_lwt.http_request_k *)
 let http_request_lwt' = Http_lwt.http_request'
 let http_request_lwt = Http_lwt.http_request
 let http_request_lwt_exn = Http_lwt.http_request_exn
