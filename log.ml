@@ -113,6 +113,7 @@ module State = struct
     let set_cur_format f = Atomic.set cur_format f
   end
   let get_cur_format () = Atomic.get cur_format
+  let is_structured_format () = match get_cur_format () with `Plain, _ -> false | `Logfmt, _ -> true
   let set_plaintext () = set_cur_format (`Plain, format_simple_full)
   let set_logfmt () = set_cur_format (`Logfmt, format_logfmt)
 
@@ -188,11 +189,15 @@ let read_env_config = State.read_env_config
 (**
   param [lines]: whether to split multiline message as separate log lines (default [true])
 
-  param [backtrace]: whether to show backtrace if [exn] is given (default is [false])
+  param [backtrace]: whethgter to show backtrace if [exn] is given (default is [false])
 
   param [saved_backtrace]: supply backtrace to show instead of using [Printexc.get_backtrace]
+
+  param [pairs] key/value pairs to add to the line, unconditionally
+
+  param [structured_pairs] key/value pairs to use for structured log formats only. Plain logging will discard.
 *)
-type 'a pr = ?exn:exn -> ?lines:bool -> ?backtrace:bool -> ?saved_backtrace:string list -> ?ts:Time.t -> ?pairs:Logger.Pairs.t -> ('a, unit, string, unit) format4 -> 'a
+type 'a pr = ?exn:exn -> ?lines:bool -> ?backtrace:bool -> ?saved_backtrace:string list -> ?ts:Time.t -> ?structured_pairs:Logger.Pairs.t -> ?pairs:Logger.Pairs.t -> ('a, unit, string, unit) format4 -> 'a
 
 class logger facil =
   let make_s (output_line:Logger.facil -> Time.t -> Logger.Pairs.t -> string -> unit) =
@@ -209,7 +214,8 @@ class logger facil =
     output lines facil ts pairs (s ^ " : exn " ^ Exn.str exn ^ (if bt = [] then " (no backtrace)" else ""));
     List.iter (fun line -> output_line facil ts pairs ("    " ^ line)) bt
   in
-  fun ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace ?(ts=Unix.gettimeofday()) ?(pairs=[]) s ->
+  fun ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace ?(ts=Unix.gettimeofday()) ?(structured_pairs=[]) ?(pairs=[]) s ->
+    let pairs = if structured_pairs!=[] && State.is_structured_format () then List.rev_append structured_pairs pairs else pairs in
     try
       match exn with
       | None -> output lines facil ts pairs s
@@ -223,8 +229,8 @@ class logger facil =
     with exn ->
       output_line facil ts pairs (sprintf "LOG FAILED : %S with message %S" (Exn.str exn) s)
 in
-let make : _ -> _ pr = fun output ?exn ?lines ?backtrace ?saved_backtrace ?ts ?pairs fmt ->
-  ksprintf (fun s -> output ?exn ?lines ?backtrace ?saved_backtrace ?ts ?pairs s) fmt
+let make : _ -> _ pr = fun output ?exn ?lines ?backtrace ?saved_backtrace ?ts ?structured_pairs ?pairs fmt ->
+    ksprintf (fun s -> output ?exn ?lines ?backtrace ?saved_backtrace ?ts ?structured_pairs ?pairs s) fmt
 in
 let debug_s = make_s debug_s in
 let warn_s = make_s warn_s in
