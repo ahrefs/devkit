@@ -129,13 +129,11 @@ module State = struct
   let hook = ref (fun _ _ _ -> ())
   let output_simple level facil s = !hook level facil s; output_ch log_ch s
 
-  let put = Logger.put_simple {
+  (** Main logger *)
+  let logger = Logger.put_simple {
     format;
     output = output_simple;
   }
-
-  (** Main logger, writes into [put] *)
-  let logger = Logger.make put
 
   let self = "lib"
 
@@ -154,21 +152,9 @@ module State = struct
     with
       e ->
         let now = (Unix.gettimeofday ()) in
-        logger.warn (facility self) now [] "reopen_log_ch(%s) failed : %s" file (Printexc.to_string e)
+        logger.put `Warn (facility self) now [] (sprintf "reopen_log_ch(%s) failed : %s" file (Printexc.to_string e))
 
 end
-
-let debug_s = State.logger.debug_s
-let info_s = State.logger.info_s
-let warn_s = State.logger.warn_s
-let error_s = State.logger.error_s
-let critical_s = State.logger.critical_s
-let put_s = State.logger.put_s
-let debug = State.logger.debug
-let info = State.logger.info
-let warn = State.logger.warn
-let error = State.logger.error
-let critical = State.logger.critical
 
 let facility = State.facility
 let set_filter = State.set_filter
@@ -232,12 +218,12 @@ in
 let make : _ -> _ pr = fun output ?exn ?lines ?backtrace ?saved_backtrace ?ts ?structured_pairs ?pairs fmt ->
     ksprintf (fun s -> output ?exn ?lines ?backtrace ?saved_backtrace ?ts ?structured_pairs ?pairs s) fmt
 in
-let debug_s = make_s debug_s in
-let warn_s = make_s warn_s in
-let info_s = make_s info_s in
-let error_s = make_s error_s in
-let critical_s = make_s critical_s in
-let put_s level = make_s (put_s level) in
+let debug_s = make_s (State.logger.put `Debug) in
+let warn_s = make_s (State.logger.put `Warn) in
+let info_s = make_s (State.logger.put `Info) in
+let error_s = make_s (State.logger.put `Error) in
+let critical_s = make_s (State.logger.put `Critical) in
+let put_s level = make_s (State.logger.put level) in
 object
 method debug_s = debug_s
 method warn_s = warn_s

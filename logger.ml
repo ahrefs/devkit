@@ -47,17 +47,18 @@ type target = {
   output : level -> facil -> string -> unit;
 }
 
-type put = {
+(** A logger *)
+type t = {
   put : level -> facil -> Time.t -> Pairs.t -> string -> unit
 } [@@unboxed]
 
-let put_simple (t:target) : put = {
+let put_simple (t:target) : t = {
   put = fun level facil ts pairs str ->
     if allowed facil level then
       t.output level facil (t.format level facil ts pairs str)
 }
 
-let put_limited (t:target) : put =
+let put_limited (t:target) : t =
   let last = ref (`Debug,"") in
   let n = ref 0 in
 
@@ -81,32 +82,3 @@ let put_limited (t:target) : put =
         t.output level facil (t.format level facil ts pairs str);
       end
   in { put }
-
-(** A logger *)
-type t = {
-  debug_s: facil -> Time.t -> Pairs.t -> string -> unit;
-  info_s: facil -> Time.t -> Pairs.t -> string -> unit;
-  warn_s: facil -> Time.t -> Pairs.t -> string -> unit;
-  error_s: facil -> Time.t -> Pairs.t -> string -> unit;
-  critical_s: facil -> Time.t -> Pairs.t -> string -> unit;
-  put_s: level -> facil -> Time.t -> Pairs.t -> string -> unit;
-  debug: 'a. facil -> Time.t -> Pairs.t -> ('a, unit, string, unit) format4 -> 'a;
-  info: 'a. facil -> Time.t -> Pairs.t -> ('a, unit, string, unit) format4 -> 'a;
-  warn: 'a. facil -> Time.t -> Pairs.t -> ('a, unit, string, unit) format4 -> 'a;
-  error: 'a. facil -> Time.t -> Pairs.t -> ('a, unit, string, unit) format4 -> 'a;
-  critical: 'a. facil -> Time.t -> Pairs.t -> ('a, unit, string, unit) format4 -> 'a;
-}
-
-let make (t:put) : t =
-  let debug_s = t.put `Debug in
-  let info_s = t.put `Info in
-  let warn_s = t.put `Warn in
-  let error_s = t.put `Error in
-  let critical_s = t.put `Critical in
-  let put_s = t.put in
-  let debug f ts pairs fmt = ksprintf (debug_s f ts pairs) fmt in
-  let info f ts pairs fmt = ksprintf (info_s f ts pairs) fmt in
-  let warn f ts pairs fmt = ksprintf (warn_s f ts pairs) fmt in
-  let error f ts pairs fmt = ksprintf (error_s f ts pairs) fmt in
-  let critical f ts pairs fmt = ksprintf (critical_s f ts pairs) fmt in
-  { debug_s; info_s; warn_s; error_s; critical_s; put_s; debug; info; warn; error; critical }
