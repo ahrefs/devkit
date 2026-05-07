@@ -358,13 +358,17 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       | Some (`Raw (ct,body)) -> sprintf "%s \"%s\"" ct (Stre.shorten ~escape:true 64 body)
       | Some (`Chunked (ct,_f)) -> sprintf "%s chunked" ct
       in
-      let pairs = [
-        "method", action_name;
-        "http_seq", string_of_int nr_http;
-        "url", url;
-      ] in
-      let pairs = if body = "" then pairs else ("body", body) :: pairs in
-      log #info ~pairs "http start"
+
+      match Log.State.get_cur_format () with
+      | `Plain, _ -> log #info "%s #%d %s %s" action_name nr_http url body
+      | `Logfmt, _ ->
+        let pairs = [
+          "method", action_name;
+          "http_seq", string_of_int nr_http;
+          "url", url;
+        ] in
+        let pairs = if body = "" then pairs else ("body", body) :: pairs in
+        log #info ~pairs "http start"
     end;
 
     let describe () =
