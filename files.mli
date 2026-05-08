@@ -31,7 +31,7 @@ val mkdir_p : ?perm:Unix.file_perm -> string -> unit
     There is no such special treatment for special files (Unix.stat
     kind not S_REG, e.g. devices, pipes, etc), instead they are
     written to directly. Symlinks are followed (not overwritten in
-    place).
+    place). Throws {!Unix.Unix_error} on broken symlinks.
 
     FIXME windows *)
 val save_as : string -> ?mode:Unix.file_perm -> (out_channel -> unit) -> unit

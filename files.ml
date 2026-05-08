@@ -82,12 +82,8 @@ let save_as_regular name ?(mode=0o644) f =
       exn -> Exn.suppress Unix.unlink temp; raise exn
   end
 
-let save_as name ?mode f =
-  let name =
-    match (Unix.lstat name).st_kind with
-    | Unix.S_LNK -> Unix.realpath name
-    | (exception Unix.Unix_error (Unix.ENOENT, _, _)) | _ -> name
-  in
-  match (Unix.stat name).st_kind with
-  | Unix.S_REG | (exception Unix.Unix_error (Unix.ENOENT, _, _)) -> save_as_regular name ?mode  f
+let rec save_as name ?mode f =
+  match (Unix.lstat name).st_kind with
+  | Unix.S_LNK -> save_as (Unix.realpath name) ?mode f
+  | Unix.S_REG | (exception Unix.Unix_error (Unix.ENOENT, _, _)) -> save_as_regular name ?mode f
   | _ -> Out_channel.with_open_gen [ Open_wronly ] 0 name f
