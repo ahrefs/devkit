@@ -22,14 +22,16 @@ val open_out_append_text : string -> out_channel
 val mkdir_p : ?perm:Unix.file_perm -> string -> unit
 
 (** [save_as filename ?mode f] is similar to
-    [Control.with_open_file_bin] for regular files, except that writing is done to a
-    temporary file that will be renamed to [filename] after [f] has
-    succesfully terminated. Therefore this guarantee that either
-    [filename] will not be modified or will contain whatever [f] was
-    writing to it as a side-effect.
+    [Control.with_open_file_bin] for regular files, except that
+    writing is done to a temporary file that will be renamed to
+    [filename] after [f] has succesfully terminated. Therefore this
+    guarantee that either [filename] will not be modified or will
+    contain whatever [f] was writing to it as a side-effect.
 
-    There is no such special treatment for special files (Unix.stat kind not S_REG, e.g. devices, pipes, etc), instead they
-    are written to directly. Symlinks are followed (not overwritten in place).
+    There is no such special treatment for special files (Unix.stat
+    kind not S_REG, e.g. devices, pipes, etc), instead they are
+    written to directly. Symlinks are followed (not overwritten in
+    place).
 
     FIXME windows *)
 val save_as : string -> ?mode:Unix.file_perm -> (out_channel -> unit) -> unit
