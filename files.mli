@@ -29,7 +29,7 @@ val mkdir_p : ?perm:Unix.file_perm -> string -> unit
     writing to it as a side-effect.
 
     There is no such special treatment for special files (Unix.stat kind not S_REG, e.g. devices, pipes, etc), instead they
-    are written to directly.
+    are written to directly. Symlinks are followed (not overwritten in place).
 
     FIXME windows *)
 val save_as : string -> ?mode:Unix.file_perm -> (out_channel -> unit) -> unit
