@@ -595,6 +595,80 @@ let () =
   assert_equal !accumulator 4;
   ()
 
+let with_temp_path name f =
+  let path = Filename.concat (Filename.get_temp_dir_name ()) name in
+  (try Sys.remove path with _ -> ());
+  Fun.protect ~finally:(fun () -> try Sys.remove path with _ -> ()) (fun () -> f path)
+
+let () = test "Files.save_as writes to new regular file" @@ fun () ->
+  with_temp_path "test_save_as_new.txt" @@ fun path ->
+  Files.save_as path (fun oc -> output_string oc "hello\n");
+  let content = In_channel.with_open_text path In_channel.input_all in
+  assert_equal ~printer:id "hello\n" content
+
+let () = test "Files.save_as overwrites existing regular file" @@ fun () ->
+  with_temp_path "test_save_as_overwrite.txt" @@ fun path ->
+  Out_channel.with_open_text path (fun oc -> output_string oc "old\n");
+  Files.save_as path (fun oc -> output_string oc "new\n");
+  let content = In_channel.with_open_text path In_channel.input_all in
+  assert_equal ~printer:id "new\n" content
+
+let () = test "Files.save_as no temp file left on success" @@ fun () ->
+  with_temp_path "test_save_as_no_temp.txt" @@ fun path ->
+  Files.save_as path (fun oc -> output_string oc "data\n");
+  let temp = Printf.sprintf "%s.save.%d.tmp" path (U.gettid ()) in
+  assert_bool "temp file should not exist" (not (Sys.file_exists temp))
+
+let () = test "Files.save_as no temp file left on failure" @@ fun () ->
+  with_temp_path "test_save_as_fail.txt" @@ fun path ->
+  (try Files.save_as path (fun _oc -> failwith "boom") with Failure _ -> ());
+  let temp = Printf.sprintf "%s.save.%d.tmp" path (U.gettid ()) in
+  assert_bool "temp file should not exist" (not (Sys.file_exists temp));
+  assert_bool "target file should not exist" (not (Sys.file_exists path))
+
+let () = test "Files.save_as writes to /dev/null without error" @@ fun () ->
+  Files.save_as "/dev/null" (fun oc -> output_string oc "discarded\n");
+  let temp = Printf.sprintf "/dev/null.save.%d.tmp" (U.gettid ()) in
+  assert_bool "temp file should not exist" (not (Sys.file_exists temp));
+  assert_bool "/dev/null should be a char device" ((Unix.stat "/dev/null").st_kind = Unix.S_CHR)
+
+let () = test "Files.save_as writes to named pipe (FIFO)" @@ fun () ->
+  with_temp_path "test_save_as_fifo" @@ fun fifo_path ->
+  Unix.mkfifo fifo_path 0o644;
+  let received = ref "" in
+  let reader = Thread.create (fun () -> received := In_channel.with_open_text fifo_path In_channel.input_all) () in
+  Files.save_as fifo_path (fun oc -> output_string oc "fifo data\n");
+  Thread.join reader;
+  assert_equal ~printer:id "fifo data\n" !received
+
+let () = test "Files.save_as no temp file created for FIFO" @@ fun () ->
+  with_temp_path "test_save_as_fifo2" @@ fun fifo_path ->
+  Unix.mkfifo fifo_path 0o644;
+  let reader = Thread.create (fun () -> ignore (In_channel.with_open_text fifo_path In_channel.input_all)) () in
+  Files.save_as fifo_path (fun oc -> output_string oc "data\n");
+  Thread.join reader;
+  let temp = Printf.sprintf "%s.save.%d.tmp" fifo_path (U.gettid ()) in
+  assert_bool "temp file should not exist" (not (Sys.file_exists temp))
+
+let () = test "Files.save_as writes through symlink without clobbering it" @@ fun () ->
+  with_temp_path "test_save_as_symlink_target.txt" @@ fun target ->
+  with_temp_path "test_save_as_symlink_link.txt" @@ fun link ->
+  Out_channel.with_open_text target (fun oc -> output_string oc "old\n");
+  Unix.symlink target link;
+  Files.save_as link (fun oc -> output_string oc "new\n");
+  assert_bool "symlink should still be a symlink" ((Unix.lstat link).st_kind = Unix.S_LNK);
+  let content = In_channel.with_open_text target In_channel.input_all in
+  assert_equal ~printer:id "new\n" content
+
+let () = test "Files.save_as fails on broken symlink" @@ fun () ->
+  with_temp_path "test_save_as_symlink_target.txt" @@ fun target ->
+  with_temp_path "test_save_as_symlink_link.txt" @@ fun link ->
+  Unix.symlink target link;
+  try
+    Files.save_as link (fun oc -> output_string oc "new\n");
+    assert_failure "should fail on broken symlink"
+  with Unix.Unix_error(Unix.ENOENT, "realpath", _) -> ()
+
 let tests () =
   let (_:test_results) = run_test_tt_main ("devkit" >::: List.rev !tests) in
   ()
