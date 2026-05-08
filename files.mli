@@ -28,7 +28,7 @@ val mkdir_p : ?perm:Unix.file_perm -> string -> unit
     [filename] will not be modified or will contain whatever [f] was
     writing to it as a side-effect.
 
-    There is no such special treatment for special files, instead they
+    There is no such special treatment for special files (Unix.stat kind not S_REG, e.g. devices, pipes, etc), instead they
     are written to directly.
 
     FIXME windows *)
