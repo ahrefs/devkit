@@ -55,7 +55,19 @@ let () =
   iter_files "/etc" (fun s _ -> print_endline s)
 *)
 
-let save_as name ?(mode=0o644) f =
+let mkdir_p ?(perm=0o755) path =
+  let rec aux path =
+    if Sys.file_exists path then begin
+      if not (Sys.is_directory path) then
+        Exn.fail "mkdir_p: %s exists but is not a directory" path
+    end else begin
+      aux (Filename.dirname path);
+      try Unix.mkdir path perm with Unix.Unix_error (Unix.EEXIST, _, _) -> ()
+    end
+  in
+  aux path
+
+let save_as_regular name ?(mode=0o644) f =
   (* not using make_temp_file cause same dir is needed for atomic rename *)
   let temp = Printf.sprintf "%s.save.%d.tmp" name (U.gettid ()) in
   bracket (Unix.openfile temp [Unix.O_WRONLY;Unix.O_CREAT] mode) Unix.close begin fun fd ->
@@ -69,3 +81,9 @@ let save_as name ?(mode=0o644) f =
     with
       exn -> Exn.suppress Unix.unlink temp; raise exn
   end
+
+let rec save_as name ?mode f =
+  match (Unix.lstat name).st_kind with
+  | Unix.S_LNK -> save_as (Unix.realpath name) ?mode f
+  | Unix.S_REG | (exception Unix.Unix_error (Unix.ENOENT, _, _)) -> save_as_regular name ?mode f
+  | _ -> Out_channel.with_open_gen [ Open_wronly ] 0 name f

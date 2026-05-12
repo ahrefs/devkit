@@ -62,6 +62,12 @@ let unless_exit x = Lwt.pick [wait_exit (); x]
 let get_args () =
   [
     ("-loglevel", Arg.String Log.set_loglevels, " ([<facil|prefix*>=]debug|info|warn|error[,])+");
+    ("-logformat",
+      Arg.Symbol (["plain"; "default"; "logfmt"], (function
+        | "plain" | "default" -> Log.State.set_plaintext ()
+        | "logfmt" -> Log.State.set_logfmt ()
+        | s -> failwith (Printf.sprintf "unknown log format %S" s))),
+      " Log output format (default: plain)");
     ExtArg.may_str "logfile" logfile "<file> Log file";
     ExtArg.may_str "pidfile" pidfile "<file> PID file";
     "-runas",

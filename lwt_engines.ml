@@ -39,7 +39,7 @@ let once_nonblock = Ev.[ONCE;NONBLOCK] in
 object(self)
   inherit Lwt_engine.abstract
 
-  method id = Engine_id__Devkit_libevent
+  method! id = Engine_id__Devkit_libevent
 
   val events_ = Ev.init ()
   val mutable pid = Unix.getpid ()

@@ -544,6 +544,28 @@ let () = test "Web.urlencode" @@ fun () ->
   assert_equal (Web.urlencode "Hello Günter") "Hello+G%C3%BCnter";
   ()
 
+let () = test "Action.make_config_lines" @@ fun () ->
+  let config_lines = [
+    "";
+    "foobar";
+    "# only comment line";
+    "arg # a comment";
+    "test # comment1 # comment2 ";
+    "  test # comment ";
+    "foo";
+    "  baz";
+    "bar  ";
+  ] in
+  assert_equal ~printer:(Stre.list (Printf.sprintf "%S")) (Action.make_config_lines config_lines) [
+    "foobar";
+    "arg";
+    "test";
+    "test";
+    "foo";
+    "baz";
+    "bar"
+  ]
+
 let () =
   let open Lwt.Syntax in
   let rec pings f = function
@@ -572,6 +594,143 @@ let () =
   );
   assert_equal !accumulator 4;
   ()
+
+let with_temp_path name f =
+  let path = Filename.concat (Filename.get_temp_dir_name ()) name in
+  (try Sys.remove path with _ -> ());
+  Fun.protect ~finally:(fun () -> try Sys.remove path with _ -> ()) (fun () -> f path)
+
+let () = test "Files.save_as writes to new regular file" @@ fun () ->
+  with_temp_path "test_save_as_new.txt" @@ fun path ->
+  Files.save_as path (fun oc -> output_string oc "hello\n");
+  let content = In_channel.with_open_text path In_channel.input_all in
+  assert_equal ~printer:id "hello\n" content
+
+let () = test "Files.save_as overwrites existing regular file" @@ fun () ->
+  with_temp_path "test_save_as_overwrite.txt" @@ fun path ->
+  Out_channel.with_open_text path (fun oc -> output_string oc "old\n");
+  Files.save_as path (fun oc -> output_string oc "new\n");
+  let content = In_channel.with_open_text path In_channel.input_all in
+  assert_equal ~printer:id "new\n" content
+
+let () = test "Files.save_as no temp file left on success" @@ fun () ->
+  with_temp_path "test_save_as_no_temp.txt" @@ fun path ->
+  Files.save_as path (fun oc -> output_string oc "data\n");
+  let temp = Printf.sprintf "%s.save.%d.tmp" path (U.gettid ()) in
+  assert_bool "temp file should not exist" (not (Sys.file_exists temp))
+
+let () = test "Files.save_as no temp file left on failure" @@ fun () ->
+  with_temp_path "test_save_as_fail.txt" @@ fun path ->
+  (try Files.save_as path (fun _oc -> failwith "boom") with Failure _ -> ());
+  let temp = Printf.sprintf "%s.save.%d.tmp" path (U.gettid ()) in
+  assert_bool "temp file should not exist" (not (Sys.file_exists temp));
+  assert_bool "target file should not exist" (not (Sys.file_exists path))
+
+let () = test "Files.save_as writes to /dev/null without error" @@ fun () ->
+  Files.save_as "/dev/null" (fun oc -> output_string oc "discarded\n");
+  let temp = Printf.sprintf "/dev/null.save.%d.tmp" (U.gettid ()) in
+  assert_bool "temp file should not exist" (not (Sys.file_exists temp));
+  assert_bool "/dev/null should be a char device" ((Unix.stat "/dev/null").st_kind = Unix.S_CHR)
+
+let () = test "Files.save_as writes to named pipe (FIFO)" @@ fun () ->
+  with_temp_path "test_save_as_fifo" @@ fun fifo_path ->
+  Unix.mkfifo fifo_path 0o644;
+  let received = ref "" in
+  let reader = Thread.create (fun () -> received := In_channel.with_open_text fifo_path In_channel.input_all) () in
+  Files.save_as fifo_path (fun oc -> output_string oc "fifo data\n");
+  Thread.join reader;
+  assert_equal ~printer:id "fifo data\n" !received
+
+let () = test "Files.save_as no temp file created for FIFO" @@ fun () ->
+  with_temp_path "test_save_as_fifo2" @@ fun fifo_path ->
+  Unix.mkfifo fifo_path 0o644;
+  let reader = Thread.create (fun () -> ignore (In_channel.with_open_text fifo_path In_channel.input_all)) () in
+  Files.save_as fifo_path (fun oc -> output_string oc "data\n");
+  Thread.join reader;
+  let temp = Printf.sprintf "%s.save.%d.tmp" fifo_path (U.gettid ()) in
+  assert_bool "temp file should not exist" (not (Sys.file_exists temp))
+
+let () = test "Files.save_as writes through symlink without clobbering it" @@ fun () ->
+  with_temp_path "test_save_as_symlink_target.txt" @@ fun target ->
+  with_temp_path "test_save_as_symlink_link.txt" @@ fun link ->
+  Out_channel.with_open_text target (fun oc -> output_string oc "old\n");
+  Unix.symlink target link;
+  Files.save_as link (fun oc -> output_string oc "new\n");
+  assert_bool "symlink should still be a symlink" ((Unix.lstat link).st_kind = Unix.S_LNK);
+  let content = In_channel.with_open_text target In_channel.input_all in
+  assert_equal ~printer:id "new\n" content
+
+let () = test "Files.save_as fails on broken symlink" @@ fun () ->
+  with_temp_path "test_save_as_symlink_target.txt" @@ fun target ->
+  with_temp_path "test_save_as_symlink_link.txt" @@ fun link ->
+  Unix.symlink target link;
+  try
+    Files.save_as link (fun oc -> output_string oc "new\n");
+    assert_failure "should fail on broken symlink"
+  with Unix.Unix_error(Unix.ENOENT, "realpath", _) -> ()
+
+let () = test "Logfmt" begin fun () ->
+  let eq name expected got =
+    assert_equal ~msg:name ~printer:(fun s -> sprintf "%S" s) expected got
+  in
+  eq "empty" "" (Logfmt.to_string []);
+  eq "safe" "k=v" (Logfmt.to_string ["k","v"]);
+  eq "multiple" "a=1 b=2" (Logfmt.to_string [("a","1");("b","2")]);
+  eq "empty value" "k=" (Logfmt.to_string ["k",""]);
+  eq "space" {|k="hello world"|} (Logfmt.to_string ["k","hello world"]);
+  eq "newline" {|k="a\nb"|} (Logfmt.to_string ["k","a\nb"]);
+  eq "quote" {|k="a\"b"|} (Logfmt.to_string ["k","a\"b"]);
+  eq "backslash" {|k="a\\b"|} (Logfmt.to_string ["k","a\\b"]);
+  eq "utf8" {|k="é"|} (Logfmt.to_string ["k","é"]);
+end
+
+let with_log_hook f =
+  let buf = Buffer.create 128 in
+  let prev = !Log.State.hook in
+  Log.State.hook := (fun _ _ s -> Buffer.add_string buf s);
+  Std.finally (fun () -> Log.State.hook := prev) f ();
+  buf
+
+let () = test "Log.pairs" begin fun () ->
+  let prev_utc = !Log.State.utc_timezone in
+  Log.State.utc_timezone := true;
+  Std.finally (fun () -> Log.State.utc_timezone := prev_utc) (fun () ->
+    let ts = 1700000000. in (* 2023-11-14 22:13:20 UTC *)
+    let log = Log.from "logtest" in
+    let check ~msg ~suffix out =
+      assert_bool (sprintf "%s: expected suffix %S, got %S" msg suffix out)
+        (Stre.ends_with out suffix)
+    in
+    let run action =
+      let out = Buffer.contents (with_log_hook action) in
+      assert_bool ("facility in output: " ^ out) (Stre.exists out "[logtest:");
+      assert_bool ("ts in output: " ^ out) (Stre.exists out "2023-11-14");
+      out
+    in
+    let out = run (fun () -> log#info ~ts ~pairs:["k","v"] "hello %d" 42) in
+    check ~msg:"pairs suffix" ~suffix:" hello 42 k=v\n" out;
+    let out = run (fun () -> log#info ~ts "plain") in
+    check ~msg:"no pairs" ~suffix:" plain\n" out;
+    let out = run (fun () -> log#warn ~ts ~pairs:[("a","1");("quoted","he said \"hi\"")] "m") in
+    check ~msg:"escape+multi" ~suffix:({| m a=1 quoted="he said \"hi\""|} ^ "\n") out;
+    assert_bool ("warn level: " ^ out) (Stre.exists out "[logtest:warn]")
+  ) ()
+end
+
+let () = test "Log.filter" begin fun () ->
+  let log = Log.from "filtertest" in
+  let prev_level = log#level in
+  log#allow `Warn;
+  Std.finally (fun () -> log#allow prev_level) (fun () ->
+    let buf = with_log_hook (fun () ->
+      log#info "suppressed";
+      log#warn "kept"
+    ) in
+    let out = Buffer.contents buf in
+    assert_bool ("only warn survives: " ^ out) (not (Stre.exists out "suppressed"));
+    assert_bool ("warn kept: " ^ out) (Stre.exists out "kept")
+  ) ()
+end
 
 let tests () =
   let (_:test_results) = run_test_tt_main ("devkit" >::: List.rev !tests) in

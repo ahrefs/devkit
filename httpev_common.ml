@@ -106,6 +106,17 @@ let show_request req =
     (header_safe req "user-agent")
     (header_safe req "x-request-id")
 
+let pairs_of_request req : Logger.Pairs.t =
+  [ "req_id", string_of_int req.id;
+    "client_addr", show_client_addr req;
+    "http_duration", sprintf "%.4f" (Time.get () -. req.conn);
+    "http_recv_duration", sprintf "%.4f" (req.recv -. req.conn);
+    "http_host", header_safe req "host";
+    "url", req.url;
+    "http_user_agent", header_safe req "user-agent";
+    "http_req_id", header_safe req "x-request-id"
+  ]
+
 let status_code : reply_status -> int = function
   | `Ok -> 200
   | `Created -> 201
