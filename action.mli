@@ -201,7 +201,7 @@ val config_lines : string -> string list
 (** Time utilities *)
 
 (** Basic timer. Also allows recording a sequence of interesting times from the given start point.
-    Can serialize recorded events to json (useful for Logstash events) *)
+    Can serialize recorded events to json *)
 class timer_start : Time.t ->
   object
     method record : string -> Time.t -> unit

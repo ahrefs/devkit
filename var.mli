@@ -1,7 +1,5 @@
 (**
   Global register for various types of counters.
-  {!Logstash} module will send all [Var] counters to logstash automatically.
-  Counters must be mononotonically increasing for logstash to send correct deltas to Elasticsearch.
 *)
 
 type attributes = (string * string) list
@@ -25,27 +23,7 @@ object
   method show : string
 end
 
-(** [cc pp type ?attr key] new set of counters with designated [type], [attr]ibutes and [key] name
-
-Logstash events will have attributes as follows :
- * all of [attr] key value pairs (if given)
- * class=[type]
- * [key]=X where X is value inserted into [CC]
-
-Guidelines for picking names :
-  keep number of different [key] names low (makes ES happy),
-  uniqueness of events is primarily provided by [class].
-
-Bad example :
-  let pages = new Var.cc "tool.pages" "pages"
-  let index = new Var.cc "tool.index" "index"
-  let count = new Var.cc "tool.count" "count"
-
-Better :
-  let pages = new Var.cc "tool.pages" "kind"
-  let pages = new Var.cc "tool.index" "kind"
-  let pages = new Var.cc "tool.count" "kind"
-*)
+(** [cc pp type ?attr key] new set of counters with designated [type], [attr]ibutes and [key] name *)
 val cc : ('a -> string) -> string -> ?attr:attributes -> string -> 'a Cache.Count.t
 
 (** [cc pp type ?attr key] new set of counters with designated [type], [attr]ibutes and [key] name, treated as milliseconds *)
