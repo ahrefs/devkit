@@ -223,6 +223,9 @@ class timer : object inherit timer_start end
 val uptime : timer
 val speed : int -> float -> float
 
+(** show speed per second with appropriate precision *)
+val speed_s : int -> float -> string
+
 
 (** Log or time execution of a function *)
 

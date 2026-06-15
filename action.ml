@@ -258,6 +258,9 @@ class timer = object inherit timer_start (Time.now ()) end
 let uptime = new timer
 
 let speed n t = float n /. (max t epsilon_float)
+let speed_s n t =
+  let f = float n /. (max t epsilon_float) in
+  sprintf (if f < 10. then "%0.1f/s" else if f < 1. then "%0.2f/s" else "%0.0f/s") f
 
 let perform ?name f x =
   let t = new timer in
@@ -376,20 +379,21 @@ let count_bytes out = let count = ref 0L in count_bytes_to count out
 let bench ?(compact=Gc.compact) count f =
   compact ();
   let t = new timer in
+  let t1 = new timer in
+  let tmin = ref Float.infinity in
   let st = Gc.quick_stat () in
-  let res = Exn.map (fun () -> for _ = 1 to count do ignore @@ f () done) () in
+  let res = Exn.map (fun () -> for _ = 1 to count do t1#reset; ignore @@ f (); tmin := min t1#get !tmin done) () in
   let st2 = Gc.quick_stat () in
   let elapsed = t#get in
-  let res = match res with
-  | `Ok () -> "ok"
-  | `Exn exn -> "exn " ^ Exn.str exn
-  in
-  sprintf "%s, elapsed %s, %.2f/sec : %s" (gc_diff st st2) (Time.duration_str elapsed) (speed count elapsed) res
+  match res with
+  | `Exn exn -> sprintf "exn %s after %s" (Exn.str exn) (Time.duration_str elapsed)
+  | `Ok () ->
+  sprintf "%s, elapsed %s, avg %s, best %s" (gc_diff st st2) (Time.duration_str elapsed) (speed_s count elapsed) (speed_s 1 !tmin)
 
 let run_bench ?compact count l =
   let max_len = List.fold_left (fun acc (name,_) -> max acc (String.length name)) 0 l in
   let align s = String.make (max 0 (max_len - String.length s)) ' ' ^ s in
-  printfn "run_bench %d cases (count %d)" (List.length l) count;
+  printfn "run_bench %d cases (%d runs)" (List.length l) count;
   List.iter (fun (name,f) -> printfn "%s : %s" (align name) (bench ?compact count f)) l
 
 (* sorting DynArray *)
