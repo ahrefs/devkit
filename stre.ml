@@ -130,6 +130,21 @@ let exists s sub = String.exists s sub[@warning "-6"]
 let drop_prefix s pre = if starts_with s pre then slice s ~first:(String.length pre) else s
 let drop_suffix s suf = if ends_with s suf then slice ~last:(- String.length suf) s else s
 
+let drop ?(prefix="") ?(suffix="") s =
+  let first = if prefix <> "" && starts_with s prefix then String.length prefix else 0 in
+  let last = String.length s - if suffix <> "" && ends_with s suffix then String.length suffix else 0 in
+  if first < last then unsafe_from_to s first last else ""
+
+let chop_prefix s pre = if starts_with s pre then Some (from s (String.length pre)) else None
+let chop_suffix s suf = if ends_with s suf then Some (upto s String.(length s - length suf)) else None
+
+(** return Some if any chop happened *)
+let chop ?(prefix="") ?(suffix="") s =
+  let first = if prefix <> "" && starts_with s prefix then String.length prefix else 0 in
+  let last = String.length s - if suffix <> "" && ends_with s suffix then String.length suffix else 0 in
+  if last - first = String.length s then None
+  else Some (if first < last then unsafe_from_to s first last else "")
+
 let istarts_with s ?(pos=0) prefix =
   if pos < 0 || pos > String.length s then invalid_arg "Stre.istarts_with";
   if String.length s < pos + String.length prefix then false else
