@@ -731,6 +731,11 @@ let () = test "Logfmt.Parser" begin fun () ->
   rt "multiple" [("a","1");("b","hello world");("c","a\"b")];
 end
 
+let without_logging f =
+  let log_output = Log.State.logger_target.output in
+  Log.State.logger_target.output <- (fun level facil s -> !Log.State.hook level facil s);
+  Std.finally (fun () -> Log.State.logger_target.output <- log_output) f ()
+
 let with_log_hook f =
   let buf = Buffer.create 128 in
   let prev = !Log.State.hook in
@@ -740,8 +745,12 @@ let with_log_hook f =
 
 let () = test "Log.pairs" begin fun () ->
   let prev_utc = !Log.State.utc_timezone in
+
+  (* suppress output *)
+  without_logging @@ fun () ->
+
   Log.State.utc_timezone := true;
-  Std.finally (fun () -> Log.State.utc_timezone := prev_utc) (fun () ->
+  let run () =
     let ts = 1700000000. in (* 2023-11-14 22:13:20 UTC *)
     let log = Log.from "logtest" in
     let check ~msg ~suffix out =
@@ -761,7 +770,10 @@ let () = test "Log.pairs" begin fun () ->
     let out = run (fun () -> log#warn ~ts ~pairs:[("a","1");("quoted","he said \"hi\"")] "m") in
     check ~msg:"escape+multi" ~suffix:({| m a=1 quoted="he said \"hi\""|} ^ "\n") out;
     assert_bool ("warn level: " ^ out) (Stre.exists out "[logtest:warn]")
-  ) ()
+  in
+  Std.finally
+    (fun () -> Log.State.utc_timezone := prev_utc)
+    run ()
 end
 
 let () = test "Log.filter" begin fun () ->

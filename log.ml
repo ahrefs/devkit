@@ -130,10 +130,11 @@ module State = struct
   let output_simple level facil s = !hook level facil s; output_ch log_ch s
 
   (** Main logger *)
-  let logger = Logger.put_simple {
+  let logger_target = {Logger.
     format;
     output = output_simple;
   }
+  let logger = Logger.put_simple logger_target
 
   let self = "lib"
 

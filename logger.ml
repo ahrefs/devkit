@@ -44,7 +44,7 @@ end
 
 type target = {
   format : level -> facil -> Time.t -> Pairs.t -> string -> string;
-  output : level -> facil -> string -> unit;
+  mutable output : level -> facil -> string -> unit;
 }
 
 (** A logger *)
