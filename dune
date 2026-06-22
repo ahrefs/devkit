@@ -79,3 +79,5 @@
 (rule
   (alias runtest)
   (action (run ./test.exe)))
+
+(ocamllex logfmt_lex)

@@ -684,6 +684,53 @@ let () = test "Logfmt" begin fun () ->
   eq "utf8" {|k="é"|} (Logfmt.to_string ["k","é"]);
 end
 
+let () = test "Logfmt.Parser" begin fun () ->
+  let p = Logfmt.Parser.create () in
+  let parse s = Logfmt.Parser.parse p s in
+  let pairs name expected raw =
+    assert_equal ~msg:name
+      ~printer:(fun pairs -> sprintf "[%s]" (String.concat "; " (List.map (fun (k,v) -> sprintf "%S=%S" k v) pairs)))
+      expected (parse raw)
+  in
+  pairs "empty string" [] "";
+  pairs "spaces only" [] "   ";
+  pairs "simple" ["k","v"] "k=v";
+  pairs "multiple" [("a","1");("b","2")] "a=1 b=2";
+  pairs "extra spaces" [("a","1");("b","2")] "  a=1   b=2  ";
+  pairs "empty value" ["k",""] "k=";
+  pairs "key only" ["k",""] "k";
+  pairs "quoted space" ["k","hello world"] {|k="hello world"|};
+  pairs "quoted empty" ["k",""] {|k=""|};
+  pairs "escape newline" ["k","a\nb"] {|k="a\nb"|};
+  pairs "escape tab" ["k","a\tb"] {|k="a\tb"|};
+  pairs "escape carriage return" ["k","a\rb"] {|k="a\rb"|};
+  pairs "escape backslash" ["k","a\\b"] {|k="a\\b"|};
+  pairs "escape quote" ["k","a\"b"] {|k="a\"b"|};
+  pairs "escape hex ctrl-A" ["k","a\x01b"] {|k="a\x01b"|};
+  pairs "escape hex backspace" ["k","a\x08b"] {|k="a\x08b"|};
+  pairs "utf8 unquoted" ["k","café"] "k=café";
+  pairs "utf8 quoted" ["k","café"] {|k="café"|};
+  pairs "unclosed quote" ["k","hello"] {|k="hello|};
+  pairs "multiple quoted" [("msg","hello world");("n","42")] {|msg="hello world" n=42|};
+  (* round-trip: to_string output must parse back to the original pairs *)
+  let rt name pairs =
+    assert_equal ~msg:("round-trip: " ^ name)
+      ~printer:(fun pairs -> sprintf "[%s]" (String.concat "; " (List.map (fun (k,v) -> sprintf "%S=%S" k v) pairs)))
+      pairs (parse (Logfmt.to_string pairs))
+  in
+  rt "safe" ["k","v"];
+  rt "space in value" ["k","hello world"];
+  rt "newline in value" ["k","a\nb"];
+  rt "tab in value" ["k","a\tb"];
+  rt "backslash in value" ["k","a\\b"];
+  rt "quote in value" ["k","a\"b"];
+  rt "ctrl-A" ["k","\x01"];
+  rt "backspace" ["k","\x08"];
+  rt "all low ctrl chars" ["k", String.init 32 Char.chr];
+  rt "utf8" ["k","café"];
+  rt "multiple" [("a","1");("b","hello world");("c","a\"b")];
+end
+
 let with_log_hook f =
   let buf = Buffer.create 128 in
   let prev = !Log.State.hook in
