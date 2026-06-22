@@ -171,18 +171,30 @@ module type HTTP = sig
     (string * string) list -> [> `Error of string | `Ok of string ] IO.t
 end
 
-let show_result ?(verbose=false) = function
+let show_result' ?(verbose=false) = function
 | Error code -> sprintf "(%d) %s" (Curl.errno code) (Curl.strerror code)
 | Ok (n, content) -> sprintf "http %d%s" n (if verbose then ": " ^ content else "")
 
-let simple_result ?verbose (_,r) =
+let show_result ?verbose r =
+  show_result' ?verbose @@ match r with
+  | `Ok x -> Ok x
+  | `Error e -> Error e
+
+let simple_result' ?verbose (_,r) =
   match r with
   | Ok (n,s) when n / 100 = 2 -> `Ok s
-  | r -> `Error (show_result ?verbose r)
+  | r -> `Error (show_result' ?verbose r)
+
+let simple_result ?verbose r =
+  let res = match r with
+    | `Ok s -> Ok s
+    | `Error e -> Error e
+  in
+  simple_result' ?verbose ((), res)
 
 let http_result ?verbose (h,r) =
   match r with
-  | Error _ -> `Error (show_result ?verbose r)
+  | Error _ -> `Error (show_result' ?verbose r)
   | Ok (n,(s:string)) ->
     match n/100 with
     | 2 -> `Ok (n,s)
@@ -433,7 +445,7 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
   (* could be [~result:snd], but need to keep compatibility *)
   let http_request' = http_request_k ~result:(function (_,Ok x) -> `Ok x | (_,Error e) -> `Error e)
 
-  let http_request ?verbose = http_request_k ?verbose ~result:(simple_result ?verbose)
+  let http_request ?verbose = http_request_k ?verbose ~result:(simple_result' ?verbose)
 
   let http_request_exn ?verbose ?ua ?timeout ?setup ?timer ?max_size ?http_1_0 ?headers ?body (action:http_action) url =
     http_request ?verbose ?ua ?timeout ?setup ?timer ?max_size ?http_1_0 ?headers ?body action url
