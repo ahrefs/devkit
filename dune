@@ -67,7 +67,7 @@
 
 (executable
   (name test)
-  (libraries lwt lwt.unix devkit extlib extunix libevent ocamlnet_lite ounit2 threads unix yojson)
+  (libraries lwt lwt.unix devkit extlib extunix libevent ocamlnet_lite ounit2 threads threads.posix unix yojson)
   (modules test test_httpev))
 
 ; uses 8GB+ RAM, so do not run as part of test suite
