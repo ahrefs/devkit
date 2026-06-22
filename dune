@@ -44,6 +44,7 @@
        lwt_flag
        lwt_util
        parallel
+       retry
        web))
   ))
 
