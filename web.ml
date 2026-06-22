@@ -103,7 +103,7 @@ let http_action_of_string : string -> http_action = function
   | s -> Exn.fail "http_action_of_string %S" s
 
 module type IO_TYPE = sig
-  type 'a t
+  type +'a t
   val return : 'a -> 'a t
   val ( >>= ) : 'a t -> ('a -> 'b t) -> 'b t
   val bracket : 'a t -> ('a -> unit t) -> ('a -> 'b t) -> 'b t
@@ -146,16 +146,16 @@ module type HTTP = sig
   val http_request_k : result:(Curl.t * (int * string, Curl.curlCode) result -> 'r) -> 'r request
 
   (** this is the most straightforward result of http status code and content or error code *)
-  val http_request' : [ `Error of Curl.curlCode | `Ok of int * string ] request
+  val http_request' : [> `Error of Curl.curlCode | `Ok of int * string ] request
 
   (** even easier - content on HTTP 2xx or error message *)
-  val http_request :  [ `Error of string | `Ok of string ] request
+  val http_request :  [> `Error of string | `Ok of string ] request
 
   (** same as {!http_request} but raise exception on non-2xx *)
   val http_request_exn : string request
 
   (** send GET with a given content-type and body *)
-  val http_query : (string * string, [ `Error of string | `Ok of string ]) request_
+  val http_query : (string * string, [> `Error of string | `Ok of string ]) request_
 
   (** send POST with key-value form parameters *)
   val http_submit :
@@ -168,7 +168,7 @@ module type HTTP = sig
     ?headers:string list ->
     ?action:http_action ->
     string ->
-    (string * string) list -> [ `Error of string | `Ok of string ] IO.t
+    (string * string) list -> [> `Error of string | `Ok of string ] IO.t
 end
 
 let show_result ?(verbose=false) = function
