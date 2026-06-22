@@ -36,6 +36,31 @@ let string s =
   IO.nwrite out (Bytes.unsafe_of_string s); (* IO wrong type *)
   IO.close_out out
 
+let string_lwt ?(chunk_size = 3000) ?(yield = Lwt.pause) s =
+  let out = output (IO.output_string ()) in
+  let buff = Buffer.create chunk_size in
+  let len = String.length s in
+  let rec loop i =
+    if i >= len then (
+      (* Final flush of the buffer if there's any residue *)
+      if Buffer.length buff > 0 then IO.nwrite out (Buffer.to_bytes buff);
+      Lwt.return_unit)
+    else begin
+      let c = s.[i] in
+      Buffer.add_char buff c;
+      if Buffer.length buff < chunk_size then loop (i + 1)
+      else (
+        (* Buffer is full, write and clear it *)
+        IO.nwrite out (Buffer.to_bytes buff);
+        Buffer.clear buff;
+        (* Yield after processing a chunk *)
+        let%lwt () = yield () in
+        loop (i + 1))
+    end
+  in
+  let%lwt () = loop 0 in
+  Lwt.return @@ IO.close_out out
+
 let to_string s =
   let inp = input (IO.input_string s) in
   let out = IO.output_string () in
