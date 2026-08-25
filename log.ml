@@ -71,19 +71,19 @@ end = struct
   let attempt = function
     | None -> true
     | RL rl ->
-      (* inspired from ahrefskit *)
       let now = Time.now() in
       if Queue.length rl.backlog < rl.max then (
-        Queue.push now rl.backlog;
+        Queue.push (now +. rl.period) rl.backlog;
         true
-      ) else match Queue.peek rl.backlog with
-        | ts when ts < now -. rl.period ->
-          ignore (Queue.pop rl.backlog : Time.t);
-          Queue.push now rl.backlog;
-          true
-        | _ ->
-          rl.count_silenced <- 1 + rl.count_silenced;
-          false
+      ) else if Queue.peek rl.backlog < now then (
+        (* first deadline is past, this attempt succeeds *)
+        ignore (Queue.pop rl.backlog : Time.t);
+        Queue.push (now +. rl.period) rl.backlog;
+        true
+      ) else (
+        rl.count_silenced <- 1 + rl.count_silenced;
+        false
+      )
 end
 
 (** Global logger state *)
