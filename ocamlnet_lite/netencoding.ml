@@ -437,6 +437,42 @@ module Html = struct
     let out_kind = Netstring_tstring.String_kind in
     encode_poly ~in_enc ~in_ops ~out_kind ?out_enc ?prefer_name ?unsafe_chars ()
 
+  let encode_utf8 =
+    let unsafe_chars = unsafe_chars_html4 in
+
+    (* Create the domain function: *)
+    let safe_array = Array.make 128 true in
+    String.iter (fun c -> safe_array.(Char.code c) <- false) unsafe_chars;
+
+    (* Create the substitution function: *)
+    let escape_char p =
+      assert (p <= 255);
+      let name = rev_etable.(p) in
+      if name = "" then "&#" ^ string_of_int p ^ ";" else name
+    in
+
+    (* Recode: *)
+    fun s ->
+      (* NOTE: we accept U+FFFE and U+FFFF but [encode] does not *)
+      if not (String.is_valid_utf_8 s) then raise Netconversion.Malformed_code;
+      if String.for_all (fun c -> Char.code c >= 128 || safe_array.(Char.code c)) s
+      then s
+      else (
+        let buf = Buffer.create (String.length s + 16) in
+        for i = 0 to String.length s-1 do
+          let c = String.unsafe_get s i in
+          let code_c = Char.code c in
+
+          if code_c >= 128 then Buffer.add_char buf c
+          else if safe_array.(code_c) then Buffer.add_char buf c
+          else (
+            let escaped = escape_char code_c in
+            Buffer.add_string buf escaped
+          )
+        done;
+        Buffer.contents buf
+      )
+
   type entity_set = [ `Html | `Xml | `Empty ]
 
   let eref_re =
