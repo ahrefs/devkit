@@ -542,6 +542,60 @@ let () = test "Web.htmlencode resize" @@ fun () ->
     "&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;";
   ()
 
+let () = test "Netencoding.Html.encode_utf8 agrees with generic encoder" @@ fun () ->
+  let reference =
+    Netencoding.Html.encode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
+  in
+  (* let state = Random.State.make [| 0x51a7; 0x8f8; 1234 |] in *)
+  let state = Random.State.make_self_init () in
+  let unsafe_chars = "<>\"&\000\001\127" in
+  let rec random_scalar () =
+    let p = Random.State.int state 0x110000 in
+    if (p >= 0xd800 && p < 0xe000) || p = 0xfffe || p = 0xffff then
+      random_scalar ()
+    else
+      p
+  in
+  let random_codepoint () =
+    match Random.State.int state 10 with
+    | 0 | 1 ->
+        Char.code
+          unsafe_chars.[Random.State.int state (String.length unsafe_chars)]
+    | 2 | 3 | 4 | 5 -> Random.State.int state 128
+    | _ -> random_scalar ()
+  in
+  let check case codepoints =
+    let input = Netconversion.ustring_of_uarray `Enc_utf8 codepoints in
+    assert_equal
+      ~msg:(sprintf "generated UTF-8 case %d (%d code points)" case
+              (Array.length codepoints))
+      (reference input)
+      (Netencoding.Html.encode_utf8 input)
+  in
+  check 0
+    [| 0x0000; 0x0001; 0x0022; 0x0026; 0x003c; 0x003e; 0x007f; 0x0080;
+       0x07ff; 0x0800; 0xd7ff; 0xe000; 0xfffd; 0x10000; 0x10ffff |];
+  let fixed_lengths = [ 0; 1; 2; 15; 16; 31; 32; 127; 249; 250; 251; 1000 ] in
+  List.iteri
+    (fun i len -> check (i + 1) (Array.init len (fun _ -> random_codepoint ())))
+    fixed_lengths;
+  let n_iter = 500 in
+  for _i = 1 to n_iter do
+    let len =
+      match Random.State.int state 4 with
+      | 0 -> Random.State.int state 17
+      | 1 -> Random.State.int state 257
+      | 2 -> 249 + Random.State.int state 3
+      | _ -> Random.State.int state 1025
+    in
+    check (_i + List.length fixed_lengths)
+      (Array.init len (fun _ -> random_codepoint ()))
+  done
+
+let () = test "Netencoding.Html.encode_utf8 rejects invalid UTF-8" @@ fun () ->
+  assert_raises Netconversion.Malformed_code (fun () ->
+      ignore (Netencoding.Html.encode_utf8 "\xC3\x28"))
+
 let () = test "Web.urldecode" @@ fun () ->
   assert_equal (Web.urldecode "Hello+G%C3%BCnter") "Hello Günter";
   ()
