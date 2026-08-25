@@ -536,6 +536,12 @@ let () = test "Web.htmlencode" @@ fun () ->
   assert_equal (Web.htmlencode "A <p> tag & a <div> tag.") "A &lt;p&gt; tag &amp; a &lt;div&gt; tag.";
   ()
 
+let () = test "Web.htmlencode resize" @@ fun () ->
+  assert_equal
+    (Web.htmlencode "&&&&&&&&&&&")
+    "&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;";
+  ()
+
 let () = test "Web.urldecode" @@ fun () ->
   assert_equal (Web.urldecode "Hello+G%C3%BCnter") "Hello Günter";
   ()
