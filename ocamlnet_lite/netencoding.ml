@@ -20,12 +20,10 @@ module Url = struct
       'F';
     |]
 
-  let to_hex2 k =
-    (* Converts k to a 2-digit hex string *)
-    let s = Bytes.create 2 in
-    Bytes.set s 0 hex_digits.((k lsr 4) land 15);
-    Bytes.set s 1 hex_digits.(k land 15);
-    Bytes.unsafe_to_string s
+  (** Converts k to a 2-digit hex string, added to [buf] *)
+  let buffer_add_hex2 buf k =
+    Buffer.add_char buf hex_digits.((k lsr 4) land 0xf);
+    Buffer.add_char buf hex_digits.(k land 0xf)
 
   let of_hex1 c =
     match c with
@@ -34,18 +32,45 @@ module Url = struct
     | 'a' .. 'f' -> Char.code c - Char.code 'a' + 10
     | _ -> raise Not_found
 
-  let url_encoding_re = Netstring_str.regexp "[^A-Za-z0-9_.!*-]"
   let url_decoding_re = Netstring_str.regexp "\\+\\|%..\\|%.\\|%"
 
-  let encode ?(plus = true) s =
-    Netstring_str.global_substitute url_encoding_re
-      (fun r _ ->
-        match Netstring_str.matched_string r s with
-        | " " when plus -> "+"
-        | x ->
-            let k = Char.code x.[0] in
-            "%" ^ to_hex2 k)
+  let[@inline] is_preserved_by_url_encode = function
+    | 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' | '.' | '!' | '*' | '-' -> true
+    | _ -> false
+
+  let encode ?(plus=true) s =
+    let buf = lazy (Buffer.create (String.length s + 10)) in
+
+    let i = ref 0 in
+    let run_start = ref 0 in
+
+    while !i < String.length s do
+      let c = String.unsafe_get s !i in
+      if is_preserved_by_url_encode c then incr i
+      else (
+        (* [s] needs some escaping *)
+        let lazy buf = buf in
+        if !i > !run_start then Buffer.add_substring buf s !run_start (!i - !run_start);
+
+        if c = ' ' && plus then Buffer.add_char buf '+'
+        else (
+          Buffer.add_char buf '%';
+          buffer_add_hex2 buf (Char.code c)
+        );
+        incr i;
+        run_start := !i
+      )
+    done;
+
+    if !run_start = 0 then (
+      assert (not (Lazy.is_val buf));
       s
+    ) else (
+      (* we escaped at least one char *)
+      let lazy buf = buf in
+      if !i > !run_start then Buffer.add_substring buf s !run_start (!i - !run_start);
+      Buffer.contents buf
+    )
 
   let decode ?(plus = true) ?(pos = 0) ?len s =
     let s_l = String.length s in
