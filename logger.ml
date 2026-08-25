@@ -1,6 +1,4 @@
 
-open Printf
-
 type level = [`Debug | `Info | `Warn | `Error | `Critical | `Nothing]
 type facil = { name : string; mutable show : int; }
 let int_level = function
@@ -57,28 +55,3 @@ let put_simple (t:target) : t = {
     if allowed facil level then
       t.output level facil (t.format level facil ts pairs str)
 }
-
-let put_limited (t:target) : t =
-  let last = ref (`Debug,"") in
-  let n = ref 0 in
-
-  (* FIXME not thread safe *)
-  let put level facil ts pairs str =
-    match allowed facil level with
-    | false -> ()
-    | true ->
-      let this = (level,str) in
-      if !last = this then
-        incr n
-      else
-      begin
-        if !n <> 0 then
-        begin
-         t.output level facil (sprintf
-          "last message repeated %u times, suppressed\n" !n);
-          n := 0
-        end;
-        last := this;
-        t.output level facil (t.format level facil ts pairs str);
-      end
-  in { put }
