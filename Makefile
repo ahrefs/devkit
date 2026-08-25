@@ -1,5 +1,5 @@
 
-.PHONY: build lib doc clean install uninstall test gen gen_ragel gen_metaocaml archive
+.PHONY: build lib doc clean install uninstall test gen gen_ragel gen_metaocaml archive bench-compare
 
 OCAMLBUILD=ocamlbuild -use-ocamlfind -no-links -j 0
 
@@ -26,6 +26,9 @@ top:
 
 test:
 		dune runtest $(DUNEFLAGS)
+
+bench-compare:
+		./bench/compare.sh $(BENCH_ARGS)
 
 doc:
 		dune build $(DUNEFLAGS) @doc
