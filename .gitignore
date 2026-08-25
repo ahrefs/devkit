@@ -7,3 +7,4 @@ _build
 TAGS
 
 *.install
+/bench/__pycache__
