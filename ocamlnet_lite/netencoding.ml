@@ -459,17 +459,23 @@ module Html = struct
       then s
       else (
         let buf = Buffer.create (String.length s + 16) in
-        for i = 0 to String.length s-1 do
-          let c = String.unsafe_get s i in
+        let i = ref 0 in
+        let run_start = ref 0 in
+
+        while !i < String.length s do
+          let c = String.unsafe_get s !i in
           let code_c = Char.code c in
 
-          if code_c >= 128 then Buffer.add_char buf c
-          else if safe_array.(code_c) then Buffer.add_char buf c
+          if code_c >= 128 || safe_array.(code_c) then incr i
           else (
+            if !i > !run_start then Buffer.add_substring buf s !run_start (!i - !run_start);
             let escaped = escape_char code_c in
-            Buffer.add_string buf escaped
+            Buffer.add_string buf escaped;
+            incr i;
+            run_start := !i;
           )
         done;
+        if !i > !run_start then Buffer.add_substring buf s !run_start (!i - !run_start);
         Buffer.contents buf
       )
 
