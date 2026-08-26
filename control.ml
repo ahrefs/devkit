@@ -25,3 +25,61 @@ let with_output_bin name k = with_open_out_bin name (fun ch -> bracket (IO.outpu
 let with_output_txt name k = with_open_out_txt name (fun ch -> bracket (IO.output_channel ch) IO.flush k)
 
 let with_opendir dir = bracket (Unix.opendir dir) Unix.closedir
+
+(* token bucket
+   https://en.wikipedia.org/wiki/Token_bucket *)
+module Rate_limit = struct
+  type t =
+    | None
+    | RL of {
+      mutable tokens: float;
+      mutable count_silenced: int;
+      mutable last_update: float;
+      capacity: float;
+      rate: float; (** new tokens/sec *)
+    }
+
+  let none = None
+
+  let create ?burst_capacity ~allowed_per_sec () : t =
+    if classify_float allowed_per_sec <> FP_normal || allowed_per_sec <= 0. then
+      invalid_arg "Rate_limit.create: allowed_per_sec must be finite and positive";
+    let capacity = match burst_capacity with
+      | Some n ->
+        if n < 1 then invalid_arg "Rate_limit.create: burst capacity must be >= 1";
+        float n
+      | None ->
+        (* default: burst of 5sec worth of tokens *)
+        max 1. @@ min max_float @@ allowed_per_sec *. 5.
+    in
+    RL {
+      tokens=capacity; last_update=Time.now(); count_silenced=0; capacity;
+      rate=allowed_per_sec;
+    }
+
+  let take_rate_limited_count = function
+    | None -> 0
+    | RL rl ->
+        let n = rl.count_silenced in
+        rl.count_silenced <- 0;
+        n
+
+  let attempt = function
+    | None -> true
+    | RL rl ->
+      let now = Time.now() in
+
+      if now > rl.last_update then (
+        rl.tokens <- min rl.capacity
+          (rl.tokens +. rl.rate *. (now -. rl.last_update));
+        rl.last_update <- now;
+      );
+
+      if rl.tokens >= 1. then (
+        rl.tokens <- rl.tokens -. 1.;
+        true
+      ) else (
+        rl.count_silenced <- 1 + rl.count_silenced;
+        false
+      )
+end

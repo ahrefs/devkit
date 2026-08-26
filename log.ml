@@ -38,54 +38,6 @@ open Printf
 open ExtLib
 open Prelude
 
-module Rate_limit : sig
-  type t
-  val none : t
-  val create : max:int -> period:Time.t -> unit -> t
-  val take_rate_limited_count: t -> int
-  (** How many attempts have been rate limited since last time this was called? *)
-
-  val attempt : t -> bool
-  (** Attempt to perform one action. Return [true] if allowed by rate limiter. *)
-end = struct
-  type t =
-    | None
-    | RL of {
-      backlog: Time.t Queue.t; (** Deadlines where tokens available again *)
-      mutable count_silenced: int;
-      max: int;
-      period: Time.t;
-    }
-
-  let none = None
-  let create ~max ~period () : t =
-    if max < 1 || period < Time.msec 1 then invalid_arg "Log.Rate_limit: max>=1, period>=1ms";
-    RL { backlog=Queue.create(); count_silenced=0; max; period }
-  let take_rate_limited_count = function
-    | None -> 0
-    | RL rl ->
-        let n = rl.count_silenced in
-        rl.count_silenced <- 0;
-        n
-
-  let attempt = function
-    | None -> true
-    | RL rl ->
-      let now = Time.now() in
-      if Queue.length rl.backlog < rl.max then (
-        Queue.push (now +. rl.period) rl.backlog;
-        true
-      ) else if Queue.peek rl.backlog < now then (
-        (* first deadline is past, this attempt succeeds *)
-        ignore (Queue.pop rl.backlog : Time.t);
-        Queue.push (now +. rl.period) rl.backlog;
-        true
-      ) else (
-        rl.count_silenced <- 1 + rl.count_silenced;
-        false
-      )
-end
-
 (** Global logger state *)
 module State = struct
   let all = Hashtbl.create 10
@@ -232,7 +184,7 @@ let read_env_config = State.read_env_config
 
   param [structured_pairs] key/value pairs to use for structured log formats only. Plain logging will discard.
 *)
-type 'a pr = ?rate_limit:Rate_limit.t -> ?exn:exn -> ?lines:bool -> ?backtrace:bool -> ?saved_backtrace:string list -> ?ts:Time.t -> ?structured_pairs:Logger.Pairs.t -> ?pairs:Logger.Pairs.t -> ('a, unit, string, unit) format4 -> 'a
+type 'a pr = ?rate_limit:Control.Rate_limit.t -> ?exn:exn -> ?lines:bool -> ?backtrace:bool -> ?saved_backtrace:string list -> ?ts:Time.t -> ?structured_pairs:Logger.Pairs.t -> ?pairs:Logger.Pairs.t -> ('a, unit, string, unit) format4 -> 'a
 
 class logger ?(logger=State.logger) facil =
   let make_s (logger: Logger.t) (level:Logger.level) =
@@ -249,12 +201,12 @@ class logger ?(logger=State.logger) facil =
     output lines facil ts pairs (s ^ " : exn " ^ Exn.str exn ^ (if bt = [] then " (no backtrace)" else ""));
     List.iter (fun line -> logger.put level facil ts pairs ("    " ^ line)) bt
   in
-  fun ?(rate_limit=Rate_limit.none) ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace ?(ts=Unix.gettimeofday()) ?(structured_pairs=[]) ?(pairs=[]) s ->
-    if logger.allowed facil level && Rate_limit.attempt rate_limit then
+  fun ?(rate_limit=Control.Rate_limit.none) ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace ?(ts=Unix.gettimeofday()) ?(structured_pairs=[]) ?(pairs=[]) s ->
+    if logger.allowed facil level && Control.Rate_limit.attempt rate_limit then
     let pairs = if State.is_structured_format () then List.rev_append structured_pairs pairs else pairs in
     try
       if Logger.allowed facil `Warn then
-        let rate_limited = Rate_limit.take_rate_limited_count rate_limit in
+        let rate_limited = Control.Rate_limit.take_rate_limited_count rate_limit in
         if rate_limited > 0 then logger.put `Warn facil ts [] (sprintf "(%d messages have been rate limited)" rate_limited);
       match exn with
       | None -> output lines facil ts pairs s
