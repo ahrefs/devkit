@@ -21,9 +21,9 @@ module Url = struct
     |]
 
   (** Converts k to a 2-digit hex string, added to [buf] *)
-  let buffer_add_hex2 buf k =
-    Buffer.add_char buf hex_digits.((k lsr 4) land 0xf);
-    Buffer.add_char buf hex_digits.(k land 0xf)
+  let bytes_set_hex2 bs i k =
+    Bytes.set bs i hex_digits.((k lsr 4) land 0xf);
+    Bytes.set bs (i+1) hex_digits.(k land 0xf)
 
   let of_hex1 c =
     match c with
@@ -39,37 +39,55 @@ module Url = struct
     | _ -> false
 
   let encode ?(plus=true) s =
-    let buf = lazy (Buffer.create (String.length s + 10)) in
+    let has_space_to_plus = ref false in
+    let additional_bytes = ref 0 in
 
-    let i = ref 0 in
-    let run_start = ref 0 in
+    for i = 0 to String.length s-1 do
+      let c = String.unsafe_get s i in
 
-    while !i < String.length s do
-      let c = String.unsafe_get s !i in
-      if is_preserved_by_url_encode c then incr i
-      else (
-        (* [s] needs some escaping *)
-        let lazy buf = buf in
-        if !i > !run_start then Buffer.add_substring buf s !run_start (!i - !run_start);
-
-        if c = ' ' && plus then Buffer.add_char buf '+'
-        else (
-          Buffer.add_char buf '%';
-          buffer_add_hex2 buf (Char.code c)
-        );
-        incr i;
-        run_start := !i
-      )
+      if is_preserved_by_url_encode c then ()
+      else if c = ' ' && plus then has_space_to_plus := true
+      else additional_bytes := !additional_bytes + 2
     done;
 
-    if !run_start = 0 then (
-      assert (not (Lazy.is_val buf));
-      s
-    ) else (
-      (* we escaped at least one char *)
-      let lazy buf = buf in
-      if !i > !run_start then Buffer.add_substring buf s !run_start (!i - !run_start);
-      Buffer.contents buf
+    if not !has_space_to_plus && !additional_bytes = 0 then s
+    else (
+      (* we know the exact length *)
+      let res = Bytes.create (String.length s + !additional_bytes) in
+      let off_res = ref 0 in
+
+      let i = ref 0 in
+      let run_start = ref 0 in
+
+      while !i < String.length s do
+        let c = String.unsafe_get s !i in
+        if is_preserved_by_url_encode c then incr i
+        else (
+          (* [s] needs some escaping *)
+          if !i > !run_start then (
+            Bytes.blit_string s !run_start res !off_res (!i - !run_start);
+            off_res  := !off_res + (!i - !run_start)
+          );
+
+          if c = ' ' && plus then (
+            Bytes.set res !off_res '+';
+            incr off_res
+          ) else (
+            Bytes.set res !off_res '%';
+            bytes_set_hex2 res (!off_res + 1) (Char.code c);
+            off_res := !off_res + 3
+          );
+          incr i;
+          run_start := !i
+        )
+      done;
+      if !i > !run_start then (
+        Bytes.blit_string s !run_start res !off_res (!i - !run_start);
+        off_res  := !off_res + (!i - !run_start)
+      );
+      assert (!off_res = Bytes.length res);
+
+      Bytes.unsafe_to_string res
     )
 
   let decode ?(plus = true) ?(pos = 0) ?len s =
