@@ -49,11 +49,11 @@ module Rate_limit : sig
   type t
   val none : t
   val create : ?burst_capacity:int -> allowed_per_sec:float -> unit -> t
-  (** Create a token-bucket limiter with the given sustained rate and capacity
-      for ten seconds of traffic (at least one token). The bucket starts full.
-      @param burst_capacity limits the size of a burst when token bucket is full
+  (** Create a token-bucket rate limiter. The bucket starts full.
+      @param burst_capacity limits the size of a burst when token bucket is full.
+        [burst_capacity = N] means a full bucket contains [N * allowed_per_sec] tokens.
       @param allowed_per_sec number of tokens refilled per second, ie asymptotic
-        max throughtput
+        maximum rate.
       @raise Invalid_argument if [allowed_per_sec] is not finite and positive. *)
 
   val take_rate_limited_count: t -> int
