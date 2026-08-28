@@ -41,17 +41,12 @@ module Rate_limit = struct
 
   let unlimited = Unlimited
 
-  let create ?burst_capacity ~allowed_per_sec () : t =
+  let create ?(burst_capacity=5) ~allowed_per_sec () : t =
     if classify_float allowed_per_sec <> FP_normal || allowed_per_sec <= 0. then
       invalid_arg "Rate_limit.create: allowed_per_sec must be finite and positive";
-    let capacity = match burst_capacity with
-      | Some n ->
-        if n < 1 then invalid_arg "Rate_limit.create: burst capacity must be >= 1";
-        float n
-      | None ->
-        (* default: burst of 5sec worth of tokens *)
-        max 1. @@ min max_float @@ allowed_per_sec *. 5.
-    in
+
+    if burst_capacity < 1 then invalid_arg "Rate_limit.create: burst capacity must be >= 1";
+    let capacity = max 1. (float burst_capacity *. allowed_per_sec) in
     RL {
       tokens=capacity; last_update=Time.now(); count_silenced=0; capacity;
       rate=allowed_per_sec;
