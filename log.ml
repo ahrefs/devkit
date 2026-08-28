@@ -205,9 +205,9 @@ class logger ?(logger=State.logger) facil =
     if logger.allowed facil level && Control.Rate_limit.attempt rate_limit then
     let pairs = if State.is_structured_format () then List.rev_append structured_pairs pairs else pairs in
     try
-      if Logger.allowed facil `Warn then
+      if Logger.allowed facil `Warn then (
         let rate_limited = Control.Rate_limit.take_rate_limited_count rate_limit in
-        if rate_limited > 0 then logger.put `Warn facil ts [] (sprintf "(%d messages have been rate limited)" rate_limited);
+        if rate_limited > 0 then logger.put `Warn facil ts [] (sprintf "(%d messages have been rate limited)" rate_limited));
       match exn with
       | None -> output lines facil ts pairs s
       | Some exn ->
