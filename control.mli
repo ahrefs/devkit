@@ -47,7 +47,7 @@ val with_opendir : string -> (Unix.dir_handle -> 'b) -> 'b
 
 module Rate_limit : sig
   type t
-  val none : t
+  val unlimited : t
   val create : ?burst_capacity:int -> allowed_per_sec:float -> unit -> t
   (** Create a token-bucket rate limiter. The bucket starts full.
       @param burst_capacity limits the size of a burst when token bucket is full.

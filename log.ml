@@ -201,7 +201,7 @@ class logger ?(logger=State.logger) facil =
     output lines facil ts pairs (s ^ " : exn " ^ Exn.str exn ^ (if bt = [] then " (no backtrace)" else ""));
     List.iter (fun line -> logger.put level facil ts pairs ("    " ^ line)) bt
   in
-  fun ?(rate_limit=Control.Rate_limit.none) ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace ?(ts=Unix.gettimeofday()) ?(structured_pairs=[]) ?(pairs=[]) s ->
+  fun ?(rate_limit=Control.Rate_limit.unlimited) ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace ?(ts=Unix.gettimeofday()) ?(structured_pairs=[]) ?(pairs=[]) s ->
     if logger.allowed facil level && Control.Rate_limit.attempt rate_limit then
     let pairs = if State.is_structured_format () then List.rev_append structured_pairs pairs else pairs in
     try

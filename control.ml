@@ -30,7 +30,7 @@ let with_opendir dir = bracket (Unix.opendir dir) Unix.closedir
    https://en.wikipedia.org/wiki/Token_bucket *)
 module Rate_limit = struct
   type t =
-    | None
+    | Unlimited
     | RL of {
       mutable tokens: float;
       mutable count_silenced: int;
@@ -39,7 +39,7 @@ module Rate_limit = struct
       rate: float; (** new tokens/sec *)
     }
 
-  let none = None
+  let unlimited = Unlimited
 
   let create ?burst_capacity ~allowed_per_sec () : t =
     if classify_float allowed_per_sec <> FP_normal || allowed_per_sec <= 0. then
@@ -58,14 +58,14 @@ module Rate_limit = struct
     }
 
   let take_rate_limited_count = function
-    | None -> 0
+    | Unlimited -> 0
     | RL rl ->
         let n = rl.count_silenced in
         rl.count_silenced <- 0;
         n
 
   let attempt = function
-    | None -> true
+    | Unlimited -> true
     | RL rl ->
       let now = Time.now() in
 
