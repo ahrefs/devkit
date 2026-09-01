@@ -9,8 +9,8 @@ let expect_invalid_rate rate =
   | exception Invalid_argument _ -> ()
   | _ -> fail "Invalid_argument" "rate limiter created"
 
-let expect_invalid_capacity burst_capacity =
-  match Control.Rate_limit.create ~burst_capacity ~allowed_per_sec:1. () with
+let expect_invalid_capacity burst_factor =
+  match Control.Rate_limit.create ~burst_factor ~allowed_per_sec:1. () with
   | exception Invalid_argument _ -> ()
   | _ -> fail "Invalid_argument" "rate limiter created"
 
@@ -42,7 +42,7 @@ let () =
   } in
   let logger = Logger.put_simple target in
   let log = new Log.logger ~logger (Log.facility "rate-limit-test") in
-  let rate_limit = Control.Rate_limit.create ~burst_capacity:7 ~allowed_per_sec:2. () in
+  let rate_limit = Control.Rate_limit.create ~burst_factor:7 ~allowed_per_sec:2. () in
   let emit count =
     for i = 0 to count - 1 do
       log#info ~rate_limit "logging %d" i
@@ -55,8 +55,8 @@ let () =
   emit 4;
   let expected =
     String.concat "\n"
-      (logging_lines 7 @
-       ["(9993 messages have been rate limited)"] @
+      (logging_lines 14 @
+       ["(9986 messages have been rate limited)"] @
        logging_lines 4 @ [""])
   in
   let actual = Buffer.contents output in
