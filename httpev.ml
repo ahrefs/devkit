@@ -331,7 +331,9 @@ let log_access_logfmt ch code size ?(background=false) req =
     let now = Time.now () in
     let msg = Logfmt.to_string [
       "time", Time.to_string ~gmt:!Log.State.utc_timezone ~ms:true now;
-      "msg", "httpev.serve";
+      "level", "info";
+      "facil", "httpev";
+      "msg", "served";
       "req_id", string_of_int req.id;
       "client_addr", show_client_addr req;
       "http_duration", sprintf "%.4f" (now -. req.conn);
