@@ -184,26 +184,33 @@ let read_env_config = State.read_env_config
 
   param [structured_pairs] key/value pairs to use for structured log formats only. Plain logging will discard.
 *)
-type 'a pr = ?exn:exn -> ?lines:bool -> ?backtrace:bool -> ?saved_backtrace:string list -> ?ts:Time.t -> ?structured_pairs:Logger.Pairs.t -> ?pairs:Logger.Pairs.t -> ('a, unit, string, unit) format4 -> 'a
+type 'a pr = ?rate_limit:Control.Rate_limit.t -> ?exn:exn -> ?lines:bool -> ?backtrace:bool -> ?saved_backtrace:string list -> ?ts:Time.t -> ?structured_pairs:Logger.Pairs.t -> ?pairs:Logger.Pairs.t -> ('a, unit, string, unit) format4 -> 'a
 
-class logger facil =
-  let make_s (output_line:Logger.facil -> Time.t -> Logger.Pairs.t -> string -> unit) =
+(** Default rate limiter, shared between all the loggers *)
+let main_rate_limiter = Control.Rate_limit.create ~burst_factor:10 ~allowed_per_sec:1_000. ()
+
+class logger ?(logger=State.logger) facil =
+  let make_s (logger: Logger.t) (level:Logger.level) =
   let output = function
   | true ->
       fun facil ts pairs s ->
         if String.contains s '\n' then
-          List.iter (output_line facil ts pairs) @@ String.nsplit s "\n"
+          List.iter (logger.put level facil ts pairs) @@ String.nsplit s "\n"
         else
-          output_line facil ts pairs s
-  | false -> output_line
+          logger.put level facil ts pairs s
+  | false -> logger.put level
   in
   let print_bt lines exn bt ts pairs s =
     output lines facil ts pairs (s ^ " : exn " ^ Exn.str exn ^ (if bt = [] then " (no backtrace)" else ""));
-    List.iter (fun line -> output_line facil ts pairs ("    " ^ line)) bt
+    List.iter (fun line -> logger.put level facil ts pairs ("    " ^ line)) bt
   in
-  fun ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace ?(ts=Unix.gettimeofday()) ?(structured_pairs=[]) ?(pairs=[]) s ->
+  fun ?(rate_limit=main_rate_limiter) ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace ?(ts=Unix.gettimeofday()) ?(structured_pairs=[]) ?(pairs=[]) s ->
+    if logger.allowed facil level && Control.Rate_limit.attempt rate_limit then
     let pairs = if State.is_structured_format () then List.rev_append structured_pairs pairs else pairs in
     try
+      if Logger.allowed facil `Warn then (
+        let rate_limited = Control.Rate_limit.take_rate_limited_count rate_limit in
+        if rate_limited > 0 then logger.put `Warn facil ts [] (sprintf "(%d messages have been rate limited)" rate_limited));
       match exn with
       | None -> output lines facil ts pairs s
       | Some exn ->
@@ -214,17 +221,17 @@ class logger facil =
       | true -> print_bt lines exn (Exn.get_backtrace ()) ts pairs s
       | false -> output lines facil ts pairs (s ^ " : exn " ^ Exn.str exn)
     with exn ->
-      output_line facil ts pairs (sprintf "LOG FAILED : %S with message %S" (Exn.str exn) s)
+      logger.put level facil ts pairs (sprintf "LOG FAILED : %S with message %S" (Exn.str exn) s)
 in
-let make : _ -> _ pr = fun output ?exn ?lines ?backtrace ?saved_backtrace ?ts ?structured_pairs ?pairs fmt ->
-    ksprintf (fun s -> output ?exn ?lines ?backtrace ?saved_backtrace ?ts ?structured_pairs ?pairs s) fmt
+let make : _ -> _ pr = fun output ?rate_limit ?exn ?lines ?backtrace ?saved_backtrace ?ts ?structured_pairs ?pairs fmt ->
+    ksprintf (fun s -> output ?rate_limit ?exn ?lines ?backtrace ?saved_backtrace ?ts ?structured_pairs ?pairs s) fmt
 in
-let debug_s = make_s (State.logger.put `Debug) in
-let warn_s = make_s (State.logger.put `Warn) in
-let info_s = make_s (State.logger.put `Info) in
-let error_s = make_s (State.logger.put `Error) in
-let critical_s = make_s (State.logger.put `Critical) in
-let put_s level = make_s (State.logger.put level) in
+let debug_s = make_s logger `Debug in
+let warn_s = make_s logger `Warn in
+let info_s = make_s logger `Info in
+let error_s = make_s logger `Error in
+let critical_s = make_s logger `Critical in
+let put_s level = make_s logger level in
 object
 method debug_s = debug_s
 method warn_s = warn_s

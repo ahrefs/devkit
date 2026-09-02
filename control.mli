@@ -43,3 +43,22 @@ val with_output_txt : string -> (unit IO.output -> 'a) -> 'a
 (** Misc. *)
 
 val with_opendir : string -> (Unix.dir_handle -> 'b) -> 'b
+
+
+module Rate_limit : sig
+  type t
+  val unlimited : t
+  val create : ?burst_factor:int -> allowed_per_sec:float -> unit -> t
+  (** Create a token-bucket rate limiter. The bucket starts full.
+      @param burst_factor limits the maximum size of a burst of activity
+        as a factor of the base rate limit.
+      @param allowed_per_sec sustained number of operations allowed per second,
+        ie asymptotic maximum rate.
+      @raise Invalid_argument if [allowed_per_sec] is not finite and positive. *)
+
+  val take_rate_limited_count: t -> int
+  (** How many attempts have been rate limited since last time this was called? *)
+
+  val attempt : t -> bool
+  (** Attempt to perform one action. Return [true] if allowed by rate limiter. *)
+end

@@ -36,7 +36,8 @@
            memory_jemalloc
            test
            test_gzip
-           test_httpev)
+           test_httpev
+           test_log_rate_limit)
   (preprocess
     (per_module
       ((pps lwt_ppx)
@@ -75,6 +76,11 @@
   (name test_gzip)
   (libraries devkit extlib)
   (modules test_gzip))
+
+(test
+  (name test_log_rate_limit)
+  (libraries devkit unix)
+  (modules test_log_rate_limit))
 
 (rule
   (alias runtest)

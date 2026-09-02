@@ -47,10 +47,12 @@ type target = {
 
 (** A logger *)
 type t = {
-  put : level -> facil -> Time.t -> Pairs.t -> string -> unit
-} [@@unboxed]
+  put : level -> facil -> Time.t -> Pairs.t -> string -> unit;
+  allowed : facil -> level -> bool;
+}
 
 let put_simple (t:target) : t = {
+  allowed;
   put = fun level facil ts pairs str ->
     if allowed facil level then
       t.output level facil (t.format level facil ts pairs str)
