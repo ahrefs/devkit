@@ -6,7 +6,7 @@ open Prelude
 open Control
 open Ocamlnet_lite
 
-let log = Log.self
+let log = Log.from "devkit.web"
 
 (** percent-encode (convert space into %20) *)
 let rawurlencode = Netencoding.Url.encode ~plus:false

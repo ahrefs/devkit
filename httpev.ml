@@ -326,10 +326,44 @@ let log_access_apache ch code size ?(background=false) req =
   with exn ->
     log #warn ~exn "access log : %s" (show_request req) ~structured_pairs:(pairs_of_request req)
 
-let log_status_apache ch status size req =
-  match status with
-  | `No_reply -> () (* ignore *)
-  | #reply_status as code -> log_access_apache ch (status_code code) size req
+let log_access_logfmt ch code size ?(background=false) req =
+  try
+    let now = Time.now () in
+    let msg = Logfmt.to_string [
+      "time", Time.to_string ~gmt:!Log.State.utc_timezone ~ms:true now;
+      "level", "info";
+      "facil", "httpev";
+      "msg", "served";
+      "req_id", string_of_int req.id;
+      "client_addr", show_client_addr req;
+      "http_duration", sprintf "%.4f" (now -. req.conn);
+      "http_recv_duration", sprintf "%.4f" (req.recv -. req.conn);
+      "http_host", header_safe req "host";
+      "url", req.url;
+      "http_user_agent", header_safe req "user-agent";
+      "http_req_id", header_safe req "x-request-id";
+      "http_request_line", req.line;
+      "http_status", string_of_int code;
+      "size", string_of_int size;
+      "http_referer", header_referer req;
+      "background", string_of_bool background;
+    ] in
+    fprintf ch "%s\n%!" msg
+  with exn ->
+    log #warn ~exn "access log : %s" (show_request req) ~structured_pairs:(pairs_of_request req)
+
+let emit_accesslog ch status size ?background req =
+  let code = match status with
+    | `No_reply -> None
+    | `Code code -> Some code
+    | #reply_status as code -> Some (status_code code)
+  in
+  match code with
+  | None -> ()
+  | Some code ->
+    if Log.State.is_structured_format ()
+    then log_access_logfmt ch code size ?background req
+    else log_access_apache ch code size ?background req
 
 (** Wait until [fd] becomes readable and close it (for eventfd-backed notifications) *)
 let wait base fd k =
@@ -439,7 +473,7 @@ let send_reply_user c req (code,hdrs,body) =
     (* hack for answer_forked, which logs on its own *)
     | ("X-Disable-Log", "true") :: hs -> hs
     | _ ->
-      if c.server.config.access_log_enabled then log_status_apache !(c.server.config.access_log) code (String.length body) req;
+      if c.server.config.access_log_enabled then emit_accesslog !(c.server.config.access_log) code (String.length body) req;
       hdrs
   in
   let hdrs = maybe_allow_cors c hdrs in
@@ -849,7 +883,7 @@ let answer_blocking ?(debug=false) srv req answer k =
       -1, None
   in
   if srv.config.access_log_enabled then
-    log_access_apache !(srv.config.access_log) code (Int64.to_int !count) ~background:(continue <> None) req;
+    emit_accesslog !(srv.config.access_log) (`Code code) (Int64.to_int !count) ~background:(continue <> None) req;
   call_me_maybe continue ()
 
 let stats = new Var.typ "httpev.forks" "k"
@@ -917,7 +951,7 @@ let send_reply c cout reply =
   begin match c.req with
   | Ready req ->
     let size = match body with `Body s -> String.length s | `Chunks _ -> 0 in
-    if c.server.config.access_log_enabled then log_status_apache !(c.server.config.access_log) code size req
+    if c.server.config.access_log_enabled then emit_accesslog !(c.server.config.access_log) code size req
   | _ -> () (* this can happen when sending back error reply on malformed HTTP input *)
   end;
   (* filter headers *)
