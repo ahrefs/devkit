@@ -186,6 +186,9 @@ let read_env_config = State.read_env_config
 *)
 type 'a pr = ?rate_limit:Control.Rate_limit.t -> ?exn:exn -> ?lines:bool -> ?backtrace:bool -> ?saved_backtrace:string list -> ?ts:Time.t -> ?structured_pairs:Logger.Pairs.t -> ?pairs:Logger.Pairs.t -> ('a, unit, string, unit) format4 -> 'a
 
+(** Default rate limiter, shared between all the loggers *)
+let main_rate_limiter = Control.Rate_limit.create ~burst_factor:10 ~allowed_per_sec:1_000. ()
+
 class logger ?(logger=State.logger) facil =
   let make_s (logger: Logger.t) (level:Logger.level) =
   let output = function
@@ -201,7 +204,7 @@ class logger ?(logger=State.logger) facil =
     output lines facil ts pairs (s ^ " : exn " ^ Exn.str exn ^ (if bt = [] then " (no backtrace)" else ""));
     List.iter (fun line -> logger.put level facil ts pairs ("    " ^ line)) bt
   in
-  fun ?(rate_limit=Control.Rate_limit.unlimited) ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace ?(ts=Unix.gettimeofday()) ?(structured_pairs=[]) ?(pairs=[]) s ->
+  fun ?(rate_limit=main_rate_limiter) ?exn ?(lines=true) ?(backtrace=false) ?saved_backtrace ?(ts=Unix.gettimeofday()) ?(structured_pairs=[]) ?(pairs=[]) s ->
     if logger.allowed facil level && Control.Rate_limit.attempt rate_limit then
     let pairs = if State.is_structured_format () then List.rev_append structured_pairs pairs else pairs in
     try
