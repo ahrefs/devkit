@@ -45,7 +45,7 @@ module Rate_limit = struct
     if classify_float allowed_per_sec <> FP_normal || allowed_per_sec <= 0. then
       invalid_arg "Rate_limit.create: allowed_per_sec must be finite and positive";
 
-    if burst_factor < 1 then invalid_arg "Rate_limit.create: burst capacity must be >= 1";
+    if burst_factor < 1 then invalid_arg "Rate_limit.create: burst factor must be >= 1";
     let capacity = max 1. (float burst_factor *. allowed_per_sec) in
     RL {
       tokens=capacity; last_update=Time.now(); count_silenced=0; capacity;
