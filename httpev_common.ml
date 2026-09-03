@@ -36,6 +36,7 @@ type status_code =
   | `No_content
   | `Found
   | `Moved
+  | `Permanent_redirect
   | `Bad_request
   | `Unauthorized
   | `Payment_required
@@ -125,6 +126,7 @@ let status_code : reply_status -> int = function
 
   | `Moved -> 301
   | `Found -> 302
+  | `Permanent_redirect -> 308
 
   | `Bad_request -> 400
   | `Unauthorized -> 401
@@ -159,6 +161,7 @@ let show_status_code : status_code -> string = function
 
   | `Moved -> "301 Moved Permanently"
   | `Found -> "302 Found"
+  | `Permanent_redirect -> "308 Permanent Redirect"
 
   | `Bad_request -> "400 Bad Request"
   | `Unauthorized -> "401 Unauthorized"
