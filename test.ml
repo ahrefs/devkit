@@ -544,6 +544,47 @@ let () = test "Web.urlencode" @@ fun () ->
   assert_equal (Web.urlencode "Hello Günter") "Hello+G%C3%BCnter";
   ()
 
+let () = test "Web streaming request" @@ fun () ->
+  let open Lwt.Syntax in
+  let random = Random.State.make [| 42 |] in
+  let payload_size = (512 + Random.State.int random 513) * 1024 in
+  let payload = String.init payload_size (fun _ -> Char.chr (Random.State.int random 256)) in
+  let rec skip_headers input =
+    let* line = Lwt_io.read_line input in
+    if String.trim line = "" then Lwt.return_unit else skip_headers input
+  in
+  let response = Lwt_main.run begin
+    let socket = Lwt_unix.socket Unix.PF_INET Unix.SOCK_STREAM 0 in
+    let* server =
+      Lwt_io.establish_server_with_client_address ~fd:socket
+        (Unix.ADDR_INET (Unix.inet_addr_loopback, 0)) begin fun _ (input, output) ->
+        let body = Bytes.create (String.length payload) in
+        let* () = skip_headers input in
+        let* () = Lwt_io.read_into_exactly input body 0 (Bytes.length body) in
+        let body = Bytes.to_string body in
+        let* () =
+          Lwt_io.write output (Printf.sprintf "HTTP/1.1 200 OK\r\nContent-Length: %d\r\n\r\n%s" (String.length body) body)
+        in
+        Lwt_io.flush output
+      end
+    in
+    let port = match Lwt_unix.getsockname socket with Unix.ADDR_INET (_, port) -> port | _ -> assert false in
+    let offset = ref 0 in
+    let body =
+      Web.streaming_body ~content_type:"text/plain" ~content_length:(Int64.of_int (String.length payload))
+        ~read:(fun bytes buffer_offset length ->
+          let length = min length (String.length payload - !offset) in
+          Bytes.blit_string payload !offset bytes buffer_offset length;
+          offset := !offset + length;
+          Lwt.return length)
+        ()
+    in
+    Lwt.finalize
+      (fun () -> Web.http_request_lwt_streaming_body' ~body `POST (Printf.sprintf "http://127.0.0.1:%d" port))
+      (fun () -> Lwt_io.shutdown_server server)
+  end in
+  assert_equal (`Ok (200, payload)) response
+
 let () = test "Action.make_config_lines" @@ fun () ->
   let config_lines = [
     "";

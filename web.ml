@@ -62,6 +62,14 @@ let curl_default_setup h =
   Curl.set_encoding h Curl.CURL_ENCODING_ANY;
   ()
 
+let update_timer h = function
+  | None -> ()
+  | Some t ->
+    let total = Curl.get_totaltime h in
+    let now = Time.now () in
+    t#record "Curl.start" (now -. total);
+    curl_times h |> List.iter (fun (name,time) -> t#record name (now -. total +. time))
+
 type http_action_old =
 [ `GET
 | `POST_FORM of (string * string) list
@@ -132,6 +140,22 @@ type ('body,'ret) http_request_ =
   http_action -> string -> 'ret
 
 type 'ret http_request = ([ `Form of (string * string) list | `Raw of string * string ], 'ret)  http_request_
+
+(** An asynchronous fixed-length body, buffered up to [buffer_size].
+    [close] runs once after the request ends and any active [read] completes. *)
+type streaming_body = {
+  content_type : string;
+  content_length : int64;
+  buffer_size : int;
+  read : bytes -> int -> int -> int Lwt.t;
+  close : unit -> unit Lwt.t;
+}
+
+let streaming_body ?(buffer_size = 256 * 1024) ?(close = Lwt.return) ~content_type ~content_length ~read () =
+  if buffer_size <= 0 then invalid_arg "Web.streaming_body: buffer_size must be positive";
+  if Int64.compare content_length 0L < 0 then
+    invalid_arg "Web.streaming_body: content_length must be non-negative";
+  { content_type; content_length; buffer_size; read; close }
 
 module type HTTP = sig
   module IO : IO_TYPE
@@ -234,16 +258,6 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     ] in
     let ct = Curl.get_contenttype h in
     if ct <> "" then ("http.response.header.content-type", `String ct) :: data else data
-
-  let update_timer h timer =
-    match timer with
-    | None -> ()
-    | Some t ->
-      let total = Curl.get_totaltime h in
-      let now = Time.now () in
-      t#record "Curl.start" (now -. total);
-      curl_times h |> List.iter (fun (name,time) -> t#record name (now -. total +. time));
-      ()
 
   (* deprecated *)
   let http_gets ~setup ?timer ?max_size ~result url =
@@ -499,6 +513,181 @@ end
 
 module Http_blocking = Http(IO_blocking)(Curl_blocking)
 module Http_lwt = Http(IO_lwt)(Curl_lwt_for_http)
+
+let http_request_lwt_streaming_body' ?ua ?timeout ?(verbose = false) ?(setup = ignore) ?timer ?max_size
+  ?(http_1_0 = false) ?headers ~body action url =
+  Http_lwt.with_curl_cache @@ fun h ->
+  let response = Buffer.create 4096 in
+  let response_size = ref 0 in
+  let response_error = ref None in
+  let chunks = Queue.create () in
+  let current_chunk = ref None in
+  let buffered = ref 0 in
+  let produced = ref 0L in
+  let eof = ref false in
+  let producer_error = ref None in
+  let paused = ref false in
+  let running = ref true in
+  let space_available = Lwt_flag.create () in
+  let wake_curl () =
+    if !running && !paused then begin
+      paused := false;
+      Curl.pause h []
+    end
+  in
+  let mark_eof () =
+    eof := true;
+    wake_curl ()
+  in
+  let mark_producer_error exn =
+    producer_error := Some exn;
+    wake_curl ()
+  in
+  let max_read_size = min (64 * 1024) body.buffer_size in
+  let rec read_exactly bytes offset length =
+    let%lwt count = body.read bytes offset length in
+    if count < 0 || count > length then
+      invalid_arg (Printf.sprintf "streaming producer returned %d bytes for a %d-byte buffer" count length)
+    else if count = 0 then
+      Exn.fail "streaming producer ended after %Ld of %Ld bytes"
+        (Int64.add !produced (Int64.of_int offset)) body.content_length
+    else if count = length then Lwt.return_unit
+    else read_exactly bytes (offset + count) (length - count)
+  in
+  let rec produce () =
+    if not !running then Lwt.return_unit
+    else if Int64.equal !produced body.content_length then begin
+      mark_eof ();
+      Lwt.return_unit
+    end
+    else if !buffered >= body.buffer_size then
+      let%lwt () = Lwt_flag.wait space_available in
+      produce ()
+    else begin
+      let available = min max_read_size (body.buffer_size - !buffered) in
+      let remaining = Int64.sub body.content_length !produced in
+      let read_size =
+        if Int64.compare remaining (Int64.of_int available) < 0 then Int64.to_int remaining else available
+      in
+      let bytes = Bytes.create read_size in
+      let%lwt () = read_exactly bytes 0 read_size in
+      Queue.push (Bytes.unsafe_to_string bytes) chunks;
+      buffered := !buffered + read_size;
+      produced := Int64.add !produced (Int64.of_int read_size);
+      wake_curl ();
+      produce ()
+    end
+  in
+  let start_producer () =
+    Lwt.catch produce (function
+      | Lwt.Canceled -> Lwt.return_unit
+      | exn ->
+        mark_producer_error exn;
+        Lwt.return_unit)
+  in
+  let rec take_chunk requested =
+    match !current_chunk with
+    | Some (chunk, offset) ->
+      let count = min requested (String.length chunk - offset) in
+      let result =
+        if offset = 0 && count = String.length chunk then chunk
+        else String.sub chunk offset count
+      in
+      let offset = offset + count in
+      current_chunk := if offset = String.length chunk then None else Some (chunk, offset);
+      buffered := !buffered - count;
+      Lwt_flag.signal space_available ();
+      result
+    | None when not (Queue.is_empty chunks) ->
+      current_chunk := Some (Queue.pop chunks, 0);
+      take_chunk requested
+    | None -> ""
+  in
+  let timer' = new Action.timer in
+  let producer = start_producer () in
+  let%lwt code =
+    Lwt.finalize
+      (fun () ->
+        let headers = Option.default [] headers in
+        List.iter
+          (fun header ->
+            let name, _ = Stre.divide header ":" in
+            match String.lowercase_ascii (String.trim name) with
+            | "content-length" | "transfer-encoding" ->
+              invalid_arg (Printf.sprintf "streaming request cannot override %s" (String.trim name))
+            | _ -> ())
+          headers;
+        Curl.set_url h url;
+        curl_default_setup h;
+        Curl.set_httpheader h
+          (Printf.sprintf "Content-Length: %Ld" body.content_length
+           :: ("Content-Type: " ^ body.content_type)
+           :: headers);
+        Curl.set_post h true;
+        Curl.set_customrequest h (string_of_http_action action);
+        if http_1_0 then Curl.set_httpversion h Curl.HTTP_VERSION_1_0;
+        Option.may (Curl.set_timeout h) timeout;
+        Option.may (Curl.set_useragent h) ua;
+        setup h;
+        Curl.set_postfieldsizelarge h body.content_length;
+        Curl.set_readfunction2 h (fun requested ->
+          match !producer_error with
+          | Some _ -> Curl.Abort
+          | None when requested <= 0 -> Curl.Pause
+          | None when !buffered > 0 -> Curl.Proceed (take_chunk requested)
+          | None when !eof -> Curl.Proceed ""
+          | None ->
+            paused := true;
+            Curl.Pause);
+        Curl.set_writefunction h (fun chunk ->
+          let chunk_size = String.length chunk in
+          let new_size = !response_size + chunk_size in
+          match max_size with
+          | Some limit when new_size > limit ->
+            response_error :=
+              Some (Failure (Printf.sprintf "received too much data (%db) when max is %db" new_size limit));
+            0
+          | Some _ | None ->
+            Buffer.add_string response chunk;
+            response_size := new_size;
+            chunk_size);
+        Option.may (fun timer -> timer#mark "Web.http") timer;
+        Lwt.catch
+          (fun () -> Curl_lwt.perform h)
+          (fun exn ->
+            update_timer h timer;
+            Lwt.reraise exn))
+      (fun () ->
+        running := false;
+        Lwt_flag.signal space_available ();
+        Lwt.cancel producer;
+        (* do not delay request completion on an in-flight read *)
+        Lwt.async begin fun () ->
+          Lwt.catch
+            (fun () -> Lwt.finalize (fun () -> producer) body.close)
+            (fun exn ->
+              log#error ~exn "failed to close streaming HTTP request body";
+              Lwt.return_unit)
+        end;
+        Lwt.return_unit)
+  in
+  update_timer h timer;
+  match !producer_error, !response_error with
+  | Some exn, _ | None, Some exn -> Lwt.reraise exn
+  | None, None ->
+    let result =
+      match code with
+      | Curl.CURLE_OK -> Ok (Curl.get_httpcode h, Buffer.contents response)
+      | error -> Error error
+    in
+    if verbose then
+      log#info "%s %s %s http=%d uploaded=%.0f downloaded=%d"
+        (string_of_http_action action) url
+        (Time.compact_duration timer'#get) (Curl.get_httpcode h) (Curl.get_sizeupload h) !response_size;
+    Lwt.return
+      (match result with
+      | Ok response -> `Ok response
+      | Error error -> `Error error)
 
 (* there is also Http_blocking.http_request_k *)
 let with_curl = Http_blocking.with_curl
