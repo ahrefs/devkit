@@ -187,7 +187,7 @@ let read_env_config = State.read_env_config
 type 'a pr = ?rate_limit:Control.Rate_limit.t -> ?exn:exn -> ?lines:bool -> ?backtrace:bool -> ?saved_backtrace:string list -> ?ts:Time.t -> ?structured_pairs:Logger.Pairs.t -> ?pairs:Logger.Pairs.t -> ('a, unit, string, unit) format4 -> 'a
 
 (** Default rate limiter, shared between all the loggers *)
-let main_rate_limiter = Control.Rate_limit.create ~burst_factor:10 ~allowed_per_sec:1_000. ()
+let main_rate_limiter = Control.Rate_limit.create ~burst_factor:10 ~allowed_per_sec:500. ()
 
 class logger ?(logger=State.logger) facil =
   let make_s (logger: Logger.t) (level:Logger.level) =
