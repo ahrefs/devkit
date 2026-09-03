@@ -536,6 +536,132 @@ let () = test "Web.htmlencode" @@ fun () ->
   assert_equal (Web.htmlencode "A <p> tag & a <div> tag.") "A &lt;p&gt; tag &amp; a &lt;div&gt; tag.";
   ()
 
+let () = test "Web.htmlencode resize" @@ fun () ->
+  assert_equal
+    (Web.htmlencode "&&&&&&&&&&&")
+    "&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;&amp;";
+  ()
+
+let () = test "Netencoding.Html.encode_utf8 agrees with generic encoder" @@ fun () ->
+  let reference =
+    Netencoding.Html.encode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
+  in
+  (* let state = Random.State.make [| 0x51a7; 0x8f8; 1234 |] in *)
+  let state = Random.State.make_self_init () in
+  let unsafe_chars = "<>\"&\000\001\127" in
+  let rec random_scalar () =
+    let p = Random.State.int state 0x110000 in
+    if (p >= 0xd800 && p < 0xe000) || p = 0xfffe || p = 0xffff then
+      random_scalar ()
+    else
+      p
+  in
+  let random_codepoint () =
+    match Random.State.int state 10 with
+    | 0 | 1 ->
+        Char.code
+          unsafe_chars.[Random.State.int state (String.length unsafe_chars)]
+    | 2 | 3 | 4 | 5 -> Random.State.int state 128
+    | _ -> random_scalar ()
+  in
+  let check case codepoints =
+    let input = Netconversion.ustring_of_uarray `Enc_utf8 codepoints in
+    assert_equal
+      ~msg:(sprintf "generated UTF-8 case %d (%d code points)" case
+              (Array.length codepoints))
+      (reference input)
+      (Netencoding.Html.encode_utf8 input)
+  in
+  check 0
+    [| 0x0000; 0x0001; 0x0022; 0x0026; 0x003c; 0x003e; 0x007f; 0x0080;
+       0x07ff; 0x0800; 0xd7ff; 0xe000; 0xfffd; 0x10000; 0x10ffff |];
+  let fixed_lengths = [ 0; 1; 2; 15; 16; 31; 32; 127; 249; 250; 251; 1000 ] in
+  List.iteri
+    (fun i len -> check (i + 1) (Array.init len (fun _ -> random_codepoint ())))
+    fixed_lengths;
+  let n_iter = 500 in
+  for _i = 1 to n_iter do
+    let len =
+      match Random.State.int state 4 with
+      | 0 -> Random.State.int state 17
+      | 1 -> Random.State.int state 257
+      | 2 -> 249 + Random.State.int state 3
+      | _ -> Random.State.int state 1025
+    in
+    check (_i + List.length fixed_lengths)
+      (Array.init len (fun _ -> random_codepoint ()))
+  done
+
+let () = test "Netencoding.Html.encode_utf8 rejects invalid UTF-8" @@ fun () ->
+  assert_raises Netconversion.Malformed_code (fun () ->
+      ignore (Netencoding.Html.encode_utf8 "\xC3\x28"))
+
+module Reference_urlencode = struct
+  let hex_digits =
+    [| '0'; '1'; '2'; '3'; '4'; '5'; '6'; '7'; '8'; '9'; 'A'; 'B'; 'C'; 'D'; 'E'; 'F'; |]
+  let to_hex2 k =
+    let s = Bytes.create 2 in
+    Bytes.set s 0 hex_digits.((k lsr 4) land 15);
+    Bytes.set s 1 hex_digits.(k land 15);
+    Bytes.unsafe_to_string s
+
+  let url_encoding_re = Netstring_str.regexp "[^A-Za-z0-9_.!*-]"
+
+  let encode ?(plus = true) s =
+    Netstring_str.global_substitute url_encoding_re
+      (fun r _ ->
+        match Netstring_str.matched_string r s with
+        | " " when plus -> "+"
+        | x ->
+            let k = Char.code x.[0] in
+            "%" ^ to_hex2 k)
+      s
+end
+
+let test_urlencode ~plus =
+  test (sprintf "Netencoding.Url.encode ~plus:%b" plus) @@ fun () ->
+  let state = Random.State.make_self_init () in
+  let safe_chars =
+    "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_.!*-"
+  in
+  let unsafe_chars = " +%/~&=\000\001\127\128\255" in
+  let random_char () =
+    match Random.State.int state 10 with
+    | 0 | 1 | 2 | 3 ->
+        safe_chars.[Random.State.int state (String.length safe_chars)]
+    | 4 | 5 | 6 ->
+        unsafe_chars.[Random.State.int state (String.length unsafe_chars)]
+    | _ -> Char.chr (Random.State.int state 256)
+  in
+  let check case input =
+    assert_equal ~printer:(Printf.sprintf "%S")
+      ~msg:(sprintf "generated URL-encoding case %d (%d bytes)" case
+              (String.length input))
+      (Reference_urlencode.encode ~plus input)
+      (Netencoding.Url.encode ~plus input)
+  in
+  check 0 (String.init 256 Char.chr);
+  let fixed_lengths = [ 0; 1; 2; 15; 16; 31; 32; 127; 249; 250; 251; 1000 ] in
+  List.iteri
+    (fun i len -> check (i + 1) (String.init len (fun _ -> random_char ())))
+    fixed_lengths;
+  let n_iter = 500 in
+  for i = 1 to n_iter do
+    let len =
+      match Random.State.int state 4 with
+      | 0 -> Random.State.int state 17
+      | 1 -> Random.State.int state 257
+      | 2 -> 249 + Random.State.int state 3
+      | _ -> Random.State.int state 1025
+    in
+    check (i + List.length fixed_lengths)
+      (String.init len (fun _ -> random_char ()))
+  done
+
+let () =
+  test_urlencode ~plus:true;
+  test_urlencode ~plus:false
+
 let () = test "Web.urldecode" @@ fun () ->
   assert_equal (Web.urldecode "Hello+G%C3%BCnter") "Hello Günter";
   ()
