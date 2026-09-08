@@ -39,8 +39,9 @@ let once_nonblock = Ev.[ONCE;NONBLOCK] in
 object(self)
   inherit Lwt_engine.abstract
 
-  method id = Engine_id__Devkit_libevent
-
+  (* suppressing warning 7: for compatibility with both lwt.5.10 and lwt.6
+     once we move fully to lwt.6 and drop compat with 5.10, we can remove the attribute *)
+  method[@warning "-7"] id = Engine_id__Devkit_libevent
   val events_ = Ev.init ()
   val mutable pid = Unix.getpid ()
   method events =
