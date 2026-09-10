@@ -30,6 +30,8 @@ method poll fds timeout =
   l
 end
 
+type Lwt_engine.engine_id += Engine_id__Devkit_libevent
+
 (** libevent-based engine for lwt *)
 class libevent =
 let once_block = Ev.[ONCE] in
@@ -37,6 +39,9 @@ let once_nonblock = Ev.[ONCE;NONBLOCK] in
 object(self)
   inherit Lwt_engine.abstract
 
+  (* suppressing warning 7: for compatibility with both lwt.5.10 and lwt.6
+     once we move fully to lwt.6 and drop compat with 5.10, we can remove the attribute *)
+  method[@warning "-7"] id = Engine_id__Devkit_libevent
   val events_ = Ev.init ()
   val mutable pid = Unix.getpid ()
   method events =
