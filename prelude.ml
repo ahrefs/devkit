@@ -64,10 +64,11 @@ let () =
   match Lwt_engine.id () with
   | Lwt_engine.Engine_id__libev _ -> ()
   | Lwt_engine.Engine_id__select ->
-    (* Otherwise, prefer poll over select, because select can only monitor fds up to 1024,
+    (* prefer poll over select, because select can only monitor fds up to 1024,
        and poll is guaranteed to be available without the fd limitation. *)
+    eprintfn "Switching Lwt engine from select to poll to avoid fd limitations";
     Lwt_engine.set @@ new Lwt_engines.poll
   | Lwt_engine.Engine_id__poll -> ()
-  | lwteng ->
-      eprintfn "Unknown Lwt engine (%s) in use, leaving as is" Obj.Extension_constructor.(name (of_val lwteng));
+  | _ ->
+      (* unknown engine*)
       ()
