@@ -36,6 +36,23 @@ let string s =
   IO.nwrite out (Bytes.unsafe_of_string s); (* IO wrong type *)
   IO.close_out out
 
+let string_lwt ?(chunk_size = 3000) ?(yield = Lwt.pause) s =
+  let out = output (IO.output_string ()) in
+  let b = Bytes.unsafe_of_string s in
+  let len = Bytes.length b in
+  let rec loop offset =
+    let written = 
+      let len_to_write = Int.min chunk_size (len - offset) in
+      IO.output out b offset len_to_write in
+    if offset + written >= len then Lwt.return_unit
+    else (
+      (* Yield after processing a chunk *)
+      let%lwt () = yield () in
+      loop (offset + written))
+  in
+  let%lwt () = loop 0 in
+  Lwt.return @@ IO.close_out out
+
 let to_string s =
   let inp = input (IO.input_string s) in
   let out = IO.output_string () in
