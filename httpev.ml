@@ -425,15 +425,27 @@ let make_request_headers ~version code hdrs =
   put "";
   Buffer.contents b
 
+open struct
+  let has_header_value name value hdrs =
+    List.exists (fun (k,v) -> Stre.iequal k name && Stre.iequal (String.strip v) value) hdrs
+
+  let is_application_gzip hdrs =
+    List.exists begin fun (k,v) ->
+      Stre.iequal k "content-type" && Stre.iequal (String.strip @@ Stre.before v ";") "application/gzip"
+    end hdrs
+
+  (* compress large bodies, if not already compressed *)
+  let maybe_gzip encoding hdrs body =
+    match encoding with
+    | Gzip when String.length body > 128 &&
+        not (has_header_value "content-encoding" "gzip" hdrs || is_application_gzip hdrs) ->
+      ("Content-Encoding", "gzip") :: hdrs, Gzip_io.string body
+    | _ -> hdrs, body
+end
+
 let send_reply_async c encoding (code,hdrs,body) =
   try
-    (* possibly apply encoding *)
-    let (hdrs,body) =
-      (* TODO do not apply encoding to application/gzip *)
-      match encoding with
-      | Gzip when String.length body > 128 -> ("Content-Encoding", "gzip") :: hdrs, Gzip_io.string body
-      | _ -> hdrs, body
-    in
+    let (hdrs,body) = maybe_gzip encoding hdrs body in
     let hdrs = ("Content-Length", string_of_int (String.length body)) :: hdrs in
     (* do not transfer body for HEAD requests *)
     let body = match c.req with Ready { meth = `HEAD; _ } -> "" | _ -> body in
@@ -479,12 +491,12 @@ let send_reply_user c req (code,hdrs,body) =
   let hdrs = maybe_allow_cors c hdrs in
   let blocking = Option.is_some req.blocking in
   (* filter headers *)
-  let hdrs = hdrs |> List.filter begin fun (k,_) ->
+  let hdrs = hdrs |> List.filter begin fun (k,v) ->
     let open Stre in
     let forbidden =
       (iequal k "content-length" && not blocking) || (* httpev will calculate *)
       (iequal k "connection") ||
-      (iequal k "content-encoding") (* none of the user's business *)
+      (iequal k "content-encoding" && not (iequal (String.strip v) "gzip")) (* none of the user's business *)
     in
     not forbidden
   end in
@@ -847,6 +859,12 @@ let serve_gzip_io req ?status f =
 let serve_text req ?status text =
   serve req ?status "text/plain" text
 
+(** Return a body that's already gzip-encoded, add corresponding content-encoding *)
+let serve_encoded_gzip req ?status ?(extra=[]) ctype data =
+  match req.encoding with
+  | Gzip -> serve req ?status ~extra:(("Content-Encoding", "gzip") :: extra) ctype data
+  | Identity -> Exn.fail "client does not accept gzip encoding"
+
 let run ?(ip=Unix.inet_addr_loopback) port answer =
   server { default with connection = ADDR_INET (ip, port) } answer
 
@@ -955,23 +973,24 @@ let send_reply c cout reply =
   | _ -> () (* this can happen when sending back error reply on malformed HTTP input *)
   end;
   (* filter headers *)
-  let hdrs = hdrs |> List.filter begin fun (k,_) ->
+  let hdrs = hdrs |> List.filter begin fun (k,v) ->
     let open Stre in
     let forbidden =
       (iequal k "content-length") || (* httpev will calculate *)
       (iequal k "connection") ||
       (iequal k "transfer-encoding") ||
-      (iequal k "content-encoding") (* none of the user's business *)
+      (iequal k "content-encoding" && not (iequal (String.strip v) "gzip")) (* none of the user's business *)
     in
     not forbidden
   end
   in
   (* possibly apply encoding *)
   let (hdrs,body) =
-    (* TODO do not apply encoding to application/gzip *)
     (* TODO gzip + chunked? *)
     match body, code, c.req with
-    | `Body s, `Ok, Ready { encoding=Gzip; _ } when String.length s > 128 -> ("Content-Encoding", "gzip")::hdrs, `Body (Gzip_io.string s)
+    | `Body s, `Ok, Ready { encoding; _ } ->
+      let hdrs, s = maybe_gzip encoding hdrs s in
+      hdrs, `Body s
     | _ -> hdrs, body
   in
   let hdrs = match body with
@@ -1178,6 +1197,12 @@ let binary = return ~typ:"application/octet-stream"
 let printf ?status ?extra fmt = ksprintf (fun s -> text ?status ?extra s) fmt
 let json = return ~typ:"application/json"
 let yojson ?status ?extra x = json ?status ?extra (Yojson.Safe.to_string x)
+
+(** Return a body that's already gzip-encoded, add corresponding content-encoding *)
+let encoded_gzip req ?status ?(extra=[]) ~typ data =
+  match req.encoding with
+  | Gzip -> return ?status ~extra:(("Content-Encoding", "gzip") :: extra) ~typ data
+  | Identity -> Exn.fail "client does not accept gzip encoding"
 
 let error status s = text ~status s
 let not_found = error `Not_found
