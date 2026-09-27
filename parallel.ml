@@ -13,6 +13,11 @@ let nr_exited = stats#count "exited"
 let nr_vanished = stats#count "vanished"
 let nr_killed = stats#count "killed"
 
+(* a child inherits a snapshot of the counters, but it did not do those forks *)
+let () = Nix.register_on_fork begin fun () ->
+  nr_spawned := 0; nr_exited := 0; nr_vanished := 0; nr_killed := 0
+end
+
 type revive_mode =
   | Never
   | On_failure
