@@ -32,7 +32,7 @@ let nsplitc_fold str sep fold zero =
 
 let nsplitc_rev str sep = nsplitc_fold str sep cons []
 
-let nsplitc str sep = List.rev (nsplitc_rev str sep)
+let nsplitc str sep = String.split_on_char sep str
 
 let countc s c = String.fold_left (fun acc c' -> if c = c' then acc+1 else acc) 0 s
 

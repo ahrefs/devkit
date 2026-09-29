@@ -41,12 +41,13 @@ let fast_to_string =
   (* "%04u-%02u-%02uT%02u:%02u:%02u%s" *)
   let template = yyyy ^ "-__-__T__:__:__" in
   let template_z = template ^ "Z" in
-  let last_time = ref 0 in
-  let last_gmt = ref true in
-  let last_s = ref "1970-01-01T00:00:00Z" in
+  (* technically even ref here is enough, we only care that the cached tuple is self-consistent,
+     but supposedly using DLS improves hit rate and avoids contention on single cell *)
+  let last = Domain.DLS.new_key (fun () -> 0, true, "1970-01-01T00:00:00Z") in
   fun ~gmt f ->
     let seconds = int_of_float f in
-    if gmt = !last_gmt && seconds = !last_time then !last_s
+    let (last_time, last_gmt, last_s) = Domain.DLS.get last in
+    if gmt = last_gmt && seconds = last_time then last_s
     else
     let open Unix in
     let t = (if gmt then gmtime else localtime) f in
@@ -57,10 +58,8 @@ let fast_to_string =
     put_2d s 11 t.tm_hour;
     put_2d s 14 t.tm_min;
     put_2d s 17 t.tm_sec;
-    last_time := seconds;
-    last_gmt := gmt;
     let s = Bytes.unsafe_to_string s in
-    last_s := s;
+    Domain.DLS.set last (seconds, gmt, s);
     s
 
 let to_string ?(gmt=false) ?(ms=false) f =
@@ -288,4 +287,3 @@ let start_of_day t =
 let end_of_day t =
   let t = Unix.gmtime t in
   ExtUnix.Specific.timegm { t with tm_sec = 59; tm_min = 59; tm_hour = 23 }
-

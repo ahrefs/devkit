@@ -41,8 +41,8 @@ let () = test "HtmlStream" begin fun () ->
 *)
   "<a b='&amp;'>&amp;</a>" ==> "<a b='&amp;'>&amp;</a>";
   "<a b='&'>&</a>" ==> "<a b='&'>&</a>";
-  let show_event = 
-    let open HS in 
+  let show_event =
+    let open HS in
     function
     | Tag (name, _) -> sprintf "(OPEN-TAG:%S)" name
     | Text t -> sprintf "(TEXT:%d)" (String.length (Raw.project t))
@@ -790,6 +790,17 @@ let () = test "Log.filter" begin fun () ->
     assert_bool ("warn kept: " ^ out) (Stre.exists out "kept")
   ) ()
 end
+
+(*
+ let () = test "time race" begin fun () ->
+  let work i s () =
+    for _ = 1 to 1_000_000 do
+      let t = Time.gmt_string @@ Time.seconds @@ i * 1_000 in
+      if t <> s then Exn.fail "worker %d : expected %s got %s" i s t
+    done
+  in
+  List.init 4 (fun i -> let s = Time.gmt_string @@ Time.seconds @@ i * 1_000 in Domain.spawn (work i s)) |> List.iter Domain.join
+end *)
 
 let tests () =
   let (_:test_results) = run_test_tt_main ("devkit" >::: List.rev !tests) in
