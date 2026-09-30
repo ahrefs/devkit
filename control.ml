@@ -26,15 +26,19 @@ let with_output_txt name k = with_open_out_txt name (fun ch -> bracket (IO.outpu
 
 let with_opendir dir = bracket (Unix.opendir dir) Unix.closedir
 
-(* token bucket
+(* token bucket, domain-safe.
    https://en.wikipedia.org/wiki/Token_bucket *)
 module Rate_limit = struct
+  type bucket = {
+    tokens: float;
+    last_update: float;
+  }
+
   type t =
     | Unlimited
     | RL of {
-      mutable tokens: float;
-      mutable count_silenced: int;
-      mutable last_update: float;
+      bucket: bucket Atomic.t; (** current state. avoid mutex for reentrancy *)
+      count_silenced: int Atomic.t;
       capacity: float;
       rate: float; (** new tokens/sec *)
     }
@@ -48,33 +52,36 @@ module Rate_limit = struct
     if burst_factor < 1 then invalid_arg "Rate_limit.create: burst factor must be >= 1";
     let capacity = max 1. (float burst_factor *. allowed_per_sec) in
     RL {
-      tokens=capacity; last_update=Time.now(); count_silenced=0; capacity;
+      bucket = Atomic.make { tokens=capacity; last_update=Time.now() };
+      count_silenced = Atomic.make 0;
+      capacity;
       rate=allowed_per_sec;
     }
 
   let take_rate_limited_count = function
     | Unlimited -> 0
-    | RL rl ->
-        let n = rl.count_silenced in
-        rl.count_silenced <- 0;
-        n
+    | RL rl -> Atomic.exchange rl.count_silenced 0
 
-  let attempt = function
+  let rec attempt_rec now = function
     | Unlimited -> true
-    | RL rl ->
-      let now = Time.now() in
-
-      if now > rl.last_update then (
-        rl.tokens <- min rl.capacity
-          (rl.tokens +. rl.rate *. (now -. rl.last_update));
-        rl.last_update <- now;
-      );
-
-      if rl.tokens >= 1. then (
-        rl.tokens <- rl.tokens -. 1.;
-        true
-      ) else (
-        rl.count_silenced <- 1 + rl.count_silenced;
+    | RL rl as rate_limiter ->
+      let old = Atomic.get rl.bucket in
+      let b =
+        let time_since_last_refill = now -. old.last_update in
+        if time_since_last_refill > 1e-3 then
+          (* lazily refill, avoid small float precision errors *)
+          let tokens = min rl.capacity (old.tokens +. rl.rate *. time_since_last_refill) in
+          { tokens; last_update = now }
+        else
+          old
+      in
+      if b.tokens >= 1. then
+        let ok = Atomic.compare_and_set rl.bucket old { b with tokens = b.tokens -. 1. } in
+        if ok then true (* done *) else attempt_rec now rate_limiter
+      else begin
+        Atomic.incr rl.count_silenced;
         false
-      )
+      end
+
+  let attempt rl = attempt_rec (Time.now()) rl
 end
