@@ -1,5 +1,9 @@
 (** Thread utilities *)
 
+val check_main_domain : string -> unit
+(** [check_main_domain name] raises [Failure] if not called from the main domain.
+    Use it to guard process-wide setup and configuration. [name] identifies the caller in the error. *)
+
 val locked : Mutex.t -> (unit -> 'a) -> 'a
 
 type 'a t
