@@ -95,6 +95,9 @@ module Html : sig
     * ]}
     *)
 
+  val encode_utf8 : string -> string
+  (** Fast path for utf8 -> utf8, regular HTML *)
+
   type entity_set = [ `Html | `Xml | `Empty ]
 
   val decode :
