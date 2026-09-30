@@ -31,6 +31,21 @@ or
 Output only messages of warning level or higher for all facilities
 {[Log.set_filter `Warn]}
 
+{2 Domains}
+
+Logging (the [logger] methods, [Logger.t.put]) is safe from any domain.
+Output lines are not interleaved, and the shared {!main_rate_limiter} is
+domain-safe.
+
+Everything else is main-domain only: creating facilities ({!facility},
+{!from}, [new logger]) and configuration ({!set_filter}, {!set_loglevels},
+{!read_env_config}, {!set_utc}, [State.set_plaintext], [State.set_logfmt]).
+These raise [Failure] when called from another domain. Do them at startup,
+before spawning domains; later changes become visible to other domains eventually.
+
+[State.hook] and [State.logger_target] must likewise only be set from the main domain,
+but the hook is {e called} from whichever domain logs, so it must be domain-safe itself.
+
 {2 API}
 *)
 
@@ -40,12 +55,17 @@ open Prelude
 
 (** Global logger state *)
 module State = struct
+  let check_main_domain name =
+    if not (Domain.is_main_domain ()) then
+      Exn.fail "Log.%s: must be called from the main domain" name
+
   let all = Hashtbl.create 10
   let default_level = ref (`Info : Logger.level)
 
   let utc_timezone = ref false
 
   let facility name =
+    check_main_domain "facility";
     try
       Hashtbl.find all name
     with
@@ -55,6 +75,7 @@ module State = struct
         x
 
   let set_filter ?name level =
+    check_main_domain "set_filter";
     match name with
     | None -> default_level := level; Hashtbl.iter (fun _ x -> Logger.set_filter x level) all
     | Some name when Stre.ends_with name "*" ->
@@ -63,6 +84,7 @@ module State = struct
     | Some name -> Logger.set_filter (facility name) level
 
   let set_loglevels s =
+    check_main_domain "set_loglevels";
     Stre.nsplitc s ',' |> List.iter begin fun spec ->
       match Stre.nsplitc spec '=' with
       | name :: l :: [] -> set_filter ~name (Logger.level l)
@@ -114,8 +136,8 @@ module State = struct
   end
   let get_cur_format () = Atomic.get cur_format
   let is_structured_format () = match get_cur_format () with `Plain, _ -> false | `Logfmt, _ -> true
-  let set_plaintext () = set_cur_format (`Plain, format_simple_full)
-  let set_logfmt () = set_cur_format (`Logfmt, format_logfmt)
+  let set_plaintext () = check_main_domain "set_plaintext"; set_cur_format (`Plain, format_simple_full)
+  let set_logfmt () = check_main_domain "set_logfmt"; set_cur_format (`Logfmt, format_logfmt)
 
   let format level facil ts pairs msg =
     (snd (Atomic.get cur_format)) level facil ts pairs msg
@@ -137,6 +159,7 @@ module State = struct
   let logger = Logger.put_simple logger_target
 
   let self = "lib"
+  let self_facil = facility self
 
   (*
     we open the new fd, then dup it to stderr and close afterwards
@@ -153,14 +176,15 @@ module State = struct
     with
       e ->
         let now = (Unix.gettimeofday ()) in
-        logger.put `Warn (facility self) now [] (sprintf "reopen_log_ch(%s) failed : %s" file (Printexc.to_string e))
+        (* this might run from any domain, so use [self_facil] since [facility] is not domain-safe *)
+        logger.put `Warn self_facil now [] (sprintf "reopen_log_ch(%s) failed : %s" file (Printexc.to_string e))
 
 end
 
 let facility = State.facility
 let set_filter = State.set_filter
 let set_loglevels = State.set_loglevels
-let set_utc () = State.utc_timezone := true
+let set_utc () = State.check_main_domain "set_utc"; State.utc_timezone := true
 
 (** Update facilities configuration from the environment.
 
