@@ -115,6 +115,15 @@ let () = test "Stre.splitc" begin fun () ->
   t ("a.b","") (Stre.rsplitc "a.b." '.');
 end
 
+let () = test "Stre.nsplitc" begin fun () ->
+  let t input expected = assert_equal ~printer:(strl (sprintf "%S")) expected (Stre.nsplitc input ',') in
+  t "" [];
+  t "foo" ["foo"];
+  t "," [""; ""];
+  t ",foo," [""; "foo"; ""];
+  t "foo,,bar" ["foo"; ""; "bar"]
+end
+
 let () = test "Stre.before" begin fun () ->
   let t = assert_equal ~printer:id in
   t "" (Stre.before "abc" "");
@@ -774,6 +783,10 @@ let () = test "Log.pairs" begin fun () ->
   Std.finally
     (fun () -> Log.State.utc_timezone := prev_utc)
     run ()
+end
+
+let () = test "Log.empty_config" begin fun () ->
+  Log.set_loglevels ""
 end
 
 let () = test "Log.filter" begin fun () ->
