@@ -1,3 +1,5 @@
+include ExtThreadBase
+
 let log = Log.self
 
 type 'a t = [ `Exn of exn | `None | `Ok of 'a ] ref * Thread.t
