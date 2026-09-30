@@ -383,17 +383,24 @@ let reuse create reset = { cache = Stack.create (); create; reset; }
 let use t = if Stack.is_empty t.cache then t.create () else Stack.pop t.cache
 let recycle t x = t.reset x; Stack.push x t.cache
 
-module ReuseLocked(L : Lock)(T : sig type t val create : unit -> t val reset : t -> unit end) : sig
+module Reuse(T : sig type t val create : unit -> t val reset : t -> unit end) : sig
 type t = T.t
 val get : unit -> t
 val release : t -> unit
 end = struct
 type t = T.t
-type cache = { cache : t Stack.t; lock : L.t }
-let cache = { cache = Stack.create (); lock = L.create () }
-let get' () = if Stack.is_empty cache.cache then T.create () else Stack.pop cache.cache
-let get () = L.locked cache.lock get'
-let release x = L.locked cache.lock (fun () -> T.reset x; Stack.push x cache.cache)
+type cache = { cache : t list Atomic.t; } [@@unboxed]
+let cache = { cache = Atomic.make []; }
+let rec get () = match Atomic.get cache.cache with
+| [] -> T.create()
+| x :: tl as old ->
+  if Atomic.compare_and_set cache.cache old tl then x else get ()
+let release x =
+  T.reset x;
+  let continue = ref true in
+  while !continue do
+    let old = Atomic.get cache.cache in
+    continue := not (Atomic.compare_and_set cache.cache old (x::old))
+  done
 end
 
-module Reuse = ReuseLocked(NoLock)
