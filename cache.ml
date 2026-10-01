@@ -60,37 +60,39 @@ module TimeLimited2(E: Set.OrderedType)
 end
 
 module Count = struct
-  open Hashtbl
-  type 'a t = ('a, int ref) Hashtbl.t
-  let create () : 'a t = create 16
-  let clear = Hashtbl.clear
-  let entry t x = match find t x with r -> r | exception Not_found -> let r = ref 0 in Hashtbl.add t x r; r
-  let plus t x n = entry t x += n
-  let minus t x n = entry t x -= n
+  module H = ExtThread.ShardedHashTrie
+  (* counters are atomic, the table only grows (or is cleared) *)
+  type 'a t = ('a, int Atomic.t) H.t
+  let create () : 'a t = H.create ~shard_bits:6 ()
+  let clear = H.clear
+  let entry t x = H.get_or_create t x ~f:(fun _ -> Atomic.make 0)
+  let plus t x n = ignore (Atomic.fetch_and_add (entry t x) n : int)
+  let minus t x n = plus t x (-n)
   let of_enum e = let h = create () in Enum.iter (fun (k,n) -> plus h k n) e; h
   let of_list l = of_enum @@ List.enum l
   let add t x = plus t x 1
   let del t x = minus t x 1
-  let enum t = enum t |> Enum.map (fun (k,n) -> k, !n)
-  let iter t f = iter (fun k n -> f k !n) t
-  let fold t f acc = Hashtbl.fold (fun k n acc -> f k !n acc) t acc
-  let count t k = match Hashtbl.find t k with n -> !n | exception Not_found -> 0
-  let count_all t = Hashtbl.fold (fun _ n acc -> acc + !n) t 0
-  let size = Hashtbl.length
-  let show t ?(sep=" ") f = enum t |>
-    List.of_enum |> List.sort ~cmp:(Action.compare_by fst) |>
+  let iter t f = H.iter t (fun k n -> f k (Atomic.get n))
+  let fold t f acc = H.fold t (fun k n acc -> f k (Atomic.get n) acc) acc
+  let to_list t = fold t (fun k n acc -> (k,n) :: acc) []
+  let enum t = List.enum (to_list t)
+  let count t k = match H.find_opt t k with Some n -> Atomic.get n | None -> 0
+  let count_all t = fold t (fun _ n acc -> acc + n) 0
+  let size = H.length
+  let show t ?(sep=" ") f = to_list t |>
+    List.sort ~cmp:(Action.compare_by fst) |>
     List.map (fun (x,n) -> sprintf "%S: %u" (f x) n) |>
     String.concat sep
-  let show_sorted t ?limit ?(sep="\n") f = enum t |>
-    List.of_enum |> List.sort ~cmp:(flip @@ Action.compare_by snd) |>
+  let show_sorted t ?limit ?(sep="\n") f = to_list t |>
+    List.sort ~cmp:(flip @@ Action.compare_by snd) |>
     (match limit with None -> id | Some n -> List.take n) |>
     List.map (fun (x,n) -> sprintf "%6d : %S" n (f x)) |>
     String.concat sep
   let stats t ?(cmp=compare) f =
-    if Hashtbl.length t = 0 then
+    let a = to_list t |> Array.of_list in
+    if Array.length a = 0 then
       "<empty>"
     else
-      let a = Array.of_enum (enum t) in
       let total = Array.fold_left (fun t (_,n) -> t + n) 0 a in
       let half = total / 2 in
       let cmp (x,_) (y,_) = cmp x y in
@@ -108,10 +110,10 @@ module Count = struct
       sprintf "total %d median %s min %s max %s"
         total (match !med with None -> "?" | Some x -> show x) (show mi) (show ma)
   let distrib t =
-    if Hashtbl.length t = 0 then
+    let a = to_list t |> Array.of_list in
+    if Array.length a = 0 then
       [||]
     else
-      let a = Array.of_enum (enum t) in
       let total = Array.fold_left (fun t (_,n) -> t + n) 0 a in
       let limits = Array.init 10 (fun i -> total * (i + 1) / 10) in
       let cmp (x,_) (y,_) = compare (x:float) y in
@@ -133,7 +135,7 @@ module Count = struct
     let data = show_sorted t ?limit ~sep f in
     let stats = stats t ?cmp f in
     stats^sep^data
-  let names (t : 'a t) = List.of_enum @@ Hashtbl.keys t
+  let names (t : 'a t) = H.fold t (fun k _ acc -> k :: acc) []
 end
 
 
