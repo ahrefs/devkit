@@ -77,13 +77,18 @@
   (libraries devkit extlib)
   (modules test_gzip))
 
-(test
+(executable
   (name test_log_rate_limit)
   (libraries devkit unix)
   (modules test_log_rate_limit))
 
+; tests are silent unless they fail
 (rule
   (alias runtest)
-  (action (run ./test.exe)))
+  (action (system "out=$(%{exe:test_log_rate_limit.exe} 2>&1) || { printf '%s\\n' \"$out\"; exit 1; }")))
+
+(rule
+  (alias runtest)
+  (action (system "out=$(%{exe:test.exe} 2>&1) || { printf '%s\\n' \"$out\"; exit 1; }")))
 
 (ocamllex logfmt_lex)

@@ -1,3 +1,16 @@
-(tests
+(executables
  (names sharded_hash_trie_test cache_count_test logger_domains_test)
  (libraries devkit qcheck-core qcheck-core.runner unix))
+
+; tests are silent unless they fail
+(rule
+ (alias runtest)
+ (action (system "out=$(%{exe:sharded_hash_trie_test.exe} 2>&1) || { printf '%s\\n' \"$out\"; exit 1; }")))
+
+(rule
+ (alias runtest)
+ (action (system "out=$(%{exe:cache_count_test.exe} 2>&1) || { printf '%s\\n' \"$out\"; exit 1; }")))
+
+(rule
+ (alias runtest)
+ (action (system "out=$(%{exe:logger_domains_test.exe} 2>&1) || { printf '%s\\n' \"$out\"; exit 1; }")))
