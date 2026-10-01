@@ -38,7 +38,12 @@ module LRU(K : Hashtbl.HashedType) : sig
   val lfu_free : 'v t -> int
 end
 
-(** Count elements *)
+(** Count elements. Domain safe.
+
+   Collection-wide operations such as [iter], [fold], [size],
+   [clear], etc. can race against individual modifications (ie it's
+   possible that a call to [clear t] races against [plus t "x" 42]
+   and an empty structure is never observable) *)
 module Count : sig
   type 'a t
   val create : unit -> 'a t
