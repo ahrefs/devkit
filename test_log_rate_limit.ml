@@ -38,7 +38,7 @@ let () =
     format = (fun _level _facility _timestamp _pairs message -> message);
     output = (fun _level _facility message ->
       Buffer.add_string output message;
-      Buffer.add_char output '\n');
+      Buffer.add_char output '\n') |> Atomic.make;
   } in
   let logger = Logger.put_simple target in
   let log = new Log.logger ~logger (Log.facility "rate-limit-test") in
