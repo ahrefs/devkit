@@ -741,9 +741,9 @@ let () = test "Logfmt.Parser" begin fun () ->
 end
 
 let without_logging f =
-  let log_output = Log.State.logger_target.output in
-  Log.State.logger_target.output <- (fun level facil s -> !Log.State.hook level facil s);
-  Std.finally (fun () -> Log.State.logger_target.output <- log_output) f ()
+  let log_output = Atomic.get Log.State.logger_target.output in
+  Atomic.set Log.State.logger_target.output (fun level facil s -> !Log.State.hook level facil s);
+  Std.finally (fun () -> Atomic.set Log.State.logger_target.output log_output) f ()
 
 let with_log_hook f =
   let buf = Buffer.create 128 in
