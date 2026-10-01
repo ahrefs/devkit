@@ -55,17 +55,13 @@ open Prelude
 
 (** Global logger state *)
 module State = struct
-  let check_main_domain name =
-    if not (Domain.is_main_domain ()) then
-      Exn.fail "Log.%s: must be called from the main domain" name
-
   let all = Hashtbl.create 10
   let default_level = ref (`Info : Logger.level)
 
   let utc_timezone = ref false
 
   let facility name =
-    check_main_domain "facility";
+    ExtThreadBase.check_main_domain "Log.facility";
     try
       Hashtbl.find all name
     with
@@ -75,7 +71,7 @@ module State = struct
         x
 
   let set_filter ?name level =
-    check_main_domain "set_filter";
+    ExtThreadBase.check_main_domain "Log.set_filter";
     match name with
     | None -> default_level := level; Hashtbl.iter (fun _ x -> Logger.set_filter x level) all
     | Some name when Stre.ends_with name "*" ->
@@ -84,7 +80,7 @@ module State = struct
     | Some name -> Logger.set_filter (facility name) level
 
   let set_loglevels s =
-    check_main_domain "set_loglevels";
+    ExtThreadBase.check_main_domain "Log.set_loglevels";
     Stre.nsplitc s ',' |> List.iter begin fun spec ->
       match Stre.nsplitc spec '=' with
       | name :: l :: [] -> set_filter ~name (Logger.level l)
@@ -136,8 +132,8 @@ module State = struct
   end
   let get_cur_format () = Atomic.get cur_format
   let is_structured_format () = match get_cur_format () with `Plain, _ -> false | `Logfmt, _ -> true
-  let set_plaintext () = check_main_domain "set_plaintext"; set_cur_format (`Plain, format_simple_full)
-  let set_logfmt () = check_main_domain "set_logfmt"; set_cur_format (`Logfmt, format_logfmt)
+  let set_plaintext () = ExtThreadBase.check_main_domain "Log.set_plaintext"; set_cur_format (`Plain, format_simple_full)
+  let set_logfmt () = ExtThreadBase.check_main_domain "Log.set_logfmt"; set_cur_format (`Logfmt, format_logfmt)
 
   let format level facil ts pairs msg =
     (snd (Atomic.get cur_format)) level facil ts pairs msg
@@ -184,7 +180,7 @@ end
 let facility = State.facility
 let set_filter = State.set_filter
 let set_loglevels = State.set_loglevels
-let set_utc () = State.check_main_domain "set_utc"; State.utc_timezone := true
+let set_utc () = ExtThreadBase.check_main_domain "Log.set_utc"; State.utc_timezone := true
 
 (** Update facilities configuration from the environment.
 

@@ -1,0 +1,6 @@
+; optional: needs saturn and benchmark. Build with make benchs.
+(executable
+ (name bench_sharded_hash_trie)
+ (optional)
+ (enabled_if (= %{profile} bench))
+ (libraries devkit saturn benchmark unix))

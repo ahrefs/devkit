@@ -12,9 +12,11 @@ build: [
 ]
 depends: [
   "ocaml" {>= "5.0"}
-  "dune" {>= "2.0"}
+  "dune" {>= "2.3"}
   ("extlib" {>= "1.7.1"} | "extlib-compat" {>= "1.7.1"})
   "ounit2"
+  "qcheck-core" {with-test}
+  "benchmark" {with-dev-setup}
   "camlzip"
   "libevent" {>= "0.8.0"}
   "curl" {>= "0.10.0"}
