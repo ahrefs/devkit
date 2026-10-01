@@ -1,0 +1,6 @@
+; optional: needs saturn and benchmark. Build explicitly:
+;   dune build --release bench/bench_sharded_hash_trie.exe
+(executable
+ (name bench_sharded_hash_trie)
+ (optional)
+ (libraries devkit saturn benchmark unix))

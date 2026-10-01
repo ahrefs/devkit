@@ -15,6 +15,7 @@ depends: [
   "dune" {>= "2.0"}
   ("extlib" {>= "1.7.1"} | "extlib-compat" {>= "1.7.1"})
   "ounit2"
+  "qcheck-core" {with-test}
   "camlzip"
   "libevent" {>= "0.8.0"}
   "curl" {>= "0.10.0"}

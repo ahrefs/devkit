@@ -1,0 +1,3 @@
+(tests
+ (names sharded_hash_trie_test cache_count_test)
+ (libraries devkit qcheck-core qcheck-core.runner unix))
