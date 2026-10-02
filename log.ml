@@ -66,7 +66,7 @@ module State = struct
       Hashtbl.find all name
     with
       Not_found ->
-        let x = { Logger.name = name; show = Logger.int_level !default_level } in
+        let x = { Logger.name = name; show = Atomic.make (Logger.int_level !default_level) } in
         Hashtbl.add all name x;
         x
 
@@ -150,7 +150,7 @@ module State = struct
   (** Main logger *)
   let logger_target = {Logger.
     format;
-    output = output_simple;
+    output = Atomic.make output_simple;
   }
   let logger = Logger.put_simple logger_target
 
