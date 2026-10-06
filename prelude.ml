@@ -66,7 +66,6 @@ let () =
   | Lwt_engine.Engine_id__select ->
     (* prefer poll over select, because select can only monitor fds up to 1024,
        and poll is guaranteed to be available without the fd limitation. *)
-    eprintfn "Switching Lwt engine from select to poll to avoid fd limitations";
     Lwt_engine.set @@ new Lwt_engines.poll
   | Lwt_engine.Engine_id__poll -> ()
   | _ ->
