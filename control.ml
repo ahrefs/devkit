@@ -76,8 +76,8 @@ module Rate_limit = struct
           old
       in
       if b.tokens >= 1. then
-        let ok = Atomic.compare_and_set rl.bucket old { b with tokens = b.tokens -. 1. } in
-        if ok then true (* done *) else attempt_rec now rate_limiter
+        let got_token = Atomic.compare_and_set rl.bucket old { b with tokens = b.tokens -. 1. } in
+        if got_token then true (* done *) else attempt_rec now rate_limiter
       else begin
         Atomic.incr rl.count_silenced;
         false
