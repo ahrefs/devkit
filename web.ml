@@ -329,12 +329,12 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     | `Plain, _ -> verbose_curl_result_plain nr_http action t hr
     | `Logfmt, _ -> verbose_curl_result_logfmt nr_http action t hr
 
-  (* Given a list of strings, check pre-existing entry starting with `~name`; and adds the concatenation of `~name` and `~value` if not. *)
-  let add_if_absent ~name ~value strs =
-    match strs with
-    | Some strs when List.exists (fun s -> Stre.starts_with s (name^":")) strs -> strs
-    | Some strs -> (String.concat ": " [name; value]) :: strs
-    | None -> [String.concat ": " [name; value]]
+  (* Remove from the list of "Name: value" headers those whose name (case-insensitive) is in `names`, then add `pairs`. *)
+  let replace_headers ~names pairs strs =
+    let is_replaced s = let (n, _) = Stre.dividec s ':' in List.exists (Stre.iequal (String.strip n)) names in
+    let strs = Option.default [] strs in
+    let strs = if List.exists is_replaced strs then List.filter (fun s -> not (is_replaced s)) strs else strs in
+    List.map (fun (n, v) -> sprintf "%s: %s" n v) pairs @ strs
 
   (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
   (* Don't use curl_setheaders when using ?headers option *)
@@ -414,9 +414,10 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       Possibly_otel.enter_manual_span
         ~__FUNCTION__:"Devkit.Web.Http.http_request_k" ~__FILE__ ~__LINE__ ~data:describe span_name in
 
-    let headers = match Possibly_otel.Traceparent.get_ambient ~explicit_span () with
-    | None -> headers
-    | Some value -> Some (add_if_absent ~name:(Possibly_otel.Traceparent.name) ~value headers)
+    (* trace context headers always override the caller's *)
+    let headers = match Possibly_otel.Trace_context.get_ambient_headers ~explicit_span () with
+    | [] -> headers
+    | pairs -> Some (replace_headers ~names:Possibly_otel.Trace_context.header_names pairs headers)
     in
 
     let set_body_and_headers h ct body =
