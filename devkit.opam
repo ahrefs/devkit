@@ -40,6 +40,6 @@ depopts: [
 ]
 conflicts: [
   "jemalloc" {< "0.2"}
-  "opentelemetry" {< "0.13"}
+  "opentelemetry" {< "0.91"}
 ]
 available: arch != "arm32" & arch != "x86_32"
