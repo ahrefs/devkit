@@ -4,6 +4,22 @@ open Prelude
 
 let log = Log.from "parallel"
 
+(* counters are process-wide, as in Httpev : several run_forks calls are not told apart.
+   Add Var attributes here if that is ever needed. *)
+let stats = new Var.typ "parallel.forks" "event"
+
+let nr_spawned = stats#count "spawned"
+let nr_succeeded = stats#count "succeeded"
+let nr_failed = stats#count "failed"
+let nr_signaled = stats#count "signaled"
+let nr_vanished = stats#count "vanished"
+let nr_force_killed = stats#count "force_killed"
+
+(* a child inherits a snapshot of the counters, but it did not do those forks *)
+let () = Nix.register_on_fork begin fun () ->
+  nr_spawned := 0; nr_succeeded := 0; nr_failed := 0; nr_signaled := 0; nr_vanished := 0; nr_force_killed := 0
+end
+
 type revive_mode =
   | Never
   | On_failure
@@ -23,10 +39,11 @@ val perform : t -> ?autoexit:bool -> task Enum.t -> (result -> unit) -> unit
 val stop : ?wait:int -> t -> unit
 end
 
-(** @return list of reaped PIDs with status, list of live PIDs *)
+(** reap and count exited workers
+  @return list of reaped PIDs with status, list of live PIDs *)
 let reap l =
   let open Unix in
-  List.fold_left begin fun (acc_dead, acc_alive) pid ->
+  let (dead,_) as r = List.fold_left begin fun (acc_dead, acc_alive) pid ->
     let dead result = (pid, result) :: acc_dead, acc_alive in
     let alive () = acc_dead, pid :: acc_alive in
     match waitpid [WNOHANG] pid with
@@ -46,6 +63,14 @@ let reap l =
       log #warn ~exn "Worker PID %d lost (wait)" pid;
       dead None
   end ([], []) l
+  in
+  dead |> List.iter begin function
+    | _, Some (WEXITED 0) -> incr nr_succeeded
+    | _, Some (WEXITED _) -> incr nr_failed
+    | _, Some (WSIGNALED _) -> incr nr_signaled
+    | _, (Some (WSTOPPED _) | None) -> incr nr_vanished (* lost, no status *)
+  end;
+  r
 
 let hard_kill1 pid =
   let open Unix in
@@ -57,6 +82,7 @@ let hard_kill1 pid =
 
 let hard_kill l =
   let (_,live) = reap l in
+  nr_force_killed += List.length live;
   List.iter hard_kill1 live
 
 let killall signo pids =
@@ -123,6 +149,7 @@ let worker (execute : task -> result) =
       Unix.set_close_on_exec main_read;
       let cout = Unix.out_channel_of_descr main_write in
       let cin = Unix.in_channel_of_descr main_read in
+      incr nr_spawned;
       { ch = Some (cin, cout); pid; }
 
 let create execute n =
@@ -176,6 +203,7 @@ let perform t ?(autoexit=false) tasks finish =
             | exception exn ->
               log #warn ~exn "no result from PID %d" w.pid;
               t.gone <- t.gone + 1;
+              incr nr_vanished;
               decr workers;
               (* close pipes and forget dead child, do not reap zombie so that premature exit is visible in process list *)
               close_ch w;
@@ -261,7 +289,7 @@ let run_forks_simple ?(revive=Never) ?wait_stop f args =
         log #error ~exn ~backtrace:true "worker failed";
         exit 1
       end
-    | `Forked pid -> Hashtbl.add workers pid x; pid
+    | `Forked pid -> incr nr_spawned; Hashtbl.add workers pid x; pid
   in
   args |> List.iter (fun x -> let (_:int) = launch f x in ());
   let pids () = Hashtbl.keys workers |> List.of_enum in
