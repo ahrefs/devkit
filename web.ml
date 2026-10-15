@@ -119,6 +119,9 @@ module type CURL = sig
   val perform : Curl.t -> Curl.curlCode t
 end
 
+(** [?headers] are sent as given, with one exception: if the request has an OpenTelemetry span, any [traceparent]
+    and [tracestate] headers are removed (names match case-insensitively) and replaced with ones generated from that span.
+    To continue an incoming trace, make it the ambient context; don't pass these headers yourself. *)
 type ('body,'ret) http_request_ =
   ?verbose:bool ->
   ?ua:string ->
@@ -329,9 +332,15 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     | `Plain, _ -> verbose_curl_result_plain nr_http action t hr
     | `Logfmt, _ -> verbose_curl_result_logfmt nr_http action t hr
 
-  (* Remove from the list of "Name: value" headers those whose name (case-insensitive) is in `names`, then add `pairs`. *)
+  (* Remove from the list of "Name: value" headers those whose name (case-insensitive) is in `names`, then add `pairs`.
+     Also handles curl's "Name;" syntax for sending an empty header. *)
   let replace_headers ~names pairs strs =
-    let is_replaced s = let (n, _) = Stre.dividec s ':' in List.exists (Stre.iequal (String.strip n)) names in
+    let header_name s =
+      let i = try String.index s ':' with Not_found -> String.length s in
+      let i = try min i (String.index s ';') with Not_found -> i in
+      String.strip (String.sub s 0 i)
+    in
+    let is_replaced s = let n = header_name s in List.exists (Stre.iequal n) names in
     let strs = Option.default [] strs in
     let strs = if List.exists is_replaced strs then List.filter (fun s -> not (is_replaced s)) strs else strs in
     List.map (fun (n, v) -> sprintf "%s: %s" n v) pairs @ strs
