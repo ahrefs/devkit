@@ -1,3 +1,9 @@
+module Trace_context = struct
+  let header_names = [ "traceparent"; "tracestate" ]
+
+  let get_ambient_headers ?explicit_span:_ () = []
+end
+
 module Traceparent = struct
   let name = "traceparent"
 
