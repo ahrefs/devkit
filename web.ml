@@ -40,6 +40,17 @@ let parse_url_args args =
 
 let url_get_args url = try String.split url "?" |> snd |> parse_url_args with _ -> []
 
+(** Header name is a non-empty HTTP token. See https://www.rfc-editor.org/rfc/rfc9110.html#name-collected-abnf *)
+let valid_header_name n =
+  n <> "" && Stdlib.String.for_all (function
+    | 'a'..'z' | 'A'..'Z' | '0'..'9'
+    | '!' | '#' | '$' | '%' | '&' | '\'' | '*' | '+' | '-' | '.' | '^' | '_' | '`' | '|' | '~' -> true
+    | _ -> false) n
+
+(** Header value is not too long and has no CR, LF or NUL (which could inject into the request) *)
+let valid_header_value v =
+  String.length v <= 8192 && Stdlib.String.for_all (function '\r' | '\n' | '\000' -> false | _ -> true) v
+
 let () = Curl.global_init Curl.CURLINIT_GLOBALALL
 
 let curl_times h =
@@ -327,6 +338,11 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
       in
       log #info ~pairs "http error"
 
+  let validate_header (n, v) =
+    if not (valid_header_name n) then invalid_arg (sprintf "Web: invalid header name %S" n);
+    if not (valid_header_value v) then invalid_arg (sprintf "Web: invalid value for header %s: %S" n (Stre.shorten 64 v));
+    ()
+
   let verbose_curl_result nr_http action t hr =
     match Log.State.get_cur_format () with
     | `Plain, _ -> verbose_curl_result_plain nr_http action t hr
@@ -343,7 +359,8 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     let is_replaced s = let n = header_name s in List.exists (Stre.iequal n) names in
     let strs = Option.default [] strs in
     let strs = if List.exists is_replaced strs then List.filter (fun s -> not (is_replaced s)) strs else strs in
-    List.map (fun (n, v) -> sprintf "%s: %s" n v) pairs @ strs
+    let header (n, v) = validate_header (n, v); sprintf "%s: %s" n v in
+    List.map header pairs @ strs
 
   (* NOTE don't forget to set http_1_0=true when sending requests to a Httpev-based server *)
   (* Don't use curl_setheaders when using ?headers option *)
@@ -426,7 +443,9 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     (* trace context headers always override the caller's *)
     let headers = match Possibly_otel.Trace_context.get_ambient_headers ~explicit_span () with
     | [] -> headers
-    | pairs -> Some (replace_headers ~names:Possibly_otel.Trace_context.header_names pairs headers)
+    | pairs ->
+      try Some (replace_headers ~names:Possibly_otel.Trace_context.header_names pairs headers)
+      with exn -> Trace_core.exit_span explicit_span; Stdlib.raise exn
     in
 
     let set_body_and_headers h ct body =
