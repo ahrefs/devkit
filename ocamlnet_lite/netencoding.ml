@@ -20,12 +20,10 @@ module Url = struct
       'F';
     |]
 
-  let to_hex2 k =
-    (* Converts k to a 2-digit hex string *)
-    let s = Bytes.create 2 in
-    Bytes.set s 0 hex_digits.((k lsr 4) land 15);
-    Bytes.set s 1 hex_digits.(k land 15);
-    Bytes.unsafe_to_string s
+  (** Converts k to a 2-digit hex string, added to [buf] *)
+  let bytes_set_hex2 bs i k =
+    Bytes.set bs i hex_digits.((k lsr 4) land 0xf);
+    Bytes.set bs (i+1) hex_digits.(k land 0xf)
 
   let of_hex1 c =
     match c with
@@ -34,18 +32,63 @@ module Url = struct
     | 'a' .. 'f' -> Char.code c - Char.code 'a' + 10
     | _ -> raise Not_found
 
-  let url_encoding_re = Netstring_str.regexp "[^A-Za-z0-9_.!*-]"
   let url_decoding_re = Netstring_str.regexp "\\+\\|%..\\|%.\\|%"
 
-  let encode ?(plus = true) s =
-    Netstring_str.global_substitute url_encoding_re
-      (fun r _ ->
-        match Netstring_str.matched_string r s with
-        | " " when plus -> "+"
-        | x ->
-            let k = Char.code x.[0] in
-            "%" ^ to_hex2 k)
-      s
+  let[@inline] is_preserved_by_url_encode = function
+    | 'A'..'Z' | 'a'..'z' | '0'..'9' | '_' | '.' | '!' | '*' | '-' -> true
+    | _ -> false
+
+  let encode ?(plus=true) s =
+    let has_space_to_plus = ref false in
+    let additional_bytes = ref 0 in
+
+    for i = 0 to String.length s-1 do
+      let c = String.unsafe_get s i in
+
+      if is_preserved_by_url_encode c then ()
+      else if c = ' ' && plus then has_space_to_plus := true
+      else additional_bytes := !additional_bytes + 2
+    done;
+
+    if not !has_space_to_plus && !additional_bytes = 0 then s
+    else (
+      (* we know the exact length *)
+      let res = Bytes.create (String.length s + !additional_bytes) in
+      let off_res = ref 0 in
+
+      let i = ref 0 in
+      let run_start = ref 0 in
+
+      while !i < String.length s do
+        let c = String.unsafe_get s !i in
+        if is_preserved_by_url_encode c then incr i
+        else (
+          (* [s] needs some escaping *)
+          if !i > !run_start then (
+            Bytes.blit_string s !run_start res !off_res (!i - !run_start);
+            off_res  := !off_res + (!i - !run_start)
+          );
+
+          if c = ' ' && plus then (
+            Bytes.set res !off_res '+';
+            incr off_res
+          ) else (
+            Bytes.set res !off_res '%';
+            bytes_set_hex2 res (!off_res + 1) (Char.code c);
+            off_res := !off_res + 3
+          );
+          incr i;
+          run_start := !i
+        )
+      done;
+      if !i > !run_start then (
+        Bytes.blit_string s !run_start res !off_res (!i - !run_start);
+        off_res  := !off_res + (!i - !run_start)
+      );
+      assert (!off_res = Bytes.length res);
+
+      Bytes.unsafe_to_string res
+    )
 
   let decode ?(plus = true) ?(pos = 0) ?len s =
     let s_l = String.length s in
@@ -436,6 +479,48 @@ module Html = struct
     let in_ops = Netstring_tstring.string_ops in
     let out_kind = Netstring_tstring.String_kind in
     encode_poly ~in_enc ~in_ops ~out_kind ?out_enc ?prefer_name ?unsafe_chars ()
+
+  let encode_utf8 =
+    let unsafe_chars = unsafe_chars_html4 in
+
+    (* Create the domain function: *)
+    let safe_array = Array.make 128 true in
+    String.iter (fun c -> safe_array.(Char.code c) <- false) unsafe_chars;
+
+    (* Create the substitution function: *)
+    let escape_char p =
+      assert (p <= 255);
+      let name = rev_etable.(p) in
+      if name = "" then "&#" ^ string_of_int p ^ ";" else name
+    in
+
+    (* Recode: *)
+    fun s ->
+      (* NOTE: we accept U+FFFE and U+FFFF but [encode] does not *)
+      if not (String.is_valid_utf_8 s) then raise Netconversion.Malformed_code;
+      if String.for_all (fun c -> Char.code c >= 128 || safe_array.(Char.code c)) s
+      then s
+      else (
+        let buf = Buffer.create (String.length s + 16) in
+        let i = ref 0 in
+        let run_start = ref 0 in
+
+        while !i < String.length s do
+          let c = String.unsafe_get s !i in
+          let code_c = Char.code c in
+
+          if code_c >= 128 || safe_array.(code_c) then incr i
+          else (
+            if !i > !run_start then Buffer.add_substring buf s !run_start (!i - !run_start);
+            let escaped = escape_char code_c in
+            Buffer.add_string buf escaped;
+            incr i;
+            run_start := !i;
+          )
+        done;
+        if !i > !run_start then Buffer.add_substring buf s !run_start (!i - !run_start);
+        Buffer.contents buf
+      )
 
   type entity_set = [ `Html | `Xml | `Empty ]
 
