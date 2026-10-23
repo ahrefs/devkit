@@ -625,19 +625,19 @@ let () = test "Files.save_as overwrites existing regular file" @@ fun () ->
 let () = test "Files.save_as no temp file left on success" @@ fun () ->
   with_temp_path "test_save_as_no_temp.txt" @@ fun path ->
   Files.save_as path (fun oc -> output_string oc "data\n");
-  let temp = Printf.sprintf "%s.save.%d.tmp" path (U.gettid ()) in
+  let temp = Printf.sprintf "%s.save.%d.%d.tmp" path (U.gettid ()) (Thread.id @@ Thread.self ()) in
   assert_bool "temp file should not exist" (not (Sys.file_exists temp))
 
 let () = test "Files.save_as no temp file left on failure" @@ fun () ->
   with_temp_path "test_save_as_fail.txt" @@ fun path ->
   (try Files.save_as path (fun _oc -> failwith "boom") with Failure _ -> ());
-  let temp = Printf.sprintf "%s.save.%d.tmp" path (U.gettid ()) in
+  let temp = Printf.sprintf "%s.save.%d.%d.tmp" path (U.gettid ()) (Thread.id @@ Thread.self ()) in
   assert_bool "temp file should not exist" (not (Sys.file_exists temp));
   assert_bool "target file should not exist" (not (Sys.file_exists path))
 
 let () = test "Files.save_as writes to /dev/null without error" @@ fun () ->
   Files.save_as "/dev/null" (fun oc -> output_string oc "discarded\n");
-  let temp = Printf.sprintf "/dev/null.save.%d.tmp" (U.gettid ()) in
+  let temp = Printf.sprintf "/dev/null.save.%d.%d.tmp" (U.gettid ()) (Thread.id @@ Thread.self ()) in
   assert_bool "temp file should not exist" (not (Sys.file_exists temp));
   assert_bool "/dev/null should be a char device" ((Unix.stat "/dev/null").st_kind = Unix.S_CHR)
 
@@ -656,7 +656,7 @@ let () = test "Files.save_as no temp file created for FIFO" @@ fun () ->
   let reader = Thread.create (fun () -> ignore (In_channel.with_open_text fifo_path In_channel.input_all)) () in
   Files.save_as fifo_path (fun oc -> output_string oc "data\n");
   Thread.join reader;
-  let temp = Printf.sprintf "%s.save.%d.tmp" fifo_path (U.gettid ()) in
+  let temp = Printf.sprintf "%s.save.%d.%d.tmp" fifo_path (U.gettid ()) (Thread.id @@ Thread.self ()) in
   assert_bool "temp file should not exist" (not (Sys.file_exists temp))
 
 let () = test "Files.save_as writes through symlink without clobbering it" @@ fun () ->

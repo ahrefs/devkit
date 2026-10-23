@@ -69,7 +69,8 @@ let mkdir_p ?(perm=0o755) path =
 
 let save_as_regular name ?(mode=0o644) f =
   (* not using make_temp_file cause same dir is needed for atomic rename *)
-  let temp = Printf.sprintf "%s.save.%d.tmp" name (U.gettid ()) in
+  let tid = Thread.id @@ Thread.self () in
+  let temp = Printf.sprintf "%s.save.%d.%d.tmp" name (U.gettid ()) tid in
   bracket (Unix.openfile temp [Unix.O_WRONLY;Unix.O_CREAT] mode) Unix.close begin fun fd ->
     try
       let ch = Unix.out_channel_of_descr fd in
