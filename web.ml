@@ -20,7 +20,7 @@ let rawurldecode s = try Netencoding.Url.decode ~plus:false s with _ -> s
 (** percent-decode and convert plus into space *)
 let urldecode s = try Netencoding.Url.decode ~plus:true s with _ -> s
 
-let htmlencode = Netencoding.Html.encode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
+let htmlencode = Netencoding.Html.encode_utf8
 let htmldecode_exn = Netencoding.Html.decode ~in_enc:`Enc_utf8 ~out_enc:`Enc_utf8 ()
 let htmldecode =
   (* U+FFFD REPLACEMENT CHARACTER *)
