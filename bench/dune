@@ -1,6 +1,14 @@
 ; optional: needs saturn and benchmark. Build with make benchs.
+
 (executable
  (name bench_sharded_hash_trie)
+ (modules bench_sharded_hash_trie)
  (optional)
- (enabled_if (= %{profile} bench))
+ (enabled_if
+  (= %{profile} bench))
  (libraries devkit saturn benchmark unix))
+
+(executable
+ (name bench_gzip_io)
+ (modules bench_gzip_io)
+ (libraries devkit extlib unix))
