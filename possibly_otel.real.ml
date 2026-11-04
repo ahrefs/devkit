@@ -30,3 +30,10 @@ end
    an ambient context (e.g. from an incoming traceparent) instead of forcing a new trace *)
 let enter_manual_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ?data name =
     Trace_core.enter_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ?data name
+
+let set_error span ?(message="") ~error_type () =
+  Trace_core.add_data_to_span span [ "error.type", `String error_type ];
+  Opentelemetry_trace.set_span_status span
+    (Span_status.make ~message ~code:Span_status.Status_code_error)
+
+let set_client_kind span = Opentelemetry_trace.set_span_kind span Span_kind.Span_kind_client

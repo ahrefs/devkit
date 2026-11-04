@@ -22,3 +22,9 @@ val enter_manual_span :
   ?data:(unit -> (string * Otrace.user_data) list) ->
   string ->
   Trace_core.span
+
+val set_error : Trace_core.span -> ?message:string -> error_type:string -> unit -> unit
+(** Mark the span as failed (status [Error], with optional [message]) and set the [error.type] attribute. No-op without OTEL. *)
+
+val set_client_kind : Trace_core.span -> unit
+(** Mark the span as a CLIENT span. No-op without OTEL. *)

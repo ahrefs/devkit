@@ -425,7 +425,6 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
 
     let describe () =
       let base = [
-        "otrace.spankind", `String "CLIENT";
         "http.request.method", `String action_name;
         "url.full", `String url;
       ] in
@@ -437,8 +436,11 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
     let explicit_span =
       let span_name = Printf.sprintf "devkit.web.%s" action_name in
       (* We set the value of `__FUNCTION__` to preserve the build with OCaml < 4.12. *)
-      Possibly_otel.enter_manual_span
+      let span = Possibly_otel.enter_manual_span
         ~__FUNCTION__:"Devkit.Web.Http.http_request_k" ~__FILE__ ~__LINE__ ~data:describe span_name in
+      Possibly_otel.set_client_kind span;
+      span
+    in
 
     (* trace context headers always override the caller's *)
     let headers = match Possibly_otel.Trace_context.get_ambient_headers ~explicit_span () with
@@ -463,7 +465,12 @@ module Http (IO : IO_TYPE) (Curl_IO : CURL with type 'a t = 'a IO.t) : HTTP with
         let data = match !ch_query_id with None -> data | Some v -> ("http.response.header.x-clickhouse-query-id", `String v) :: data in
         let data = match !ch_summary  with None -> data | Some v -> ("http.response.header.x-clickhouse-summary",  `String v) :: data in
         let data = match !resp_content_encoding with None -> data | Some v -> ("http.response.header.content-encoding", `String v) :: data in
-        Trace_core.add_data_to_span explicit_span data
+        Trace_core.add_data_to_span explicit_span data;
+        (* per OTEL semconv, client spans are errors on 4xx/5xx and on failures without a response *)
+        match res with
+        | _, Ok (n,_) when n >= 400 -> Possibly_otel.set_error explicit_span ~error_type:(string_of_int n) ()
+        | _, (Error _ as r) -> Possibly_otel.set_error explicit_span ~message:(show_result' r) ~error_type:"_OTHER" ()
+        | _ -> ()
       end;
       Trace_core.exit_span explicit_span;
       result res

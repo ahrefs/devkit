@@ -13,3 +13,7 @@ end
 
 let[@inline] enter_manual_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ?data name =
   Trace_core.enter_span ~__FUNCTION__ ~__FILE__ ~__LINE__ ?data name
+
+let set_error _ ?message:_ ~error_type:_ () = ()
+
+let set_client_kind _ = ()
