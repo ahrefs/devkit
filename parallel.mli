@@ -14,6 +14,9 @@ val launch_forks : ('a -> unit) -> 'a list -> unit
 
 (** Launch forks for each element of the list and wait for all workers to finish.
   Pass exit signals to the workers, see {!Forks.stop} for the description of [wait_stop] parameter.
+  Workers are counted process-wide in the [parallel.forks] {!Var} family, per [event] :
+  [spawned], [succeeded] (exit status 0), [failed] (non-zero exit status), [signaled] (killed by a signal),
+  [vanished] (lost without an exit status, e.g. mid-task) and [force_killed] (with SIGKILL, didn't stop in time).
   @param revive to keep workers running (restarting with same param if exited) [default: Never]
 *)
 val run_forks : ?wait_stop:int -> ?revive:revive_mode -> ?wait:int -> ?workers:int -> ('a -> unit) -> 'a list -> unit
