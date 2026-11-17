@@ -632,14 +632,16 @@ let convert_poly :
      *)
     k_in := !k_in + k_in_inc;
     k_out := !k_out + k_out_inc;
-    (* double the size of out_buf: *)
-    let size' = min Sys.max_string_length (!size + !size) in
-    if size' < !size + multibyte_limit then
-      failwith "Netconversion.convert: string too long";
-    let out_buf' = Bytes.create size' in
-    Bytes.blit !out_buf 0 out_buf' 0 !k_out;
-    out_buf := out_buf';
-    size := size'
+    (* double the size of out_buf if we stopped for lack of space: *)
+    if !k_in < range_len then (
+      let size' = min Sys.max_string_length (!size + !size) in
+      if size' < !size + multibyte_limit then
+        failwith "Netconversion.convert: string too long";
+      let out_buf' = Bytes.create size' in
+      Bytes.blit !out_buf 0 out_buf' 0 !k_out;
+      out_buf := out_buf';
+      size := size'
+    )
   done;
   match out_kind with
   | Netstring_tstring.String_kind -> Bytes.sub_string !out_buf 0 !k_out
@@ -725,14 +727,16 @@ let ustring_of_uarray_poly out_kind
     k_in := !k_in + k_in_inc;
     k_out := !k_out + k_out_inc;
 
-    (* double the size of out_buf: *)
-    let size' = min Sys.max_string_length (!size + !size) in
-    if size' < !size + multibyte_limit then
-      failwith "Netconversion.ustring_of_uarray: string too long";
-    let out_buf' = Bytes.create size' in
-    Bytes.blit !out_buf 0 out_buf' 0 !k_out;
-    out_buf := out_buf';
-    size := size'
+    (* double the size of out_buf if we stopped too early: *)
+    if !k_in < len then (
+      let size' = min Sys.max_string_length (!size + !size) in
+      if size' < !size + multibyte_limit then
+        failwith "Netconversion.ustring_of_uarray: string too long";
+      let out_buf' = Bytes.create size' in
+      Bytes.blit !out_buf 0 out_buf' 0 !k_out;
+      out_buf := out_buf';
+      size := size'
+    )
   done;
 
   Netstring_tstring.bytes_subpoly out_kind !out_buf 0 !k_out
