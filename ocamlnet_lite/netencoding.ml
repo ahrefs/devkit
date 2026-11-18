@@ -481,11 +481,20 @@ module Html = struct
     encode_poly ~in_enc ~in_ops ~out_kind ?out_enc ?prefer_name ?unsafe_chars ()
 
   let encode_utf8 =
-    let unsafe_chars = unsafe_chars_html4 in
-
     (* Create the domain function: *)
     let safe_array = Array.make 128 true in
-    String.iter (fun c -> safe_array.(Char.code c) <- false) unsafe_chars;
+    String.iter (fun c -> safe_array.(Char.code c) <- false) unsafe_chars_html4;
+
+    let is_all_safe s =
+      try
+        for i = 0 to String.length s - 1 do
+          let c = String.unsafe_get s i in
+          let safe = Char.code c >= 128 || Array.unsafe_get safe_array (Char.code c) in
+          if not safe then raise_notrace Exit
+        done;
+        true
+      with Exit -> false
+    in
 
     (* Create the substitution function: *)
     let escape_char ~into:buf p =
@@ -502,7 +511,7 @@ module Html = struct
     fun s ->
       (* NOTE: we accept U+FFFE and U+FFFF but [encode] does not *)
       if not (String.is_valid_utf_8 s) then raise Netconversion.Malformed_code;
-      if String.for_all (fun c -> Char.code c >= 128 || safe_array.(Char.code c)) s
+      if is_all_safe s
       then s
       else (
         let buf = Buffer.create (String.length s + 16) in
