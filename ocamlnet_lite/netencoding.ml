@@ -488,10 +488,14 @@ module Html = struct
     String.iter (fun c -> safe_array.(Char.code c) <- false) unsafe_chars;
 
     (* Create the substitution function: *)
-    let escape_char p =
+    let escape_char ~into:buf p =
       assert (p <= 255);
       let name = rev_etable.(p) in
-      if name = "" then "&#" ^ string_of_int p ^ ";" else name
+      if name = "" then (
+        Buffer.add_string buf "&#";
+        Buffer.add_string buf (string_of_int p);
+        Buffer.add_char buf ';'
+      ) else Buffer.add_string buf name
     in
 
     (* Recode: *)
@@ -509,11 +513,10 @@ module Html = struct
           let c = String.unsafe_get s !i in
           let code_c = Char.code c in
 
-          if code_c >= 128 || safe_array.(code_c) then incr i
+          if code_c >= 128 || Array.unsafe_get safe_array code_c then incr i
           else (
             if !i > !run_start then Buffer.add_substring buf s !run_start (!i - !run_start);
-            let escaped = escape_char code_c in
-            Buffer.add_string buf escaped;
+            escape_char ~into:buf code_c;
             incr i;
             run_start := !i;
           )
