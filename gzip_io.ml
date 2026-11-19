@@ -1,11 +1,38 @@
 (** gzip IO *)
 
+let buf_size = 65536
+
 let input io =
-  let iz = Gzip_stream.open_in io in
-  IO.create_in
-    ~read:(fun () -> Gzip_stream.input_char iz)
-    ~input:(Gzip_stream.input iz)
-    ~close:(fun () -> Gzip_stream.close_in iz)
+  let stream = Gzip_stream.open_in io in
+  (* Gzip_stream.input returns 0 at end of stream, which [Buf_in.create] turns into [No_more_input] *)
+  let buf_in = IO.Buf_in.create (Bytes.create buf_size) ~fill:(fun buf -> Gzip_stream.input stream buf 0 (Bytes.length buf)) in
+  let read () =
+    IO.Buf_in.refill_if_empty buf_in;
+    assert (buf_in.len > 0);
+    let c = Bytes.unsafe_get buf_in.buf buf_in.pos in
+    IO.Buf_in.consume buf_in 1;
+    c
+  in
+  let input buf pos len =
+    if buf_in.len = 0 then (
+      (* passthrough *)
+      let n = Gzip_stream.input stream buf pos len in
+      if n = 0 && len > 0 then raise IO.No_more_input;
+      n
+    )
+    else (
+      let n = min len buf_in.len in
+      Bytes.blit buf_in.buf buf_in.pos buf pos n;
+      IO.Buf_in.consume buf_in n;
+      n
+    )
+  in
+  let buffered = Some buf_in in
+  IO.create_in_full ()
+    ~read
+    ~input
+    ~close:(fun () -> Gzip_stream.close_in stream)
+    ~as_buffered:(fun () -> buffered)
 
 let output io =
   let oz = Gzip_stream.open_out io in

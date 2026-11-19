@@ -29,6 +29,7 @@ test:
 
 benchs:
 		RUN_BENCHS=1 dune exec --profile bench $(DUNEFLAGS) bench/bench_sharded_hash_trie.exe
+		dune exec --release $(DUNEFLAGS) bench/bench_gzip_io.exe
 
 doc:
 		dune build $(DUNEFLAGS) @doc
