@@ -481,24 +481,37 @@ module Html = struct
     encode_poly ~in_enc ~in_ops ~out_kind ?out_enc ?prefer_name ?unsafe_chars ()
 
   let encode_utf8 =
-    let unsafe_chars = unsafe_chars_html4 in
-
     (* Create the domain function: *)
     let safe_array = Array.make 128 true in
-    String.iter (fun c -> safe_array.(Char.code c) <- false) unsafe_chars;
+    String.iter (fun c -> safe_array.(Char.code c) <- false) unsafe_chars_html4;
+
+    let is_all_safe s =
+      try
+        for i = 0 to String.length s - 1 do
+          let c = String.unsafe_get s i in
+          let safe = Char.code c >= 128 || Array.unsafe_get safe_array (Char.code c) in
+          if not safe then raise_notrace Exit
+        done;
+        true
+      with Exit -> false
+    in
 
     (* Create the substitution function: *)
-    let escape_char p =
+    let escape_char ~into:buf p =
       assert (p <= 255);
       let name = rev_etable.(p) in
-      if name = "" then "&#" ^ string_of_int p ^ ";" else name
+      if name = "" then (
+        Buffer.add_string buf "&#";
+        Buffer.add_string buf (string_of_int p);
+        Buffer.add_char buf ';'
+      ) else Buffer.add_string buf name
     in
 
     (* Recode: *)
     fun s ->
       (* NOTE: we accept U+FFFE and U+FFFF but [encode] does not *)
       if not (String.is_valid_utf_8 s) then raise Netconversion.Malformed_code;
-      if String.for_all (fun c -> Char.code c >= 128 || safe_array.(Char.code c)) s
+      if is_all_safe s
       then s
       else (
         let buf = Buffer.create (String.length s + 16) in
@@ -509,11 +522,10 @@ module Html = struct
           let c = String.unsafe_get s !i in
           let code_c = Char.code c in
 
-          if code_c >= 128 || safe_array.(code_c) then incr i
+          if code_c >= 128 || Array.unsafe_get safe_array code_c then incr i
           else (
             if !i > !run_start then Buffer.add_substring buf s !run_start (!i - !run_start);
-            let escaped = escape_char code_c in
-            Buffer.add_string buf escaped;
+            escape_char ~into:buf code_c;
             incr i;
             run_start := !i;
           )
